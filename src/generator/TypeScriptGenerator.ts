@@ -161,17 +161,17 @@ export class TypeScriptGenerator {
     
     // Add CORBA import only if needed
     if (module.usesCorba && module.usesCorbaTypes) {
-      // Both value and type usage
-      lines.push(`import { CORBA } from "${this.options.corbaImportPath || 'corba'}";`);
+      // Both value and type usage - separate type and value imports
+      lines.push(`import type { CORBA, TypeCode } from "${this.options.corbaImportPath || 'corba'}";`);
+      lines.push(`import { create_request } from "${this.options.corbaImportPath || 'corba'}";`);
     } else if (module.usesCorbaTypes) {
       // Type-only usage
       lines.push(`import type { CORBA } from "${this.options.corbaImportPath || 'corba'}";`);
     } else if (module.usesCorba) {
       // Value-only usage (rare but possible)
-      lines.push(`import { CORBA } from "${this.options.corbaImportPath || 'corba'}";`);
+      lines.push(`import type { TypeCode } from "${this.options.corbaImportPath || 'corba'}";`);
+      lines.push(`import { create_request } from "${this.options.corbaImportPath || 'corba'}";`);
     }
-    // Note: When using Deno, add "corba" to your import map in deno.json:
-    // { "imports": { "corba": "path/to/CORBA.ts/mod.ts" } }
     
     // Add imports from other modules
     // Handle type-only imports
@@ -179,7 +179,7 @@ export class TypeScriptGenerator {
       for (const imp of module.typeImports) {
         // Check if this module is also imported for values
         if (!module.imports.has(imp)) {
-          lines.push(`import type { ${imp} } from "./${imp}";`);
+          lines.push(`import type * as ${imp} from "./${imp}.ts";`);
         }
       }
     }
@@ -187,7 +187,7 @@ export class TypeScriptGenerator {
     // Handle value imports (which can also be used for types)
     if (module.imports.size > 0) {
       for (const imp of module.imports) {
-        lines.push(`import { ${imp} } from "./${imp}";`);
+        lines.push(`import * as ${imp} from "./${imp}.ts";`);
       }
     }
     
@@ -509,17 +509,21 @@ export class TypeScriptGenerator {
     // Always emit constructor
     this.emit('constructor(private objRef: CORBA.ObjectRef) {}');
     this.markCorbaTypeUsed();
+    
+    // Add index signature to match CORBA.ObjectRef
+    this.emit('[key: string]: unknown;');
     this.emit('');
     
     // Collect all operations and attributes from this interface and its inheritance hierarchy
     const allMembers = this.collectInterfaceMembers(node);
     
     // Generate stub implementations for all members
-    for (const member of allMembers) {
+    for (let i = 0; i < allMembers.length; i++) {
+      const member = allMembers[i];
       if (member.kind === 'operation') {
-        this.generateStubOperation(member);
+        this.generateStubOperation(member, i < allMembers.length - 1);
       } else if (member.kind === 'attribute') {
-        this.generateStubAttribute(member);
+        this.generateStubAttribute(member, i < allMembers.length - 1);
       }
     }
     
@@ -528,7 +532,7 @@ export class TypeScriptGenerator {
     this.emit('');
   }
 
-  private generateStubOperation(node: AST.OperationNode): void {
+  private generateStubOperation(node: AST.OperationNode, addBlankLine: boolean = true): void {
     const sourceModule = (node as AST.OperationNode & ExtendedNode).__sourceModule;
     const sourceInterface = (node as AST.OperationNode & ExtendedNode).__sourceInterface;
     const params = node.parameters.map(p => {
@@ -544,15 +548,15 @@ export class TypeScriptGenerator {
     this.emit(`async ${node.name}(${params}): ${returnType} {`);
     this.indent();
     
-    this.emit(`const request = this.objRef.create_request("${node.name}");`);
-    this.markCorbaTypeUsed(); // Using objRef which is CORBA.ObjectRef type
+    this.emit(`const request = create_request(this.objRef, "${node.name}");`);
+    this.markCorbaUsed(); // Using CORBA.create_request function
     
     for (const param of node.parameters) {
       if (param.direction === 'in' || param.direction === 'inout') {
-        this.emit(`request.add_in_arg("${param.name}", ${param.name});`);
+        this.emit(`request.add_named_in_arg("${param.name}", ${param.name}, undefined as unknown as TypeCode);`);
       }
       if (param.direction === 'out' || param.direction === 'inout') {
-        this.emit(`request.add_out_arg("${param.name}");`);
+        this.emit(`request.add_out_arg(undefined as unknown as TypeCode);`);
       }
     }
     
@@ -562,26 +566,29 @@ export class TypeScriptGenerator {
       this.emit('await request.invoke();');
       
       if (node.returnType.kind !== 'primitiveType' || node.returnType.type !== 'void') {
-        this.emit('return request.return_value();');
+        const mappedType = this.mapType(node.returnType, true, (node as any).__sourceModule, (node as any).__sourceInterface);
+        this.emit(`return request.return_value() as ${mappedType};`);
       }
     }
     
     this.dedent();
     this.emit('}');
-    this.emit('');
+    if (addBlankLine) {
+      this.emit('');
+    }
   }
 
-  private generateStubAttribute(node: AST.AttributeNode): void {
+  private generateStubAttribute(node: AST.AttributeNode, addBlankLine: boolean = true): void {
     const sourceModule = (node as AST.AttributeNode & ExtendedNode).__sourceModule;
     const sourceInterface = (node as AST.AttributeNode & ExtendedNode).__sourceInterface;
     const tsType = this.mapType(node.type, true, sourceModule, sourceInterface);
     
     this.emit(`async get_${node.name}(): Promise<${tsType}> {`);
     this.indent();
-    this.emit(`const request = this.objRef.create_request("_get_${node.name}");`);
-    this.markCorbaTypeUsed(); // Using objRef which is CORBA.ObjectRef type
+    this.emit(`const request = create_request(this.objRef, "_get_${node.name}");`);
+    this.markCorbaUsed(); // Using create_request function
     this.emit('await request.invoke();');
-    this.emit('return request.return_value();');
+    this.emit(`return request.return_value() as ${tsType};`);
     this.dedent();
     this.emit('}');
     this.emit('');
@@ -589,9 +596,9 @@ export class TypeScriptGenerator {
     if (!node.isReadonly) {
       this.emit(`async set_${node.name}(value: ${tsType}): Promise<void> {`);
       this.indent();
-      this.emit(`const request = this.objRef.create_request("_set_${node.name}");`);
-      this.markCorbaTypeUsed(); // Using objRef which is CORBA.ObjectRef type
-      this.emit(`request.add_in_arg("value", value);`);
+      this.emit(`const request = create_request(this.objRef, "_set_${node.name}");`);
+      this.markCorbaUsed(); // Using create_request function
+      this.emit(`request.add_named_in_arg("value", value, undefined as unknown as TypeCode);`);
       this.emit('await request.invoke();');
       this.dedent();
       this.emit('}');
@@ -613,7 +620,9 @@ export class TypeScriptGenerator {
       this.emit('}');
     }
     
-    this.emit('');
+    if (addBlankLine) {
+      this.emit('');
+    }
   }
 
   private generateServerSkeleton(node: AST.InterfaceNode): void {
@@ -764,7 +773,7 @@ export class TypeScriptGenerator {
       'float': 'number',
       'double': 'number',
       'long double': 'number',
-      'any': 'any', // CORBA any type
+      'any': 'unknown',
       'Object': 'CORBA.ObjectRef'  // Use ObjectRef which is defined in CORBA namespace
     };
     

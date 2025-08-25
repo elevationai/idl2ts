@@ -113,7 +113,7 @@ describe('IDLCompiler Integration', () => {
       expect(fs.existsSync(commonOutput)).toBe(true);
       
       const mainContent = fs.readFileSync(mainOutput, 'utf-8');
-      expect(mainContent).toContain('import type { Common } from "./Common"');
+      expect(mainContent).toContain('import type * as Common from "./Common.ts"');
       expect(mainContent).toContain('getTime(): Promise<Common.Timestamp>');
     });
   });
@@ -179,7 +179,8 @@ describe('IDLCompiler Integration', () => {
         'utf-8'
       );
       
-      expect(output).toContain('import type { CORBA } from "@myorg/corba"');
+      expect(output).toContain('import type { CORBA, TypeCode } from "@myorg/corba"');
+      expect(output).toContain('import { create_request } from "@myorg/corba"');
     });
   });
 
@@ -255,7 +256,7 @@ describe('IDLCompiler Integration', () => {
         path.join(tempDir, 'Banking.ts'), 
         'utf-8'
       );
-      expect(bankingOutput).toContain('import type { Common } from "./Common"');
+      expect(bankingOutput).toContain('import type * as Common from "./Common.ts"');
       expect(bankingOutput).toContain('export class InsufficientFunds extends CORBA.SystemException');
       expect(bankingOutput).toContain('export interface Account');
       expect(bankingOutput).toContain('export interface Bank');

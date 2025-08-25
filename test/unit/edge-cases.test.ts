@@ -417,7 +417,7 @@ describe('Edge Cases and Error Handling', () => {
       expect(output).toContain('export type ManyTypes =');
       expect(output).toContain('{ discriminator: 1; boolVal: boolean }');
       expect(output).toContain('{ discriminator: 10; wstringVal: string }');
-      expect(output).toContain('{ discriminator: "default"; anyVal: any }');
+      expect(output).toContain('{ discriminator: "default"; anyVal: unknown }');
     });
   });
 
@@ -539,8 +539,8 @@ describe('Edge Cases and Error Handling', () => {
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
       
-      expect(output).toContain('getValue(): Promise<any>');
-      expect(output).toContain('setValue(value: any): Promise<void>');
+      expect(output).toContain('getValue(): Promise<unknown>');
+      expect(output).toContain('setValue(value: unknown): Promise<void>');
     });
 
     test.skip('should handle fixed-point types as numbers', () => {

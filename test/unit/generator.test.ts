@@ -49,7 +49,7 @@ describe('TypeScriptGenerator', () => {
       expect(output).toContain('getWChar(): Promise<string>');
       expect(output).toContain('getBoolean(): Promise<boolean>');
       expect(output).toContain('getOctet(): Promise<number>');
-      expect(output).toContain('getAny(): Promise<any>');
+      expect(output).toContain('getAny(): Promise<unknown>');
       expect(output).toContain('doVoid(): Promise<void>');
       expect(output).toContain('getString(): Promise<string>');
       expect(output).toContain('getWString(): Promise<string>');
@@ -187,7 +187,7 @@ describe('TypeScriptGenerator', () => {
       expect(output).toContain('export class Service_Stub implements Service');
       expect(output).toContain('constructor(private objRef: CORBA.ObjectRef)');
       expect(output).toContain('async process(data: string): Promise<string>');
-      expect(output).toContain('const request = this.objRef.create_request("process")');
+      expect(output).toContain('const request = create_request(this.objRef, "process")');
       expect(output).toContain('return request.return_value()');
     });
 
@@ -441,7 +441,7 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const businessOutput = results.get('Business.ts') || '';
       
-      expect(businessOutput).toContain('import type { Common } from "./Common"');
+      expect(businessOutput).toContain('import type * as Common from "./Common.ts"');
       expect(businessOutput).toContain('getTime(): Promise<Common.Timestamp>');
     });
 
@@ -463,7 +463,7 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const derivedOutput = results.get('Derived.ts') || '';
       
-      expect(derivedOutput).toContain('import type { Base } from "./Base"');
+      expect(derivedOutput).toContain('import type * as Base from "./Base.ts"');
       expect(derivedOutput).toContain('export interface IDerived extends Base.IBase');
     });
   });
@@ -561,7 +561,7 @@ describe('TypeScriptGenerator', () => {
       const serviceOutput = results.get('Service.ts') || '';
       
       // Should use 'import type' for type-only imports
-      expect(serviceOutput).toContain('import type { Types } from "./Types"');
+      expect(serviceOutput).toContain('import type * as Types from "./Types.ts"');
     });
 
     test('should use regular imports when needed for values', () => {
@@ -580,7 +580,7 @@ describe('TypeScriptGenerator', () => {
       
       // Should use regular import when constants are referenced
       // But in this case, constants are copied by value, so might still be type import
-      expect(serviceOutput).toMatch(/import (type )?{ Constants } from "\.\/Constants"/);
+      expect(serviceOutput).toMatch(/import (type )?\* as Constants from "\.\/Constants\.ts"/);
     });
   });
 
@@ -659,7 +659,8 @@ describe('TypeScriptGenerator', () => {
       });
       const tsOutput = output.get('Test.ts') || '';
       
-      expect(tsOutput).toContain('import type { CORBA } from "@myorg/corba-lib"');
+      expect(tsOutput).toContain('import type { CORBA, TypeCode } from "@myorg/corba-lib"');
+      expect(tsOutput).toContain('import { create_request } from "@myorg/corba-lib"');
     });
 
     test('should use default CORBA import path', () => {
@@ -674,7 +675,8 @@ describe('TypeScriptGenerator', () => {
       const output = generateTypeScript(idl);
       const tsOutput = output.get('Test.ts') || '';
       
-      expect(tsOutput).toContain('import type { CORBA } from "corba"');
+      expect(tsOutput).toContain('import type { CORBA, TypeCode } from "corba"');
+      expect(tsOutput).toContain('import { create_request } from "corba"');
     });
   });
 });
