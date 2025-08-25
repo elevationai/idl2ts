@@ -8,11 +8,9 @@ export interface ParserOptions {
 
 export class IDLParser {
   private input: string;
-  private pos: number = 0;
   private tokens: string[] = [];
   private currentToken: number = 0;
   private preprocessor: IDLPreprocessor;
-  private pragmaPrefix?: string;
 
   constructor(options: ParserOptions = {}) {
     this.input = '';
@@ -24,12 +22,6 @@ export class IDLParser {
     const preprocessed = this.preprocessor.preprocess(input, filePath);
     this.input = preprocessed.processedContent;
     
-    // Store pragma prefix if available
-    if (preprocessed.pragmas.has('prefix')) {
-      this.pragmaPrefix = preprocessed.pragmas.get('prefix');
-    }
-    
-    this.pos = 0;
     this.tokenize();
     this.currentToken = 0;
     
@@ -73,6 +65,13 @@ export class IDLParser {
     }
     this.currentToken++;
     return token;
+  }
+
+  private consumeSemicolon(): void {
+    // Try to consume semicolon, but don't fail if it's missing
+    if (this.peek() === ';') {
+      this.consume(';');
+    }
   }
 
   private parseDefinition(): AST.DefinitionNode | null {
@@ -157,7 +156,7 @@ export class IDLParser {
     }
     
     this.consume('}');
-    this.consume(';');
+    this.consumeSemicolon();
     
     return {
       kind: 'interface',
@@ -188,8 +187,37 @@ export class IDLParser {
       return this.parseConstant();
     } else if (token === 'exception') {
       return this.parseException();
-    } else if (token === 'void' || this.isType(token)) {
-      return this.parseOperation(false);
+    } else if (token === 'void' || token === '::' || this.isType(token)) {
+      // Look ahead to determine if this is an operation (has parentheses) or attribute
+      const currentPos = this.currentToken;
+      
+      try {
+        this.parseType(); // Parse the type
+        this.consume(); // Parse the name
+        
+        if (this.peek() === '(') {
+          // It's an operation - reset and parse as operation
+          this.currentToken = currentPos;
+          return this.parseOperation(false);
+        } else {
+          // It's an attribute - reset and parse as attribute  
+          this.currentToken = currentPos;
+          const type = this.parseType();
+          const attrName = this.consume();
+          this.consume(';');
+          
+          return {
+            kind: 'attribute',
+            name: attrName,
+            type: type,
+            isReadonly: false
+          };
+        }
+      } catch (e) {
+        // If parsing fails, reset position and try as operation
+        this.currentToken = currentPos;
+        return this.parseOperation(false);
+      }
     } else {
       if (token === ';') {
         this.consume();
@@ -219,7 +247,7 @@ export class IDLParser {
       this.consume(')');
     }
     
-    this.consume(';');
+    this.consumeSemicolon();
     
     return {
       kind: 'operation',
@@ -296,7 +324,7 @@ export class IDLParser {
     const members: AST.MemberNode[] = [];
     
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
-      if (this.isType(this.peek())) {
+      if (this.peek() === '::' || this.isType(this.peek())) {
         const type = this.parseType();
         const memberName = this.consume();
         
@@ -358,7 +386,11 @@ export class IDLParser {
     while (this.peek() === 'case' || this.peek() === 'default') {
       if (this.peek() === 'case') {
         this.consume('case');
-        const value = this.consume();
+        let value = this.consume();
+        // Handle negative numbers
+        if (value === '-') {
+          value = '-' + this.consume();
+        }
         labels.push(this.parseValue(value));
         this.consume(':');
       } else if (this.peek() === 'default') {
@@ -418,13 +450,48 @@ export class IDLParser {
 
   private parseTypedef(): AST.TypedefNode {
     this.consume('typedef');
-    const type = this.parseType();
-    const name = this.consume();
     
+    // Try to parse type, but handle malformed typedef
+    let type: AST.TypeNode;
+    let name: string;
+    
+    try {
+      const nextToken = this.peek();
+      if (nextToken === ';' || !nextToken) {
+        // Malformed typedef with no type or name - use any as default
+        type = { kind: 'primitiveType', type: 'any' };
+        name = 'UnknownType';
+      } else if (this.tokens[this.currentToken + 1] === ';') {
+        // Only name provided, no type (e.g., typedef MissingType;)
+        name = this.consume();
+        type = { kind: 'primitiveType', type: 'any' };
+      } else {
+        // Normal case: type name
+        type = this.parseType();
+        name = this.consume();
+      }
+    } catch (e) {
+      // Error recovery - create a minimal valid typedef
+      type = { kind: 'primitiveType', type: 'any' };
+      name = 'ErrorType';
+    }
+    
+    // Check for array dimensions
+    const dimensions: number[] = [];
     while (this.peek() === '[') {
       this.consume('[');
-      this.consume();
+      const dim = this.consume();
+      dimensions.push(parseInt(dim));
       this.consume(']');
+    }
+    
+    // If we have dimensions, wrap the type in an arrayType
+    if (dimensions.length > 0) {
+      type = {
+        kind: 'arrayType',
+        elementType: type,
+        dimensions
+      };
     }
     
     this.consume(';');
@@ -594,6 +661,14 @@ export class IDLParser {
 
   private parseQualifiedName(): string {
     const parts: string[] = [];
+    
+    // Handle leading :: for global scope
+    let prefix = '';
+    if (this.peek() === '::') {
+      prefix = '::';
+      this.consume('::');
+    }
+    
     parts.push(this.consume());
     
     while (this.peek() === '::') {
@@ -601,7 +676,7 @@ export class IDLParser {
       parts.push(this.consume());
     }
     
-    return parts.join('::');
+    return prefix + parts.join('::');
   }
 
   private parseValue(token: string): string | number | boolean {
@@ -609,11 +684,29 @@ export class IDLParser {
     if (token === 'FALSE' || token === 'false') return false;
     
     if (token.startsWith('"') && token.endsWith('"')) {
-      return token.slice(1, -1);
+      let str = token.slice(1, -1);
+      // Handle escape sequences in strings - order matters!
+      // First handle doubled backslashes to avoid double processing
+      str = str.replace(/\\\\/g, '\u0000'); // Temporarily replace \\ with null char
+      str = str.replace(/\\n/g, '\n');
+      str = str.replace(/\\t/g, '\t');
+      str = str.replace(/\\r/g, '\r');
+      str = str.replace(/\\'/g, "'");
+      str = str.replace(/\\"/g, '"');
+      str = str.replace(/\u0000/g, '\\'); // Restore single backslashes
+      return str;
     }
     
     if (token.startsWith("'") && token.endsWith("'")) {
-      return token.slice(1, -1);
+      const char = token.slice(1, -1);
+      // Handle escape sequences
+      if (char === '\\n') return '\n';
+      if (char === '\\t') return '\t';
+      if (char === '\\r') return '\r';
+      if (char === '\\\\') return '\\';
+      if (char === "\\'") return "'";
+      if (char === '\\"') return '"';
+      return char;
     }
     
     // Handle negative numbers
@@ -625,7 +718,7 @@ export class IDLParser {
       return parseInt(token, 16);
     }
     
-    if (token.match(/^-?[0-9]*\.[0-9]+$/)) {
+    if (token.match(/^-?[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?$/)) {
       return parseFloat(token);
     }
     

@@ -1,0 +1,245 @@
+// Banking system IDL - comprehensive example for testing
+#pragma prefix "com.example.banking"
+
+module Banking {
+  // Forward declarations
+  interface Account;
+  interface Bank;
+  
+  // Basic types
+  typedef string AccountNumber;
+  typedef string CustomerID;
+  typedef double Money;
+  typedef sequence<Account> AccountList;
+  typedef long long Timestamp;
+  
+  // Enumerations
+  enum AccountType {
+    CHECKING,
+    SAVINGS,
+    BUSINESS,
+    INVESTMENT
+  };
+  
+  enum TransactionType {
+    DEPOSIT,
+    WITHDRAWAL,
+    TRANSFER,
+    FEE,
+    INTEREST
+  };
+  
+  enum AccountStatus {
+    ACTIVE,
+    FROZEN,
+    CLOSED
+  };
+  
+  // Structures
+  struct Address {
+    string street;
+    string city;
+    string state;
+    string zipCode;
+    string country;
+  };
+  
+  struct CustomerInfo {
+    CustomerID id;
+    string firstName;
+    string lastName;
+    string email;
+    string phone;
+    Address address;
+    Timestamp memberSince;
+  };
+  
+  struct Transaction {
+    string transactionId;
+    Timestamp timestamp;
+    TransactionType type;
+    Money amount;
+    AccountNumber fromAccount;
+    AccountNumber toAccount;
+    string description;
+  };
+  
+  struct AccountInfo {
+    AccountNumber accountNumber;
+    AccountType type;
+    AccountStatus status;
+    Money balance;
+    Money availableBalance;
+    CustomerInfo owner;
+    Timestamp openedDate;
+    Timestamp lastActivityDate;
+  };
+  
+  // Exceptions
+  exception InsufficientFunds {
+    Money requested;
+    Money available;
+    AccountNumber account;
+  };
+  
+  exception AccountNotFound {
+    AccountNumber accountNumber;
+  };
+  
+  exception InvalidTransaction {
+    string reason;
+    Transaction transaction;
+  };
+  
+  exception CustomerNotFound {
+    CustomerID customerId;
+  };
+  
+  exception AccountLocked {
+    AccountNumber accountNumber;
+    string reason;
+  };
+  
+  // Union for different types of limits
+  union AccountLimit switch (AccountType) {
+    case CHECKING: Money dailyWithdrawalLimit;
+    case SAVINGS: long monthlyTransactionLimit;
+    case BUSINESS: Money creditLimit;
+    case INVESTMENT: double marginRequirement;
+  };
+  
+  // Account interface with nested types
+  interface Account {
+    // Nested enum for account alerts
+    enum AlertType {
+      LOW_BALANCE,
+      LARGE_TRANSACTION,
+      SUSPICIOUS_ACTIVITY,
+      PAYMENT_DUE
+    };
+    
+    // Nested struct for alert configuration
+    struct AlertConfig {
+      AlertType type;
+      boolean enabled;
+      string notificationMethod;
+    };
+    
+    // Attributes
+    readonly attribute AccountNumber accountNumber;
+    readonly attribute AccountType accountType;
+    readonly attribute CustomerInfo owner;
+    attribute Money balance;
+    attribute AccountStatus status;
+    
+    // Operations
+    Money deposit(in Money amount) 
+      raises (InvalidTransaction);
+    
+    Money withdraw(in Money amount) 
+      raises (InsufficientFunds, AccountLocked, InvalidTransaction);
+    
+    void transfer(in Money amount, in Account targetAccount)
+      raises (InsufficientFunds, AccountLocked, AccountNotFound, InvalidTransaction);
+    
+    sequence<Transaction> getTransactionHistory(
+      in Timestamp startDate,
+      in Timestamp endDate
+    );
+    
+    AccountInfo getAccountInfo();
+    
+    void freeze(in string reason)
+      raises (AccountLocked);
+    
+    void unfreeze()
+      raises (AccountNotFound);
+    
+    void close()
+      raises (AccountLocked, InvalidTransaction);
+    
+    // Alert management
+    void setAlertConfig(in AlertConfig config);
+    sequence<AlertConfig> getAlertConfigs();
+    
+    // Async notification
+    oneway void notifyCustomer(in string message);
+  };
+  
+  // Bank interface
+  interface Bank {
+    // Nested types
+    struct BankInfo {
+      string bankId;
+      string name;
+      string routingNumber;
+      Address headquarters;
+    };
+    
+    typedef sequence<CustomerInfo> CustomerList;
+    
+    // Attributes
+    readonly attribute BankInfo info;
+    readonly attribute long totalAccounts;
+    readonly attribute Money totalAssets;
+    
+    // Customer management
+    CustomerInfo createCustomer(
+      in string firstName,
+      in string lastName,
+      in string email,
+      in Address address
+    ) raises (InvalidTransaction);
+    
+    CustomerInfo findCustomer(in CustomerID customerId)
+      raises (CustomerNotFound);
+    
+    CustomerList searchCustomers(in string searchTerm);
+    
+    // Account management
+    Account createAccount(
+      in CustomerID customerId,
+      in AccountType type,
+      in Money initialDeposit
+    ) raises (CustomerNotFound, InvalidTransaction);
+    
+    Account findAccount(in AccountNumber accountNumber)
+      raises (AccountNotFound);
+    
+    AccountList getCustomerAccounts(in CustomerID customerId)
+      raises (CustomerNotFound);
+    
+    AccountList getAccountsByType(in AccountType type);
+    
+    void closeAccount(in AccountNumber accountNumber)
+      raises (AccountNotFound, InvalidTransaction);
+    
+    // Transactions
+    void processTransaction(in Transaction transaction)
+      raises (InvalidTransaction, InsufficientFunds, AccountNotFound);
+    
+    sequence<Transaction> getDailyTransactions(in Timestamp date);
+    
+    // Reports
+    Money calculateTotalBalance(in CustomerID customerId)
+      raises (CustomerNotFound);
+    
+    sequence<Transaction> generateStatement(
+      in AccountNumber accountNumber,
+      in Timestamp startDate,
+      in Timestamp endDate
+    ) raises (AccountNotFound);
+    
+    // Maintenance
+    oneway void performDailyMaintenance();
+    oneway void sendNotifications();
+  };
+  
+  // Constants
+  const Money MINIMUM_BALANCE = 25.00;
+  const Money OVERDRAFT_FEE = 35.00;
+  const double SAVINGS_INTEREST_RATE = 0.02;
+  const double BUSINESS_INTEREST_RATE = 0.015;
+  const long MAX_DAILY_TRANSACTIONS = 50;
+  const string BANK_NAME = "Example Bank";
+};

@@ -92,7 +92,7 @@ program
   .option('--skeletons', 'Generate server skeletons')
   .option('--no-helpers', 'Do not emit helper functions')
   .option('-v, --verbose', 'Verbose output')
-  .action(async (input: string, options: any) => {
+  .action(async (_input: string, _options: any) => {
     console.log('Watch mode not yet implemented');
     process.exit(1);
   });
