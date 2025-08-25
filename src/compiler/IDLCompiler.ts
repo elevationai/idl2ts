@@ -1,4 +1,4 @@
-import { SimpleIDLParser, ParserOptions } from '../parser/SimpleIDLParser.js';
+import { IDLParser, ParserOptions } from '../parser/IDLParser.js';
 import { TypeScriptGenerator, GeneratorOptions } from '../generator/TypeScriptGenerator.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -69,7 +69,7 @@ export class IDLCompiler {
         filePath ? path.dirname(filePath) : process.cwd()
       ]
     };
-    const parser = new SimpleIDLParser(parserOptions);
+    const parser = new IDLParser(parserOptions);
     return parser.parse(idlContent, filePath);
   }
 

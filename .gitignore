@@ -31,14 +31,22 @@ certs/
 *.crt
 *.key
 
-# Test coverage
-coverage/
 
 # Build outputs
 dist/
 build/
 
+# Test coverage
+coverage/
+
+# Test outputs
+test/output/
+
 # Temporary files
 tmp/
 temp/
 specs/
+
+
+# Tools
+.tools/

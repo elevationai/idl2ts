@@ -6,7 +6,7 @@ export interface ParserOptions {
   filePath?: string;
 }
 
-export class SimpleIDLParser {
+export class IDLParser {
   private input: string;
   private pos: number = 0;
   private tokens: string[] = [];
