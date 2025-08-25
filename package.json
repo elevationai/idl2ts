@@ -1,6 +1,6 @@
 {
   "name": "@elevationai/idl2ts",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CORBA IDL to TypeScript compiler",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,14 @@
     "type": "git",
     "url": "git+https://github.com/elevationai/idl2ts.git"
   },
-  "keywords": ["idl", "corba", "typescript", "compiler", "code-generation", "transpiler"],
+  "keywords": [
+    "idl",
+    "corba",
+    "typescript",
+    "compiler",
+    "code-generation",
+    "transpiler"
+  ],
   "author": "Elevation AI",
   "license": "MIT",
   "bugs": {
