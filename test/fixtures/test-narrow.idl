@@ -1,0 +1,9 @@
+module TestNarrow {
+  interface Base {
+    string getName();
+  };
+  
+  interface Derived : Base {
+    long getValue();
+  };
+};

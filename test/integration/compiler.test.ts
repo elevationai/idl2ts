@@ -179,8 +179,8 @@ describe('IDLCompiler Integration', () => {
         'utf-8'
       );
       
-      expect(output).toContain('import type { CORBA, TypeCode } from "@myorg/corba"');
-      expect(output).toContain('import { create_request } from "@myorg/corba"');
+      expect(output).toContain('import type { TypeCode } from "@myorg/corba"');
+      expect(output).toContain('import { CORBA, create_request } from "@myorg/corba"');
     });
   });
 

@@ -184,10 +184,11 @@ describe('TypeScriptGenerator', () => {
       const matcher = new CodeMatcher(output);
       
       expect(matcher.hasClass('Service_Stub')).toBe(true);
-      expect(output).toContain('export class Service_Stub implements Service');
-      expect(output).toContain('constructor(private objRef: CORBA.ObjectRef)');
+      expect(output).toContain('export class Service_Stub extends CORBA.CorbaStub<Service> implements Service');
+      expect(output).toContain('constructor(ref: CORBA.ObjectRef)');
+      expect(output).toContain('super(ref);');
       expect(output).toContain('async process(data: string): Promise<string>');
-      expect(output).toContain('const request = create_request(this.objRef, "process")');
+      expect(output).toContain('const request = create_request(this._ref, "process")');
       expect(output).toContain('return request.return_value()');
     });
 
@@ -659,8 +660,8 @@ describe('TypeScriptGenerator', () => {
       });
       const tsOutput = output.get('Test.ts') || '';
       
-      expect(tsOutput).toContain('import type { CORBA, TypeCode } from "@myorg/corba-lib"');
-      expect(tsOutput).toContain('import { create_request } from "@myorg/corba-lib"');
+      expect(tsOutput).toContain('import type { TypeCode } from "@myorg/corba-lib"');
+      expect(tsOutput).toContain('import { CORBA, create_request } from "@myorg/corba-lib"');
     });
 
     test('should use default CORBA import path', () => {
@@ -675,8 +676,8 @@ describe('TypeScriptGenerator', () => {
       const output = generateTypeScript(idl);
       const tsOutput = output.get('Test.ts') || '';
       
-      expect(tsOutput).toContain('import type { CORBA, TypeCode } from "corba"');
-      expect(tsOutput).toContain('import { create_request } from "corba"');
+      expect(tsOutput).toContain('import type { TypeCode } from "corba"');
+      expect(tsOutput).toContain('import { CORBA, create_request } from "corba"');
     });
   });
 });
