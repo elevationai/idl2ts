@@ -179,8 +179,8 @@ describe('IDLCompiler Integration', () => {
         'utf-8'
       );
       
-      expect(output).toContain('import type { TypeCode } from "@myorg/corba"');
-      expect(output).toContain('import { CORBA, CorbaStub, create_request } from "@myorg/corba"');
+      // Now we import everything together since we generate interface TypeCodes
+      expect(output).toContain('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba"');
     });
   });
 
@@ -256,7 +256,8 @@ describe('IDLCompiler Integration', () => {
         path.join(tempDir, 'Banking.ts'), 
         'utf-8'
       );
-      expect(bankingOutput).toContain('import type * as Common from "./Common.ts"');
+      // Now we import as value because Common.TC_* TypeCodes are used in stubs
+      expect(bankingOutput).toContain('import * as Common from "./Common.ts"');
       expect(bankingOutput).toContain('export class InsufficientFunds extends CORBA.SystemException');
       expect(bankingOutput).toContain('export interface Account');
       expect(bankingOutput).toContain('export interface Bank');

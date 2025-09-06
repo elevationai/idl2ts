@@ -162,15 +162,13 @@ export class TypeScriptGenerator {
     // Add CORBA import only if needed
     if (module.usesCorba && module.usesCorbaTypes) {
       // Both value and type usage - separate type and value imports
-      lines.push(`import type { TypeCode } from "${this.options.corbaImportPath || 'corba'}";`);
-      lines.push(`import { CORBA, CorbaStub, create_request } from "${this.options.corbaImportPath || 'corba'}";`);
+      lines.push(`import { TypeCode, CORBA, CorbaStub, create_request } from "${this.options.corbaImportPath || 'corba'}";`);
     } else if (module.usesCorbaTypes) {
       // Type-only usage
       lines.push(`import type { CORBA } from "${this.options.corbaImportPath || 'corba'}";`);
     } else if (module.usesCorba) {
       // Value-only usage (rare but possible)
-      lines.push(`import type { TypeCode } from "${this.options.corbaImportPath || 'corba'}";`);
-      lines.push(`import { create_request } from "${this.options.corbaImportPath || 'corba'}";`);
+      lines.push(`import { TypeCode, create_request } from "${this.options.corbaImportPath || 'corba'}";`);
     }
 
     // Add imports from other modules
@@ -197,6 +195,7 @@ export class TypeScriptGenerator {
     if (hasImports) {
       lines.push("");
     }
+    
 
     // Add module content
     for (const line of module.content) {
@@ -330,6 +329,7 @@ export class TypeScriptGenerator {
 
     if (this.options.includeStubs) {
       this.generateClientStub(node);
+      this.generateInterfaceTypeCode(node);
     }
 
     if (this.options.includeSkeletons) {
@@ -378,6 +378,94 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit('}');
     this.emit('');
+    
+    // Generate TypeCode for struct if stubs are enabled
+    if (this.options.includeStubs) {
+      this.generateStructTypeCode(node);
+    }
+  }
+  
+  private generateStructTypeCode(node: AST.StructNode): void {
+    const name = this.getPrefixedName(node.name);
+    const tcName = `TC_${name}`;
+    
+    // Build the repository ID
+    const modulePath = this.currentModule || 'global';
+    const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+    
+    this.emit(`export const ${tcName} = TypeCode.create_struct_tc(`);
+    this.indent();
+    this.emit(`"${repoId}",`);
+    this.emit(`"${node.name}",`);
+    this.emit(`[`);
+    this.indent();
+    
+    for (let i = 0; i < node.members.length; i++) {
+      const member = node.members[i];
+      const memberTc = this.getTypeCodeForType(member.type);
+      this.emit(`{ name: "${member.name}", type: ${memberTc} }${i < node.members.length - 1 ? ',' : ''}`);
+    }
+    
+    this.dedent();
+    this.emit(`]`);
+    this.dedent();
+    this.emit(`);`);
+    this.emit('');
+    this.markCorbaUsed();
+  }
+  
+  private getTypeCodeForType(type: AST.TypeNode): string {
+    switch (type.kind) {
+      case 'primitiveType':
+        switch (type.type) {
+          case 'void': return 'TypeCode.TC_void';
+          case 'short': return 'TypeCode.TC_short';
+          case 'long': return 'TypeCode.TC_long';
+          case 'long long': return 'TypeCode.TC_longlong';
+          case 'unsigned short': return 'TypeCode.TC_ushort';
+          case 'unsigned long': return 'TypeCode.TC_ulong';
+          case 'unsigned long long': return 'TypeCode.TC_ulonglong';
+          case 'float': return 'TypeCode.TC_float';
+          case 'double': return 'TypeCode.TC_double';
+          case 'long double': return 'TypeCode.TC_longdouble';
+          case 'char': return 'TypeCode.TC_char';
+          case 'wchar': return 'TypeCode.TC_wchar';
+          case 'boolean': return 'TypeCode.TC_boolean';
+          case 'octet': return 'TypeCode.TC_octet';
+          case 'any': return 'TypeCode.TC_any';
+          case 'Object': return 'new TypeCode(TypeCode.Kind.tk_objref)';
+          default: return 'TypeCode.TC_any';
+        }
+      case 'stringType':
+        return type.type === 'wstring' ? 'TypeCode.TC_wstring' : 'TypeCode.TC_string';
+      case 'namedType':
+        // Check if this is a nested type that was prefixed
+        const prefixedName = this.nestedTypes.get(type.name);
+        if (prefixedName) {
+          // Use the prefixed name for the TypeCode
+          return `TC_${prefixedName}`;
+        }
+        
+        // Reference to another type's TypeCode
+        const typeName = this.resolveTypeName(type.name, false); // false = not type-only, we need the value
+        if (typeName.includes('.')) {
+          // Cross-module reference
+          const parts = typeName.split('.');
+          // Ensure we have a value import for the module (for TypeCodes)
+          this.addImport(parts[0], false);
+          return `${parts[0]}.TC_${parts[1]}`;
+        }
+        return `TC_${typeName}`;
+      case 'sequenceType':
+        const elemTc = this.getTypeCodeForType(type.elementType);
+        return `TypeCode.create_sequence_tc(${elemTc}, ${type.bound || 0})`;
+      case 'arrayType':
+        return 'TC_any'; // TODO: implement array TypeCode
+      case 'fixedType':
+        return 'TC_any'; // TODO: implement fixed TypeCode
+      default:
+        return 'TC_any';
+    }
   }
 
   private generateUnion(node: AST.UnionNode): void {
@@ -406,6 +494,59 @@ export class TypeScriptGenerator {
     }
     this.dedent();
     this.emit('');
+    
+    // Generate TypeCode for union if stubs are enabled
+    if (this.options.includeStubs) {
+      this.generateUnionTypeCode(node);
+    }
+  }
+  
+  private generateUnionTypeCode(node: AST.UnionNode): void {
+    const name = this.getPrefixedName(node.name);
+    const tcName = `TC_${name}`;
+    
+    // Build the repository ID
+    const modulePath = this.currentModule || 'global';
+    const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+    
+    // Get the discriminator TypeCode
+    const discriminatorTypeCode = this.getTypeCodeForType(node.discriminatorType);
+    
+    this.emit(`export const ${tcName} = TypeCode.create_union_tc(`);
+    this.indent();
+    this.emit(`"${repoId}",`);
+    this.emit(`"${node.name}",`);
+    this.emit(`${discriminatorTypeCode},`);
+    this.emit(`[`);
+    this.indent();
+    
+    // Generate union members
+    const members: string[] = [];
+    for (const caseNode of node.cases) {
+      if (caseNode.member) {
+        for (const label of caseNode.labels) {
+          const labelValue = typeof label === 'string' ? `"${label}"` : label;
+          const memberTypeCode = this.getTypeCodeForType(caseNode.member.type);
+          members.push(`{ label: ${labelValue}, name: "${caseNode.member.name}", type: ${memberTypeCode} }`);
+        }
+      }
+    }
+    
+    for (let i = 0; i < members.length; i++) {
+      if (i < members.length - 1) {
+        this.emit(`${members[i]},`);
+      } else {
+        this.emit(`${members[i]}`);
+      }
+    }
+    
+    this.dedent();
+    this.emit(`]`);
+    this.dedent();
+    this.emit(`);`);
+    this.emit('');
+    
+    this.markCorbaUsed();
   }
 
   private generateEnum(node: AST.EnumNode): void {
@@ -421,6 +562,21 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit('}');
     this.emit('');
+    
+    // Generate TypeCode for enum if stubs are enabled
+    if (this.options.includeStubs) {
+      const modulePath = this.currentModule || 'global';
+      const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+      this.emit(`export const TC_${name} = TypeCode.create_enum_tc(`);
+      this.indent();
+      this.emit(`"${repoId}",`);
+      this.emit(`"${node.name}",`);
+      this.emit(`[${node.members.map(m => `"${m}"`).join(', ')}]`);
+      this.dedent();
+      this.emit(`);`);
+      this.emit('');
+      this.markCorbaUsed();
+    }
   }
 
   private generateTypedef(node: AST.TypedefNode): void {
@@ -428,6 +584,14 @@ export class TypeScriptGenerator {
     const tsType = this.mapType(node.type);
     this.emit(`export type ${name} = ${tsType};`);
     this.emit('');
+    
+    // Generate TypeCode alias for typedef if stubs are enabled
+    if (this.options.includeStubs) {
+      const baseTypeCode = this.getTypeCodeForType(node.type);
+      this.emit(`export const TC_${name} = ${baseTypeCode};`);
+      this.emit('');
+      this.markCorbaUsed();
+    }
   }
 
   private generateConstant(node: AST.ConstantNode): void {
@@ -499,6 +663,25 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit('}');
     this.emit('');
+  }
+
+  private generateInterfaceTypeCode(node: AST.InterfaceNode): void {
+    const name = this.getPrefixedName(node.name);
+    const tcName = `TC_${name}`;
+    
+    // Build the repository ID
+    const modulePath = this.currentModule || 'global';
+    const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+    
+    this.emit(`export const ${tcName} = TypeCode.create_interface_tc(`);
+    this.indent();
+    this.emit(`"${repoId}",`);
+    this.emit(`"${node.name}"`);
+    this.dedent();
+    this.emit(`);`);
+    this.emit('');
+    
+    this.markCorbaUsed();
   }
 
   private generateClientStub(node: AST.InterfaceNode): void {
@@ -601,10 +784,12 @@ export class TypeScriptGenerator {
 
     for (const param of node.parameters) {
       if (param.direction === 'in' || param.direction === 'inout') {
-        this.emit(`request.add_named_in_arg("${param.name}", ${param.name}, undefined as unknown as TypeCode);`);
+        const typeCode = this.getTypeCodeForType(param.type);
+        this.emit(`request.add_named_in_arg("${param.name}", ${param.name}, ${typeCode});`);
       }
       if (param.direction === 'out' || param.direction === 'inout') {
-        this.emit(`request.add_out_arg(undefined as unknown as TypeCode);`);
+        const typeCode = this.getTypeCodeForType(param.type);
+        this.emit(`request.add_out_arg(${typeCode});`);
       }
     }
 
@@ -646,7 +831,8 @@ export class TypeScriptGenerator {
       this.indent();
       this.emit(`const request = create_request(this._ref, "_set_${node.name}");`);
       this.markCorbaUsed(); // Using create_request function
-      this.emit(`request.add_named_in_arg("value", value, undefined as unknown as TypeCode);`);
+      const typeCode = this.getTypeCodeForType(node.type);
+      this.emit(`request.add_named_in_arg("value", value, ${typeCode});`);
       this.emit('await request.invoke();');
       this.dedent();
       this.emit('}');

@@ -558,8 +558,8 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const serviceOutput = results.get('Service.ts') || '';
 
-      // Should use 'import type' for type-only imports
-      expect(serviceOutput).toContain('import type * as Types from "./Types.ts"');
+      // Should use regular import because Types.TC_Data is used as a value in the stub
+      expect(serviceOutput).toContain('import * as Types from "./Types.ts"');
     });
 
     test('should use regular imports when needed for values', () => {
@@ -657,8 +657,8 @@ describe('TypeScriptGenerator', () => {
       });
       const tsOutput = output.get('Test.ts') || '';
 
-      expect(tsOutput).toContain('import type { TypeCode } from "@myorg/corba-lib"');
-      expect(tsOutput).toContain('import { CORBA, CorbaStub, create_request } from "@myorg/corba-lib"');
+      // Now we import everything together since we generate interface TypeCodes
+      expect(tsOutput).toContain('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba-lib"');
     });
 
     test('should use default CORBA import path', () => {
@@ -673,8 +673,8 @@ describe('TypeScriptGenerator', () => {
       const output = generateTypeScript(idl);
       const tsOutput = output.get('Test.ts') || '';
 
-      expect(tsOutput).toContain('import type { TypeCode } from "corba"');
-      expect(tsOutput).toContain('import { CORBA, CorbaStub, create_request } from "corba"');
+      // Now we import everything together since we generate interface TypeCodes
+      expect(tsOutput).toContain('import { TypeCode, CORBA, CorbaStub, create_request } from "corba"');
     });
   });
 });
