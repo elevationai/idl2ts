@@ -36,7 +36,8 @@ export class IDLParser {
     
     return {
       kind: 'specification',
-      definitions
+      definitions,
+      pragmas: preprocessed.pragmas
     };
   }
 

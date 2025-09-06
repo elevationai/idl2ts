@@ -1,0 +1,65 @@
+// Test IDL file for pragma directives
+
+#pragma prefix "com.example.test"
+#pragma version TestInterface 2.1
+#pragma ID CustomInterface "IDL:custom/location/CustomInterface:3.0"
+#pragma inhibit_code_generation InhibitedInterface
+
+module TestModule {
+  
+  // Interface with custom version from pragma
+  interface TestInterface {
+    void testMethod();
+  };
+  
+  // Interface with custom repository ID from pragma
+  interface CustomInterface {
+    string getName();
+  };
+  
+  // Interface that should not generate code
+  interface InhibitedInterface {
+    void neverGenerated();
+  };
+  
+  // Regular interface with prefix applied
+  interface RegularInterface {
+    long getValue();
+  };
+  
+  // Struct to test prefix on non-interfaces
+  struct TestStruct {
+    string field1;
+    long field2;
+  };
+  
+  // Enum to test prefix
+  enum TestEnum {
+    OPTION_ONE,
+    OPTION_TWO,
+    OPTION_THREE
+  };
+  
+  // Union to test prefix
+  union TestUnion switch (TestEnum) {
+    case OPTION_ONE:
+      string stringValue;
+    case OPTION_TWO:
+      long longValue;
+    default:
+      boolean boolValue;
+  };
+};
+
+// Test global inhibit pragma
+#pragma inhibit_code_generation
+
+module InhibitedModule {
+  interface ShouldNotGenerate {
+    void test();
+  };
+  
+  struct AlsoNotGenerated {
+    string value;
+  };
+};

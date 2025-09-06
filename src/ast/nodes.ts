@@ -24,6 +24,7 @@ export interface BaseNode {
 export interface SpecificationNode extends BaseNode {
   kind: 'specification';
   definitions: DefinitionNode[];
+  pragmas?: Map<string, string>;  // Global pragmas like prefix
 }
 
 export type DefinitionNode = 

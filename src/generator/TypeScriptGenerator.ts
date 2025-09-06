@@ -35,6 +35,8 @@ export class TypeScriptGenerator {
   private rootModule: ModuleOutput | null = null;
   private nestedTypes: Map<string, string> = new Map(); // Maps nested type to parent_type
   private currentModuleOutput: ModuleOutput | null = null; // Current module being generated
+  private pragmas: Map<string, string> = new Map(); // Store global pragmas
+  private scopedPragmas: Map<string, Map<string, string>> = new Map(); // Store scoped pragmas (version, ID)
 
   constructor(options: GeneratorOptions = {}) {
     this.options = {
@@ -96,6 +98,12 @@ export class TypeScriptGenerator {
     this.indentLevel = 0;
     this.modules.clear();
     this.currentModule = '';
+    
+    // Store pragmas from the AST
+    if (ast.pragmas) {
+      this.pragmas = new Map(ast.pragmas);
+      this.processPragmas(ast.pragmas);
+    }
 
     // Initialize root module for top-level definitions
     this.rootModule = {
@@ -236,6 +244,11 @@ export class TypeScriptGenerator {
   }
 
   private generateModule(node: AST.ModuleNode): void {
+    // Check if code generation is inhibited globally
+    if (this.shouldInhibitCodeGeneration()) {
+      return;
+    }
+    
     // Save current context
     const savedOutput = this.output;
     const savedModule = this.currentModule;
@@ -279,6 +292,11 @@ export class TypeScriptGenerator {
   }
 
   private generateInterface(node: AST.InterfaceNode): void {
+    // Check if code generation is inhibited for this type
+    if (this.shouldInhibitCodeGeneration(node.name)) {
+      return;
+    }
+    
     // First, extract and generate any nested types with prefixed names
     for (const member of node.members) {
       if (member.kind === 'enum' || member.kind === 'struct' ||
@@ -366,6 +384,10 @@ export class TypeScriptGenerator {
   }
 
   private generateStruct(node: AST.StructNode): void {
+    // Check if code generation is inhibited for this type
+    if (this.shouldInhibitCodeGeneration(node.name)) {
+      return;
+    }
     const name = this.getPrefixedName(node.name);
     this.emit(`export interface ${name} {`);
     this.indent();
@@ -385,13 +407,95 @@ export class TypeScriptGenerator {
     }
   }
   
+  private processPragmas(pragmas: Map<string, string>): void {
+    // Process version and ID pragmas
+    for (const [key, value] of pragmas) {
+      if (key === 'version') {
+        // Format: #pragma version InterfaceName major.minor
+        const parts = value.split(' ');
+        if (parts.length >= 2) {
+          const typeName = parts[0];
+          const version = parts[1];
+          if (!this.scopedPragmas.has(typeName)) {
+            this.scopedPragmas.set(typeName, new Map());
+          }
+          this.scopedPragmas.get(typeName)!.set('version', version);
+        }
+      } else if (key === 'ID') {
+        // Format: #pragma ID InterfaceName "IDL:custom/path:1.0"
+        const parts = value.split(' ');
+        if (parts.length >= 2) {
+          const typeName = parts[0];
+          const customId = parts.slice(1).join(' ').replace(/"/g, '');
+          if (!this.scopedPragmas.has(typeName)) {
+            this.scopedPragmas.set(typeName, new Map());
+          }
+          this.scopedPragmas.get(typeName)!.set('ID', customId);
+        }
+      } else if (key === 'inhibit_code_generation') {
+        // Format: #pragma inhibit_code_generation [TypeName]
+        // If TypeName is provided, only that type is inhibited
+        // Otherwise, all following types are inhibited
+        if (value && value.trim()) {
+          const typeName = value.trim();
+          if (!this.scopedPragmas.has(typeName)) {
+            this.scopedPragmas.set(typeName, new Map());
+          }
+          this.scopedPragmas.get(typeName)!.set('inhibit', 'true');
+        } else {
+          // Global inhibit - mark in global pragmas
+          this.pragmas.set('global_inhibit', 'true');
+        }
+      }
+    }
+  }
+  
+  private shouldInhibitCodeGeneration(typeName?: string): boolean {
+    // Check global inhibit
+    if (this.pragmas.get('global_inhibit') === 'true') {
+      return true;
+    }
+    
+    // Check type-specific inhibit
+    if (typeName) {
+      const typePragmas = this.scopedPragmas.get(typeName);
+      if (typePragmas?.get('inhibit') === 'true') {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  private getRepositoryId(typeName: string, defaultVersion: string = '1.0'): string {
+    // Check for custom ID pragma
+    const typePragmas = this.scopedPragmas.get(typeName);
+    if (typePragmas?.has('ID')) {
+      return typePragmas.get('ID')!;
+    }
+    
+    // Build repository ID with prefix
+    const prefix = this.pragmas.get('prefix');
+    const modulePath = this.currentModule || 'global';
+    
+    // Check for version pragma
+    const version = typePragmas?.get('version') || defaultVersion;
+    
+    if (prefix) {
+      // With prefix: IDL:prefix/module/type:version
+      return `IDL:${prefix}/${modulePath}/${typeName}:${version}`;
+    } else {
+      // Without prefix: IDL:module/type:version
+      return `IDL:${modulePath}/${typeName}:${version}`;
+    }
+  }
+
   private generateStructTypeCode(node: AST.StructNode): void {
     const name = this.getPrefixedName(node.name);
     const tcName = `TC_${name}`;
     
-    // Build the repository ID
-    const modulePath = this.currentModule || 'global';
-    const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+    // Build the repository ID using pragma-aware method
+    const repoId = this.getRepositoryId(node.name);
     
     this.emit(`export const ${tcName} = TypeCode.create_struct_tc(`);
     this.indent();
@@ -469,6 +573,10 @@ export class TypeScriptGenerator {
   }
 
   private generateUnion(node: AST.UnionNode): void {
+    // Check if code generation is inhibited for this type
+    if (this.shouldInhibitCodeGeneration(node.name)) {
+      return;
+    }
     const name = this.getPrefixedName(node.name);
     this.emit(`export type ${name} =`);
     this.indent();
@@ -505,9 +613,8 @@ export class TypeScriptGenerator {
     const name = this.getPrefixedName(node.name);
     const tcName = `TC_${name}`;
     
-    // Build the repository ID
-    const modulePath = this.currentModule || 'global';
-    const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+    // Build the repository ID using pragma-aware method
+    const repoId = this.getRepositoryId(node.name);
     
     // Get the discriminator TypeCode
     const discriminatorTypeCode = this.getTypeCodeForType(node.discriminatorType);
@@ -550,6 +657,10 @@ export class TypeScriptGenerator {
   }
 
   private generateEnum(node: AST.EnumNode): void {
+    // Check if code generation is inhibited for this type
+    if (this.shouldInhibitCodeGeneration(node.name)) {
+      return;
+    }
     const name = this.getPrefixedName(node.name);
     this.emit(`export enum ${name} {`);
     this.indent();
@@ -565,8 +676,7 @@ export class TypeScriptGenerator {
     
     // Generate TypeCode for enum if stubs are enabled
     if (this.options.includeStubs) {
-      const modulePath = this.currentModule || 'global';
-      const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+      const repoId = this.getRepositoryId(node.name);
       this.emit(`export const TC_${name} = TypeCode.create_enum_tc(`);
       this.indent();
       this.emit(`"${repoId}",`);
@@ -669,9 +779,8 @@ export class TypeScriptGenerator {
     const name = this.getPrefixedName(node.name);
     const tcName = `TC_${name}`;
     
-    // Build the repository ID
-    const modulePath = this.currentModule || 'global';
-    const repoId = `IDL:${modulePath}/${node.name}:1.0`;
+    // Build the repository ID using pragma-aware method
+    const repoId = this.getRepositoryId(node.name);
     
     this.emit(`export const ${tcName} = TypeCode.create_interface_tc(`);
     this.indent();
@@ -686,8 +795,7 @@ export class TypeScriptGenerator {
 
   private generateClientStub(node: AST.InterfaceNode): void {
     const name = this.getPrefixedName(node.name);
-    const moduleName = this.currentModule || 'IDL';
-    const repositoryId = `IDL:${moduleName}/${node.name}:1.0`;
+    const repositoryId = this.getRepositoryId(node.name);
 
     // Check if any methods conflict with CorbaStub base class methods
     // CorbaStub implements Object which has: release(), duplicate(), hash(), etc.
