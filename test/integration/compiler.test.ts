@@ -180,7 +180,7 @@ describe('IDLCompiler Integration', () => {
       );
       
       expect(output).toContain('import type { TypeCode } from "@myorg/corba"');
-      expect(output).toContain('import { CORBA, create_request } from "@myorg/corba"');
+      expect(output).toContain('import { CORBA, CorbaStub, create_request } from "@myorg/corba"');
     });
   });
 

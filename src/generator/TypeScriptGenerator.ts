@@ -163,7 +163,7 @@ export class TypeScriptGenerator {
     if (module.usesCorba && module.usesCorbaTypes) {
       // Both value and type usage - separate type and value imports
       lines.push(`import type { TypeCode } from "${this.options.corbaImportPath || 'corba'}";`);
-      lines.push(`import { CORBA, create_request } from "${this.options.corbaImportPath || 'corba'}";`);
+      lines.push(`import { CORBA, CorbaStub, create_request } from "${this.options.corbaImportPath || 'corba'}";`);
     } else if (module.usesCorbaTypes) {
       // Type-only usage
       lines.push(`import type { CORBA } from "${this.options.corbaImportPath || 'corba'}";`);
@@ -506,26 +506,64 @@ export class TypeScriptGenerator {
     const moduleName = this.currentModule || 'IDL';
     const repositoryId = `IDL:${moduleName}/${node.name}:1.0`;
 
-    this.emit(`export class ${name}_Stub extends CORBA.CorbaStub<${name}> implements ${name} {`);
-    this.indent();
+    // Check if any methods conflict with CorbaStub base class methods
+    // CorbaStub implements Object which has: release(), duplicate(), hash(), etc.
+    const allMembers = this.collectInterfaceMembers(node);
+    const corbaObjectMethods = ['release', 'duplicate', 'hash', 'is_nil', 'is_equivalent', 'is_a', 'non_existent', 
+                                'get_interface', 'get_policy', 'get_domain_managers', 'set_policy_overrides',
+                                'get_client_policy', 'get_policy_overrides', 'validate_connection', 
+                                'get_component', 'get_type_id', '_get_interface_id'];
+    
+    const hasMethodConflict = allMembers.some(m => 
+      m.kind === 'operation' && corbaObjectMethods.includes(m.name)
+    );
 
-    // Static repository ID for narrow
-    this.emit(`static readonly _repository_id = "${repositoryId}";`);
-    this.emit('');
+    // If there's a method conflict, we can't extend CorbaStub due to potential signature incompatibility
+    // Instead, implement the interface directly and provide our own narrow() method
+    if (hasMethodConflict) {
+      this.emit(`export class ${name}_Stub implements ${name} {`);
+      this.indent();
+      
+      // Static repository ID
+      this.emit(`static readonly _repository_id = "${repositoryId}";`);
+      this.emit('');
+      
+      // Store the object reference
+      this.emit('constructor(protected readonly _ref: CORBA.ObjectRef) {}');
+      this.emit('');
+      
+      // Implement our own narrow() since we can't inherit from CorbaStub
+      this.emit(`static narrow(obj: CORBA.ObjectRef | null | undefined): ${name}_Stub | null {`);
+      this.indent();
+      this.emit('if (!obj) return null;');
+      this.emit(`return new ${name}_Stub(obj);`);
+      this.dedent();
+      this.emit('}');
+      this.emit('');
+      
+      // Add index signature to match CORBA.ObjectRef interface
+      this.emit('[key: string]: unknown;');
+      this.emit('');
+    } else {
+      // No conflicts, use CorbaStub as base class
+      this.emit(`export class ${name}_Stub extends CorbaStub implements ${name} {`);
+      this.indent();
 
-    // Constructor calls super
-    this.emit('constructor(ref: CORBA.ObjectRef) {');
-    this.indent();
-    this.emit('super(ref);');
-    this.dedent();
-    this.emit('}');
-    this.emit('');
+      // Static repository ID for narrow (override from base class)
+      this.emit(`static override readonly _repository_id = "${repositoryId}";`);
+      this.emit('');
+
+      // Constructor calls super
+      this.emit('constructor(ref: CORBA.ObjectRef) {');
+      this.indent();
+      this.emit('super(ref);');
+      this.dedent();
+      this.emit('}');
+      this.emit('');
+    }
 
     this.markCorbaUsed();
     this.markCorbaTypeUsed();
-
-    // Collect all operations and attributes from this interface and its inheritance hierarchy
-    const allMembers = this.collectInterfaceMembers(node);
 
     // Generate stub implementations for all members
     for (let i = 0; i < allMembers.length; i++) {

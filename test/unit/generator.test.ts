@@ -1,11 +1,8 @@
-import { TypeScriptGenerator } from '../../src/generator/TypeScriptGenerator';
-import { 
-  parseIDL, 
+import {
   generateTypeScript,
   compile,
   compileToString,
   CodeMatcher,
-  normalizeWhitespace 
 } from '../helpers/test-utils';
 
 describe('TypeScriptGenerator', () => {
@@ -33,10 +30,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
       const matcher = new CodeMatcher(output);
-      
+
       expect(output).toContain('getShort(): Promise<number>');
       expect(output).toContain('getLong(): Promise<number>');
       expect(output).toContain('getLongLong(): Promise<bigint>');
@@ -69,9 +66,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export type LongSeq = number[]');
       expect(output).toContain('export type StringSeq = string[]');
       expect(output).toContain('export type NestedSeq = number[][]');
@@ -91,9 +88,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export type LongArray = number[]');
       expect(output).toContain('export type StringMatrix = string[][]');
     });
@@ -106,10 +103,10 @@ describe('TypeScriptGenerator', () => {
           const long VERSION = 1;
         };
       `;
-      
+
       const output = compileToString(idl, 'TestModule');
       const matcher = new CodeMatcher(output);
-      
+
       // Modules create separate files with ES module exports
       expect(output).not.toContain('namespace');
       expect(output).toContain('export const VERSION: number = 1');
@@ -123,9 +120,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const result = compile(idl, 'Outer');
-      
+
       // Nested modules should create separate files
       expect(result.has('Outer.ts')).toBe(true);
       expect(result.has('Inner.ts')).toBe(true);
@@ -141,10 +138,10 @@ describe('TypeScriptGenerator', () => {
           const long SECOND = 2;
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       expect(output).toContain('export const FIRST: number = 1');
       expect(output).toContain('export const SECOND: number = 2');
     });
@@ -161,10 +158,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
       const matcher = new CodeMatcher(output);
-      
+
       expect(matcher.hasInterface('Calculator')).toBe(true);
       expect(output).toContain('add(a: number, b: number): Promise<number>');
       expect(output).toContain('subtract(a: number, b: number): Promise<number>');
@@ -179,12 +176,12 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
       const matcher = new CodeMatcher(output);
-      
+
       expect(matcher.hasClass('Service_Stub')).toBe(true);
-      expect(output).toContain('export class Service_Stub extends CORBA.CorbaStub<Service> implements Service');
+      expect(output).toContain('export class Service_Stub extends CorbaStub implements Service');
       expect(output).toContain('constructor(ref: CORBA.ObjectRef)');
       expect(output).toContain('super(ref);');
       expect(output).toContain('async process(data: string): Promise<string>');
@@ -200,10 +197,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = generateTypeScript(idl, { includeStubs: false });
       const tsOutput = output.get('Test.ts') || '';
-      
+
       expect(tsOutput).not.toContain('Service_Stub');
     });
 
@@ -219,9 +216,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export interface Derived extends Base');
     });
 
@@ -234,9 +231,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('readonly id: string');
       expect(output).toContain('balance: number');
     });
@@ -253,13 +250,13 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       // Exceptions are generated as classes extending CORBA.SystemException
       expect(output).toContain('export class DivisionByZero extends CORBA.SystemException');
       expect(output).toContain('message: string');
-      
+
       // Method signature doesn't change for raises
       expect(output).toContain('divide(a: number, b: number): Promise<number>');
     });
@@ -273,9 +270,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       // Both should have Promise<void> return type
       expect(output).toContain('fireAndForget(message: string): Promise<void>');
       expect(output).toContain('normalMethod(message: string): Promise<void>');
@@ -293,10 +290,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
       const matcher = new CodeMatcher(output);
-      
+
       expect(matcher.hasInterface('Point')).toBe(true);
       expect(output).toContain('export interface Point');
       expect(output).toContain('x: number');
@@ -318,9 +315,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export interface Outer');
       expect(output).toContain('name: string');
       expect(output).toContain('inner: Inner');
@@ -340,10 +337,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
       const matcher = new CodeMatcher(output);
-      
+
       expect(matcher.hasEnum('Status')).toBe(true);
       expect(output).toContain('export enum Status');
       expect(output).toContain('PENDING = 0');
@@ -365,9 +362,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export type Value =');
       expect(output).toContain('{ discriminator: 1; intValue: number }');
       expect(output).toContain('{ discriminator: 2; floatValue: number }');
@@ -387,9 +384,9 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export type Data =');
       expect(output).toContain('{ discriminator: "INT"; intData: number }');
       expect(output).toContain('{ discriminator: "FLOAT"; floatData: number }');
@@ -410,9 +407,9 @@ describe('TypeScriptGenerator', () => {
           const boolean BOOL_VAL = TRUE;
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('export const SHORT_VAL: number = 100');
       expect(output).toContain('export const LONG_VAL: number = 1000000');
       expect(output).toContain('export const BIG_VAL: bigint = 9999999999');
@@ -438,10 +435,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const businessOutput = results.get('Business.ts') || '';
-      
+
       expect(businessOutput).toContain('import type * as Common from "./Common.ts"');
       expect(businessOutput).toContain('getTime(): Promise<Common.Timestamp>');
     });
@@ -460,10 +457,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const derivedOutput = results.get('Derived.ts') || '';
-      
+
       expect(derivedOutput).toContain('import type * as Base from "./Base.ts"');
       expect(derivedOutput).toContain('export interface IDerived extends Base.IBase');
     });
@@ -479,15 +476,15 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       // Nested enum should be flattened
       expect(output).toContain('export enum Container_Status');
       expect(output).toContain('READY = 0');
       expect(output).toContain('BUSY = 1');
       expect(output).toContain('ERROR = 2');
-      
+
       // Interface should reference flattened type
       expect(output).toContain('getStatus(): Promise<Container_Status>');
     });
@@ -504,14 +501,14 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       // Nested struct should be flattened
       expect(output).toContain('export interface Container_Config');
       expect(output).toContain('name: string');
       expect(output).toContain('value: number');
-      
+
       // Interface should reference flattened type
       expect(output).toContain('getConfig(): Promise<Container_Config>');
     });
@@ -529,13 +526,13 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = compileToString(idl, 'Characteristics');
-      
+
       // Should have both MediaType interface and MediaOutput_MediaType enum
       expect(output).toContain('export interface MediaType');
       expect(output).toContain('export enum MediaOutput_MediaType');
-      
+
       // MediaOutput should use the nested enum type
       expect(output).toContain('get_type(): Promise<MediaOutput_MediaType>');
     });
@@ -557,10 +554,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const serviceOutput = results.get('Service.ts') || '';
-      
+
       // Should use 'import type' for type-only imports
       expect(serviceOutput).toContain('import type * as Types from "./Types.ts"');
     });
@@ -575,10 +572,10 @@ describe('TypeScriptGenerator', () => {
           const long LOCAL = ::Constants::VALUE;
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const serviceOutput = results.get('Service.ts') || '';
-      
+
       // Should use regular import when constants are referenced
       // But in this case, constants are copied by value, so might still be type import
       expect(serviceOutput).toMatch(/import (type )?\* as Constants from "\.\/Constants\.ts"/);
@@ -594,10 +591,10 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const outputWithHelpers = generateTypeScript(idl, { emitHelpers: true });
       const outputWithoutHelpers = generateTypeScript(idl, { emitHelpers: false });
-      
+
       // This depends on what helpers are implemented
       // For now, just check that the option is respected
       expect(outputWithHelpers.get('Test.ts')).toBeDefined();
@@ -620,9 +617,9 @@ describe('TypeScriptGenerator', () => {
           const long C = 3;
         };
       `;
-      
+
       const results = generateTypeScript(idl);
-      
+
       expect(results.has('ModuleA.ts')).toBe(true);
       expect(results.has('ModuleB.ts')).toBe(true);
       expect(results.has('ModuleC.ts')).toBe(true);
@@ -635,9 +632,9 @@ describe('TypeScriptGenerator', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const output = compileToString(idl, 'Test');
-      
+
       expect(output).toContain('/**');
       expect(output).toContain('* This file was automatically generated');
       expect(output).toContain('* DO NOT EDIT THIS FILE DIRECTLY');
@@ -654,14 +651,14 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
-      const output = generateTypeScript(idl, { 
+
+      const output = generateTypeScript(idl, {
         corbaImportPath: '@myorg/corba-lib'
       });
       const tsOutput = output.get('Test.ts') || '';
-      
+
       expect(tsOutput).toContain('import type { TypeCode } from "@myorg/corba-lib"');
-      expect(tsOutput).toContain('import { CORBA, create_request } from "@myorg/corba-lib"');
+      expect(tsOutput).toContain('import { CORBA, CorbaStub, create_request } from "@myorg/corba-lib"');
     });
 
     test('should use default CORBA import path', () => {
@@ -672,12 +669,12 @@ describe('TypeScriptGenerator', () => {
           };
         };
       `;
-      
+
       const output = generateTypeScript(idl);
       const tsOutput = output.get('Test.ts') || '';
-      
+
       expect(tsOutput).toContain('import type { TypeCode } from "corba"');
-      expect(tsOutput).toContain('import { CORBA, create_request } from "corba"');
+      expect(tsOutput).toContain('import { CORBA, CorbaStub, create_request } from "corba"');
     });
   });
 });
