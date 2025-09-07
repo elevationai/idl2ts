@@ -128,10 +128,31 @@ module TestModule {
       expect(moduleCode).toContain('interface GeneratedInterface');
     });
     
-    // Note: Global inhibit after modules is not supported yet
-    // The preprocessor collects all pragmas at the beginning,
-    // so we can't track position-dependent pragmas properly.
-    // This is a known limitation.
+    it('should not generate any code after global inhibit pragma', () => {
+      const idl = `
+module GeneratedModule {
+  interface GeneratedInterface {
+    void test();
+  };
+};
+
+#pragma inhibit_code_generation
+
+module InhibitedModule {
+  interface ShouldNotGenerate {
+    void test();
+  };
+};`;
+      
+      const ast = parser.parse(idl);
+      const result = generator.generate(ast);
+      
+      // GeneratedModule should exist
+      expect(result.get('GeneratedModule.ts')).toBeDefined();
+      
+      // InhibitedModule should not be generated
+      expect(result.get('InhibitedModule.ts')).toBeUndefined();
+    });
   });
   
   describe('Real-world CUSS IDL', () => {

@@ -133,13 +133,18 @@ export class IDLPreprocessor {
       
       // Handle #pragma
       if (line.startsWith('#pragma')) {
-        const pragmaMatch = line.match(/#pragma\s+(\w+)\s+(.*)/);
+        const pragmaMatch = line.match(/#pragma\s+(\w+)(?:\s+(.*))?/);
         if (pragmaMatch) {
           const pragmaType = pragmaMatch[1];
-          const pragmaValue = pragmaMatch[2].trim().replace(/"/g, '');
+          const pragmaValue = pragmaMatch[2] ? pragmaMatch[2].trim().replace(/"/g, '') : '';
           this.pragmas.set(pragmaType, pragmaValue);
           
-          // Pragma is stored in this.pragmas, no need to add as comment
+          // For position-dependent pragmas like inhibit_code_generation,
+          // inject a marker into the content
+          if (pragmaType === 'inhibit_code_generation' && pragmaValue === '') {
+            // Global inhibit - inject marker
+            processedLines.push(`__PRAGMA_GLOBAL_INHIBIT__`);
+          }
         }
         continue;
       }

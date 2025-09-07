@@ -244,11 +244,6 @@ export class TypeScriptGenerator {
   }
 
   private generateModule(node: AST.ModuleNode): void {
-    // Check if code generation is inhibited globally
-    if (this.shouldInhibitCodeGeneration()) {
-      return;
-    }
-    
     // Save current context
     const savedOutput = this.output;
     const savedModule = this.currentModule;

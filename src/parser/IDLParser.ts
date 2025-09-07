@@ -11,6 +11,7 @@ export class IDLParser {
   private tokens: string[] = [];
   private currentToken: number = 0;
   private preprocessor: IDLPreprocessor;
+  private globalInhibit: boolean = false;
 
   constructor(options: ParserOptions = {}) {
     this.input = '';
@@ -22,17 +23,34 @@ export class IDLParser {
     const preprocessed = this.preprocessor.preprocess(input, filePath);
     this.input = preprocessed.processedContent;
     
+    
     this.tokenize();
     this.currentToken = 0;
+    
     
     const definitions: AST.DefinitionNode[] = [];
     
     while (this.currentToken < this.tokens.length) {
+      // Check for pragma markers
+      if (this.peek() === '__PRAGMA_GLOBAL_INHIBIT__') {
+        this.consume('__PRAGMA_GLOBAL_INHIBIT__');
+        this.globalInhibit = true;
+        // Stop processing entirely after global inhibit
+        break;
+      }
+      
+      // Skip definitions if global inhibit is active
+      if (this.globalInhibit) {
+        // This shouldn't be reached now, but keep as safety
+        break;
+      }
+      
       const def = this.parseDefinition();
       if (def) {
         definitions.push(def);
       }
     }
+    
     
     return {
       kind: 'specification',
@@ -47,12 +65,14 @@ export class IDLParser {
       .replace(/\/\/.*$/gm, '')
       .replace(/\/\*[\s\S]*?\*\//g, '');
     
-    const tokenPattern = /"[^"]*"|'[^']*'|::|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+\.?[0-9]*|[{}();,<>[\]=]|./gm;
+    // Modified pattern to explicitly match our pragma marker
+    const tokenPattern = /__PRAGMA_GLOBAL_INHIBIT__|"[^"]*"|'[^']*'|::|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+\.?[0-9]*|[{}();,<>[\]=]|./gm;
     const matches = cleanInput.match(tokenPattern) || [];
     
     this.tokens = matches.filter(token => {
       return !token.match(/^\s+$/);
     });
+    
   }
 
   private peek(offset: number = 0): string {
