@@ -98,7 +98,7 @@ export class TypeScriptGenerator {
     this.indentLevel = 0;
     this.modules.clear();
     this.currentModule = '';
-    
+
     // Store pragmas from the AST
     if (ast.pragmas) {
       this.pragmas = new Map(ast.pragmas);
@@ -203,7 +203,7 @@ export class TypeScriptGenerator {
     if (hasImports) {
       lines.push("");
     }
-    
+
 
     // Add module content
     for (const line of module.content) {
@@ -291,7 +291,7 @@ export class TypeScriptGenerator {
     if (this.shouldInhibitCodeGeneration(node.name)) {
       return;
     }
-    
+
     // First, extract and generate any nested types with prefixed names
     for (const member of node.members) {
       if (member.kind === 'enum' || member.kind === 'struct' ||
@@ -358,9 +358,29 @@ export class TypeScriptGenerator {
       return paramName;
     }).join(', ');
 
-    const returnType = node.isOneway
-      ? 'Promise<void>'
-      : `Promise<${this.mapType(node.returnType, true)}>`;
+    // Check if we have out parameters
+    const outParams = node.parameters.filter(p => p.direction === 'out' || p.direction === 'inout');
+    const hasReturn = node.returnType.kind !== 'primitiveType' || node.returnType.type !== 'void';
+
+    let returnType: string;
+    if (node.isOneway) {
+      returnType = 'Promise<void>';
+    }
+    else if (outParams.length === 0) {
+      // No out parameters - return just the return value
+      returnType = `Promise<${this.mapType(node.returnType, true)}>`;
+    }
+    else if (!hasReturn) {
+      // Out parameters but void return - return object with just out params
+      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true)}`).join('; ');
+      returnType = `Promise<{ ${outParamTypes} }>`;
+    }
+    else {
+      // Both return value and out parameters - return object with both
+      const returnValueType = this.mapType(node.returnType, true);
+      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true)}`).join('; ');
+      returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
+    }
 
     this.emit(`${node.name}(${params}): ${returnType};`);
   }
@@ -395,13 +415,13 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit('}');
     this.emit('');
-    
+
     // Generate TypeCode for struct if stubs are enabled
     if (this.options.includeStubs) {
       this.generateStructTypeCode(node);
     }
   }
-  
+
   private processPragmas(pragmas: Map<string, string>): void {
     // Process version and ID pragmas
     for (const [key, value] of pragmas) {
@@ -444,13 +464,13 @@ export class TypeScriptGenerator {
       }
     }
   }
-  
+
   private shouldInhibitCodeGeneration(typeName?: string): boolean {
     // Check global inhibit
     if (this.pragmas.get('global_inhibit') === 'true') {
       return true;
     }
-    
+
     // Check type-specific inhibit
     if (typeName) {
       const typePragmas = this.scopedPragmas.get(typeName);
@@ -458,7 +478,7 @@ export class TypeScriptGenerator {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -468,14 +488,14 @@ export class TypeScriptGenerator {
     if (typePragmas?.has('ID')) {
       return typePragmas.get('ID')!;
     }
-    
+
     // Build repository ID with prefix
     const prefix = this.pragmas.get('prefix');
     const modulePath = this.currentModule || 'global';
-    
+
     // Check for version pragma
     const version = typePragmas?.get('version') || defaultVersion;
-    
+
     if (prefix) {
       // With prefix: IDL:prefix/module/type:version
       return `IDL:${prefix}/${modulePath}/${typeName}:${version}`;
@@ -488,23 +508,23 @@ export class TypeScriptGenerator {
   private generateStructTypeCode(node: AST.StructNode): void {
     const name = this.getPrefixedName(node.name);
     const tcName = `TC_${name}`;
-    
+
     // Build the repository ID using pragma-aware method
     const repoId = this.getRepositoryId(node.name);
-    
+
     this.emit(`export const ${tcName} = TypeCode.create_struct_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
     this.emit(`"${node.name}",`);
     this.emit(`[`);
     this.indent();
-    
+
     for (let i = 0; i < node.members.length; i++) {
       const member = node.members[i];
       const memberTc = this.getTypeCodeForType(member.type);
       this.emit(`{ name: "${member.name}", type: ${memberTc} }${i < node.members.length - 1 ? ',' : ''}`);
     }
-    
+
     this.dedent();
     this.emit(`]`);
     this.dedent();
@@ -512,7 +532,7 @@ export class TypeScriptGenerator {
     this.emit('');
     this.markCorbaUsed();
   }
-  
+
   private getTypeCodeForType(type: AST.TypeNode): string {
     switch (type.kind) {
       case 'primitiveType':
@@ -544,7 +564,7 @@ export class TypeScriptGenerator {
           // Use the prefixed name for the TypeCode
           return `TC_${prefixedName}`;
         }
-        
+
         // Reference to another type's TypeCode
         const typeName = this.resolveTypeName(type.name, false); // false = not type-only, we need the value
         if (typeName.includes('.')) {
@@ -557,7 +577,7 @@ export class TypeScriptGenerator {
         return `TC_${typeName}`;
       case 'sequenceType':
         const elemTc = this.getTypeCodeForType(type.elementType);
-        return `TypeCode.create_sequence_tc(${elemTc}, ${type.bound || 0})`;
+        return `TypeCode.create_sequence_tc(${type.bound || 0}, ${elemTc})`;
       case 'arrayType':
         return 'TC_any'; // TODO: implement array TypeCode
       case 'fixedType':
@@ -597,23 +617,23 @@ export class TypeScriptGenerator {
     }
     this.dedent();
     this.emit('');
-    
+
     // Generate TypeCode for union if stubs are enabled
     if (this.options.includeStubs) {
       this.generateUnionTypeCode(node);
     }
   }
-  
+
   private generateUnionTypeCode(node: AST.UnionNode): void {
     const name = this.getPrefixedName(node.name);
     const tcName = `TC_${name}`;
-    
+
     // Build the repository ID using pragma-aware method
     const repoId = this.getRepositoryId(node.name);
-    
+
     // Get the discriminator TypeCode
     const discriminatorTypeCode = this.getTypeCodeForType(node.discriminatorType);
-    
+
     this.emit(`export const ${tcName} = TypeCode.create_union_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
@@ -621,7 +641,7 @@ export class TypeScriptGenerator {
     this.emit(`${discriminatorTypeCode},`);
     this.emit(`[`);
     this.indent();
-    
+
     // Generate union members
     const members: string[] = [];
     for (const caseNode of node.cases) {
@@ -633,7 +653,7 @@ export class TypeScriptGenerator {
         }
       }
     }
-    
+
     for (let i = 0; i < members.length; i++) {
       if (i < members.length - 1) {
         this.emit(`${members[i]},`);
@@ -641,13 +661,13 @@ export class TypeScriptGenerator {
         this.emit(`${members[i]}`);
       }
     }
-    
+
     this.dedent();
     this.emit(`]`);
     this.dedent();
     this.emit(`);`);
     this.emit('');
-    
+
     this.markCorbaUsed();
   }
 
@@ -668,7 +688,7 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit('}');
     this.emit('');
-    
+
     // Generate TypeCode for enum if stubs are enabled
     if (this.options.includeStubs) {
       const repoId = this.getRepositoryId(node.name);
@@ -689,7 +709,7 @@ export class TypeScriptGenerator {
     const tsType = this.mapType(node.type);
     this.emit(`export type ${name} = ${tsType};`);
     this.emit('');
-    
+
     // Generate TypeCode alias for typedef if stubs are enabled
     if (this.options.includeStubs) {
       const baseTypeCode = this.getTypeCodeForType(node.type);
@@ -773,10 +793,10 @@ export class TypeScriptGenerator {
   private generateInterfaceTypeCode(node: AST.InterfaceNode): void {
     const name = this.getPrefixedName(node.name);
     const tcName = `TC_${name}`;
-    
+
     // Build the repository ID using pragma-aware method
     const repoId = this.getRepositoryId(node.name);
-    
+
     this.emit(`export const ${tcName} = TypeCode.create_interface_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
@@ -784,7 +804,7 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit(`);`);
     this.emit('');
-    
+
     this.markCorbaUsed();
   }
 
@@ -795,12 +815,12 @@ export class TypeScriptGenerator {
     // Check if any methods conflict with CorbaStub base class methods
     // CorbaStub implements Object which has: release(), duplicate(), hash(), etc.
     const allMembers = this.collectInterfaceMembers(node);
-    const corbaObjectMethods = ['release', 'duplicate', 'hash', 'is_nil', 'is_equivalent', 'is_a', 'non_existent', 
+    const corbaObjectMethods = ['release', 'duplicate', 'hash', 'is_nil', 'is_equivalent', 'is_a', 'non_existent',
                                 'get_interface', 'get_policy', 'get_domain_managers', 'set_policy_overrides',
-                                'get_client_policy', 'get_policy_overrides', 'validate_connection', 
+                                'get_client_policy', 'get_policy_overrides', 'validate_connection',
                                 'get_component', 'get_type_id', '_get_interface_id'];
-    
-    const hasMethodConflict = allMembers.some(m => 
+
+    const hasMethodConflict = allMembers.some(m =>
       m.kind === 'operation' && corbaObjectMethods.includes(m.name)
     );
 
@@ -809,15 +829,15 @@ export class TypeScriptGenerator {
     if (hasMethodConflict) {
       this.emit(`export class ${name}_Stub implements ${name} {`);
       this.indent();
-      
+
       // Static repository ID
       this.emit(`static readonly _repository_id = "${repositoryId}";`);
       this.emit('');
-      
+
       // Store the object reference
       this.emit('constructor(protected readonly _ref: CORBA.ObjectRef) {}');
       this.emit('');
-      
+
       // Implement our own narrow() since we can't inherit from CorbaStub
       this.emit(`static narrow(obj: CORBA.ObjectRef | null | undefined): ${name}_Stub | null {`);
       this.indent();
@@ -826,7 +846,7 @@ export class TypeScriptGenerator {
       this.dedent();
       this.emit('}');
       this.emit('');
-      
+
       // Add index signature to match CORBA.ObjectRef interface
       this.emit('[key: string]: unknown;');
       this.emit('');
@@ -870,14 +890,38 @@ export class TypeScriptGenerator {
     const sourceModule = (node as AST.OperationNode & ExtendedNode).__sourceModule;
     const sourceInterface = (node as AST.OperationNode & ExtendedNode).__sourceInterface;
     const params = node.parameters.map(p => {
-      // Prefix unused parameters (out-only) with underscore to avoid lint warnings
+      // Make out and inout parameters optional since they're not commonly used
+      // Prefix unused out-only parameters with underscore to avoid lint warnings
+      const isOptional = p.direction === 'out' || p.direction === 'inout';
       const paramName = (p.direction === 'out') ? `_${p.name}` : p.name;
-      return `${paramName}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`;
+      return isOptional
+        ? `${paramName}?: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`
+        : `${paramName}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`;
     }).join(', ');
 
-    const returnType = node.isOneway
-      ? 'Promise<void>'
-      : `Promise<${this.mapType(node.returnType, true, sourceModule, sourceInterface)}>`;
+    // Check if we have out parameters
+    const outParams = node.parameters.filter(p => p.direction === 'out' || p.direction === 'inout');
+    const hasReturn = node.returnType.kind !== 'primitiveType' || node.returnType.type !== 'void';
+
+    let returnType: string;
+    if (node.isOneway) {
+      returnType = 'Promise<void>';
+    }
+    else if (outParams.length === 0) {
+      // No out parameters - return just the return value
+      returnType = `Promise<${this.mapType(node.returnType, true, sourceModule, sourceInterface)}>`;
+    }
+    else if (!hasReturn) {
+      // Out parameters but void return - return object with just out params
+      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`).join('; ');
+      returnType = `Promise<{ ${outParamTypes} }>`;
+    }
+    else {
+      // Both return value and out parameters - return object with both
+      const returnValueType = this.mapType(node.returnType, true, sourceModule, sourceInterface);
+      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`).join('; ');
+      returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
+    }
 
     this.emit(`async ${node.name}(${params}): ${returnType} {`);
     this.indent();
@@ -901,9 +945,39 @@ export class TypeScriptGenerator {
     } else {
       this.emit('await request.invoke();');
 
-      if (node.returnType.kind !== 'primitiveType' || node.returnType.type !== 'void') {
-        const mappedType = this.mapType(node.returnType, true, (node as any).__sourceModule, (node as any).__sourceInterface);
-        this.emit(`return request.return_value() as ${mappedType};`);
+      // Handle return value based on out parameters
+      if (outParams.length === 0) {
+        // No out parameters - return just the return value
+        if (hasReturn) {
+          const mappedType = this.mapType(node.returnType, true, sourceModule, sourceInterface);
+          this.emit(`return request.return_value() as ${mappedType};`);
+        }
+      }
+      else if (!hasReturn) {
+        // Out parameters but void return - return object with just out params
+        this.emit('return {');
+        this.indent();
+        outParams.forEach((param, index) => {
+          const paramIndex = node.parameters.findIndex(p => p === param);
+          const comma = index < outParams.length - 1 ? ',' : '';
+          this.emit(`${param.name}: request.get_arg(${paramIndex}) as ${this.mapType(param.type, true, sourceModule, sourceInterface)}${comma}`);
+        });
+        this.dedent();
+        this.emit('};');
+      }
+      else {
+        // Both return value and out parameters - return object with both
+        this.emit('return {');
+        this.indent();
+        const returnValueType = this.mapType(node.returnType, true, sourceModule, sourceInterface);
+        this.emit(`returnValue: request.return_value() as ${returnValueType},`);
+        outParams.forEach((param, index) => {
+          const paramIndex = node.parameters.findIndex(p => p === param);
+          const comma = index < outParams.length - 1 ? ',' : '';
+          this.emit(`${param.name}: request.get_arg(${paramIndex}) as ${this.mapType(param.type, true, sourceModule, sourceInterface)}${comma}`);
+        });
+        this.dedent();
+        this.emit('};');
       }
     }
 
@@ -971,13 +1045,37 @@ export class TypeScriptGenerator {
     // Only process operations and attributes for skeleton
     for (const member of node.members) {
       if (member.kind === 'operation') {
-        const params = member.parameters.map(p =>
-          `${p.name}: ${this.mapType(p.type)}`
-        ).join(', ');
+        const params = member.parameters.map(p => {
+          // Make out and inout parameters optional since they're not commonly used
+          const isOptional = p.direction === 'out' || p.direction === 'inout';
+          return isOptional
+            ? `${p.name}?: ${this.mapType(p.type)}`
+            : `${p.name}: ${this.mapType(p.type)}`;
+        }).join(', ');
 
-        const returnType = member.isOneway
-          ? 'Promise<void>'
-          : `Promise<${this.mapType(member.returnType)}>`;
+        // Check if we have out parameters
+        const outParams = member.parameters.filter(p => p.direction === 'out' || p.direction === 'inout');
+        const hasReturn = member.returnType.kind !== 'primitiveType' || member.returnType.type !== 'void';
+
+        let returnType: string;
+        if (member.isOneway) {
+          returnType = 'Promise<void>';
+        }
+        else if (outParams.length === 0) {
+          // No out parameters - return just the return value
+          returnType = `Promise<${this.mapType(member.returnType)}>`;
+        }
+        else if (!hasReturn) {
+          // Out parameters but void return - return object with just out params
+          const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type)}`).join('; ');
+          returnType = `Promise<{ ${outParamTypes} }>`;
+        }
+        else {
+          // Both return value and out parameters - return object with both
+          const returnValueType = this.mapType(member.returnType);
+          const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type)}`).join('; ');
+          returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
+        }
 
         this.emit(`abstract ${member.name}(${params}): ${returnType};`);
       } else if (member.kind === 'attribute') {
