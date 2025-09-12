@@ -1,0 +1,29 @@
+{
+  "name": "@eai/idl2ts",
+  "version": "1.3.0",
+  "description": "CORBA IDL to TypeScript compiler for Deno",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts"
+  },
+  "tasks": {
+    "test": "deno test --allow-read --allow-write test/"
+  },
+  "fmt": {
+    "indentWidth": 2,
+    "semiColons": true,
+    "singleQuote": true
+  },
+  "lint": {
+    "rules": {
+      "tags": ["recommended"]
+    }
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.window"]
+  },
+  "license": "MIT",
+  "repository": "github:elevationai/idl2ts",
+  "keywords": ["idl", "corba", "typescript", "compiler", "code-generation", "transpiler"]
+}

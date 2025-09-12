@@ -1,10 +1,9 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S deno run --allow-read --allow-write --allow-env
 
-import { Command } from 'commander';
-import { IDLCompiler, CompilerOptions } from './compiler/IDLCompiler.js';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
-import * as glob from 'glob';
+import { Command } from 'npm:commander@11.0.0';
+import { IDLCompiler, CompilerOptions } from './compiler/IDLCompiler.ts';
+import { expandGlob } from 'jsr:@std/fs@1.0.0';
+import { basename, dirname, join, resolve } from 'jsr:@std/path@1.0.0';
 
 const program = new Command();
 
@@ -23,25 +22,42 @@ program
   .option('--no-helpers', 'Do not emit helper functions')
   .option('--corba-import <path>', 'Import path for CORBA library (default: corba)')
   .option('-v, --verbose', 'Verbose output')
-  .action(async (input: string, options: any) => {
+  .action(async (input: string, options: {
+    output?: string;
+    include?: string[];
+    stubs?: boolean;
+    skeletons?: boolean;
+    helpers?: boolean;
+    corbaImport?: string;
+    verbose?: boolean;
+  }) => {
     const compilerOptions: CompilerOptions = {
       includeStubs: options.stubs !== false,
-      includeSkeletons: options.skeletons || false,
+      includeSkeletons: options.skeletons ?? false,
       emitHelpers: options.helpers !== false,
       corbaImportPath: options.corbaImport,
-      verbose: options.verbose || false,
-      includePaths: options.include || []
+      verbose: options.verbose ?? false,
+      includePaths: options.include ?? []
     };
 
     try {
-      const files = glob.sync(input);
+      const files: string[] = [];
       
-      if (files.length === 0) {
-        if (fs.existsSync(input)) {
-          files.push(input);
-        } else {
+      // Handle glob patterns
+      if (input.includes('*')) {
+        for await (const file of expandGlob(input)) {
+          if (file.isFile) {
+            files.push(file.path);
+          }
+        }
+      } else {
+        // Single file
+        try {
+          await Deno.stat(input);
+          files.push(resolve(input));
+        } catch {
           console.error(`No files found matching: ${input}`);
-          process.exit(1);
+          Deno.exit(1);
         }
       }
 
@@ -57,12 +73,14 @@ program
           if (files.length === 1) {
             outputPath = options.output;
           } else {
-            const baseName = path.basename(file, '.idl');
-            outputPath = path.join(options.output, `${baseName}.ts`);
+            const baseName = basename(file, '.idl');
+            outputPath = join(options.output, `${baseName}.ts`);
             
-            const outputDir = path.dirname(outputPath);
-            if (!fs.existsSync(outputDir)) {
-              fs.mkdirSync(outputDir, { recursive: true });
+            const outputDir = dirname(outputPath);
+            try {
+              await Deno.stat(outputDir);
+            } catch {
+              await Deno.mkdir(outputDir, { recursive: true });
             }
           }
         }
@@ -80,7 +98,7 @@ program
       }
     } catch (error) {
       console.error('Compilation failed:', error);
-      process.exit(1);
+      Deno.exit(1);
     }
   });
 
@@ -92,9 +110,9 @@ program
   .option('--skeletons', 'Generate server skeletons')
   .option('--no-helpers', 'Do not emit helper functions')
   .option('-v, --verbose', 'Verbose output')
-  .action(async (_input: string, _options: any) => {
+  .action((_input: string, _options: Record<string, unknown>) => {
     console.log('Watch mode not yet implemented');
-    process.exit(1);
+    Deno.exit(1);
   });
 
-program.parse(process.argv);
+program.parse(['deno', 'idl2ts', ...Deno.args]);

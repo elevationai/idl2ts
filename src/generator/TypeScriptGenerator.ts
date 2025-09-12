@@ -1,6 +1,4 @@
-import * as AST from '../ast/nodes.js';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import * as AST from '../ast/nodes.ts';
 
 interface ExtendedNode {
   __sourceModule?: string;
@@ -144,14 +142,7 @@ export class TypeScriptGenerator {
     const lines: string[] = [];
 
     // Get version from package.json
-    let version = 'unknown';
-    try {
-      const packageJsonPath = path.join(__dirname, '../../package.json');
-      const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-      version = packageJson.version || 'unknown';
-    } catch (e) {
-      // If we can't read package.json, use unknown
-    }
+    const version = '1.3.0'; // Version from deno.json
 
     // Add header comment
     lines.push("/**");
@@ -533,6 +524,30 @@ export class TypeScriptGenerator {
     this.markCorbaUsed();
   }
 
+  private getTypeCodeForTypeWithContext(type: AST.TypeNode, sourceModule?: string, sourceInterface?: string): string {
+    // If the type is a simple name and we have source context, check if it's a nested type
+    if (type.kind === 'namedType' && !type.name.includes('::') && sourceInterface && sourceModule) {
+      // Check if this type exists as a nested type in the source interface
+      const flattenedName = `${sourceInterface}_${type.name}`;
+      if (sourceModule !== this.currentModule) {
+        // Check if the flattened type exists in the source module
+        const sourceModuleOutput = this.modules.get(sourceModule);
+        if (sourceModuleOutput && this.typeExistsInModule(flattenedName, sourceModuleOutput)) {
+          this.addImport(sourceModule, false); // Need value import for TypeCode
+          return `${sourceModule}.TC_${flattenedName}`;
+        }
+      } else {
+        // Same module, check if flattened type exists
+        const currentModuleOutput = this.modules.get(this.currentModule) || this.rootModule;
+        if (currentModuleOutput && this.typeExistsInModule(flattenedName, currentModuleOutput)) {
+          return `TC_${flattenedName}`;
+        }
+      }
+    }
+    
+    return this.getTypeCodeForType(type);
+  }
+
   private getTypeCodeForType(type: AST.TypeNode): string {
     switch (type.kind) {
       case 'primitiveType':
@@ -557,12 +572,45 @@ export class TypeScriptGenerator {
         }
       case 'stringType':
         return type.type === 'wstring' ? 'TypeCode.TC_wstring' : 'TypeCode.TC_string';
-      case 'namedType':
+      case 'namedType': {
         // Check if this is a nested type that was prefixed
         const prefixedName = this.nestedTypes.get(type.name);
         if (prefixedName) {
           // Use the prefixed name for the TypeCode
           return `TC_${prefixedName}`;
+        }
+
+        // Handle qualified names with :: (like IOMode::InputOutputMode or Module::Type)
+        if (type.name.includes('::')) {
+          let parts = type.name.split('::');
+          // Remove empty first element if starts with ::
+          if (parts[0] === '') {
+            parts = parts.slice(1);
+          }
+          
+          // For nested types like InterfaceName::TypeName, we need to find the flattened TypeCode
+          if (parts.length === 2) {
+            const [interfaceOrModule, typeName] = parts;
+            
+            // Check if this is a module reference
+            if (this.modules.has(interfaceOrModule)) {
+              // It's a module reference
+              this.addImport(interfaceOrModule, false);
+              return `${interfaceOrModule}.TC_${typeName}`;
+            }
+            
+            // Otherwise, it's likely a nested type within an interface
+            // These get flattened to InterfaceName_TypeName in the same module
+            const flattenedName = `${interfaceOrModule}_${typeName}`;
+            return `TC_${flattenedName}`;
+          } else if (parts.length > 2) {
+            // Module::Interface::Type pattern
+            const moduleName = parts[0];
+            const interfaceName = parts[1];
+            const typeName = parts.slice(2).join('_');
+            this.addImport(moduleName, false);
+            return `${moduleName}.TC_${interfaceName}_${typeName}`;
+          }
         }
 
         // Reference to another type's TypeCode
@@ -575,13 +623,17 @@ export class TypeScriptGenerator {
           return `${parts[0]}.TC_${parts[1]}`;
         }
         return `TC_${typeName}`;
-      case 'sequenceType':
+      }
+      case 'sequenceType': {
         const elemTc = this.getTypeCodeForType(type.elementType);
         return `TypeCode.create_sequence_tc(${type.bound || 0}, ${elemTc})`;
-      case 'arrayType':
+      }
+      case 'arrayType': {
         return 'TC_any'; // TODO: implement array TypeCode
-      case 'fixedType':
+      }
+      case 'fixedType': {
         return 'TC_any'; // TODO: implement fixed TypeCode
+      }
       default:
         return 'TC_any';
     }
@@ -931,11 +983,11 @@ export class TypeScriptGenerator {
 
     for (const param of node.parameters) {
       if (param.direction === 'in' || param.direction === 'inout') {
-        const typeCode = this.getTypeCodeForType(param.type);
+        const typeCode = this.getTypeCodeForTypeWithContext(param.type, sourceModule, sourceInterface);
         this.emit(`request.add_named_in_arg("${param.name}", ${param.name}, ${typeCode});`);
       }
       if (param.direction === 'out' || param.direction === 'inout') {
-        const typeCode = this.getTypeCodeForType(param.type);
+        const typeCode = this.getTypeCodeForTypeWithContext(param.type, sourceModule, sourceInterface);
         this.emit(`request.add_out_arg(${typeCode});`);
       }
     }
@@ -1008,7 +1060,7 @@ export class TypeScriptGenerator {
       this.indent();
       this.emit(`const request = create_request(this._ref, "_set_${node.name}");`);
       this.markCorbaUsed(); // Using create_request function
-      const typeCode = this.getTypeCodeForType(node.type);
+      const typeCode = this.getTypeCodeForTypeWithContext(node.type, sourceModule, sourceInterface);
       this.emit(`request.add_named_in_arg("value", value, ${typeCode});`);
       this.emit('await request.invoke();');
       this.dedent();
@@ -1180,9 +1232,10 @@ export class TypeScriptGenerator {
         return this.getPrefixedName(node.name);
       case 'sequenceType':
         return `${this.mapType(node.elementType, isTypeOnly, sourceModule, sourceInterface)}[]`;
-      case 'arrayType':
+      case 'arrayType': {
         const baseType = this.mapType(node.elementType, isTypeOnly, sourceModule, sourceInterface);
         return node.dimensions.reduce((type) => `${type}[]`, baseType);
+      }
       case 'stringType':
         return 'string';
       case 'fixedType':

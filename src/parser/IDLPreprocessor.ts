@@ -1,5 +1,4 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { dirname, join, resolve } from 'jsr:@std/path@1.0.0';
 
 export interface PreprocessorResult {
   processedContent: string;
@@ -22,10 +21,10 @@ export class IDLPreprocessor {
   }
 
   preprocess(content: string, filePath?: string): PreprocessorResult {
-    this.baseDir = filePath ? path.dirname(filePath) : process.cwd();
+    this.baseDir = filePath ? dirname(filePath) : Deno.cwd();
     
     // Track current file in processing stack to prevent circular includes
-    const normalizedPath = filePath ? path.resolve(filePath) : 'inline';
+    const normalizedPath = filePath ? resolve(filePath) : 'inline';
     if (this.processingStack.includes(normalizedPath)) {
       // Circular include detected, skip processing
       return {
@@ -105,7 +104,7 @@ export class IDLPreprocessor {
             const resolvedPath = this.resolveIncludePath(includePath);
             
             if (resolvedPath) {
-              const normalizedIncludePath = path.resolve(resolvedPath);
+              const normalizedIncludePath = resolve(resolvedPath);
               
               // Check if file is in processing stack (circular include)
               if (this.processingStack.includes(normalizedIncludePath)) {
@@ -115,7 +114,7 @@ export class IDLPreprocessor {
                 this.processedIncludes.push(resolvedPath);
                 
                 try {
-                  const includeContent = fs.readFileSync(resolvedPath, 'utf-8');
+                  const includeContent = Deno.readTextFileSync(resolvedPath);
                   const preprocessed = this.preprocess(includeContent, resolvedPath);
                   processedLines.push(`// BEGIN INCLUDE: ${includePath}`);
                   processedLines.push(preprocessed.processedContent);
@@ -296,22 +295,31 @@ export class IDLPreprocessor {
 
   private resolveIncludePath(includePath: string): string | null {
     // First try relative to current file
-    const relativePath = path.join(this.baseDir, includePath);
-    if (fs.existsSync(relativePath)) {
+    const relativePath = join(this.baseDir, includePath);
+    try {
+      Deno.statSync(relativePath);
       return relativePath;
+    } catch {
+      // File doesn't exist, continue
     }
     
     // Then try include paths
     for (const includeDir of this.includePaths) {
-      const fullPath = path.join(includeDir, includePath);
-      if (fs.existsSync(fullPath)) {
+      const fullPath = join(includeDir, includePath);
+      try {
+        Deno.statSync(fullPath);
         return fullPath;
+      } catch {
+        // File doesn't exist, continue
       }
     }
     
     // Try as absolute path
-    if (fs.existsSync(includePath)) {
+    try {
+      Deno.statSync(includePath);
       return includePath;
+    } catch {
+      // File doesn't exist
     }
     
     return null;

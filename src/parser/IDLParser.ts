@@ -1,5 +1,5 @@
-import * as AST from '../ast/nodes.js';
-import { IDLPreprocessor } from './IDLPreprocessor.js';
+import * as AST from '../ast/nodes.ts';
+import { IDLPreprocessor } from './IDLPreprocessor.ts';
 
 export interface ParserOptions {
   includePaths?: string[];
@@ -234,7 +234,7 @@ export class IDLParser {
             isReadonly: false
           };
         }
-      } catch (e) {
+      } catch (_e) {
         // If parsing fails, reset position and try as operation
         this.currentToken = currentPos;
         return this.parseOperation(false);
@@ -491,7 +491,7 @@ export class IDLParser {
         type = this.parseType();
         name = this.consume();
       }
-    } catch (e) {
+    } catch (_e) {
       // Error recovery - create a minimal valid typedef
       type = { kind: 'primitiveType', type: 'any' };
       name = 'ErrorType';
@@ -661,7 +661,7 @@ export class IDLParser {
         return { kind: 'primitiveType', type: 'long double' };
       }
       
-      return { kind: 'primitiveType', type: token as any };
+      return { kind: 'primitiveType', type: token as AST.PrimitiveTypeNode['type'] };
     }
     
     if (token === 'unsigned') {
@@ -673,7 +673,7 @@ export class IDLParser {
         return { kind: 'primitiveType', type: 'unsigned long long' };
       }
       
-      return { kind: 'primitiveType', type: `unsigned ${nextToken}` as any };
+      return { kind: 'primitiveType', type: `unsigned ${nextToken}` as AST.PrimitiveTypeNode['type'] };
     }
     
     const name = this.parseQualifiedName();
@@ -714,6 +714,7 @@ export class IDLParser {
       str = str.replace(/\\r/g, '\r');
       str = str.replace(/\\'/g, "'");
       str = str.replace(/\\"/g, '"');
+      // deno-lint-ignore no-control-regex
       str = str.replace(/\u0000/g, '\\'); // Restore single backslashes
       return str;
     }
@@ -757,7 +758,7 @@ export class IDLParser {
           const result = Function('"use strict"; return (' + cleanExpr.replace(/<</, '*Math.pow(2,').replace(/>>/, ')/Math.pow(2,') + ')')();
           return result;
         }
-      } catch (e) {
+      } catch (_e) {
         // If evaluation fails, return as string
       }
     }
