@@ -309,7 +309,7 @@ export class TypeScriptGenerator {
     const name = this.getPrefixedName(node.name);
     let inheritance = '';
     if (node.inheritance && node.inheritance.length > 0) {
-      inheritance = ` extends ${node.inheritance.map(i => this.resolveTypeName(i, true)).join(', ')}`;
+      inheritance = ` extends ${node.inheritance.map((i: string) => this.resolveTypeName(i, true)).join(', ')}`;
     } else {
       inheritance = ' extends CORBA.ObjectRef';
       this.markCorbaTypeUsed();
@@ -342,7 +342,7 @@ export class TypeScriptGenerator {
   }
 
   private generateOperation(node: AST.OperationNode): void {
-    const params = node.parameters.map(p => {
+    const params = node.parameters.map((p: AST.ParameterNode) => {
       const paramName = p.direction === 'out' || p.direction === 'inout'
         ? `${p.name}?: ${this.mapType(p.type, true)}`
         : `${p.name}: ${this.mapType(p.type, true)}`;
@@ -350,7 +350,7 @@ export class TypeScriptGenerator {
     }).join(', ');
 
     // Check if we have out parameters
-    const outParams = node.parameters.filter(p => p.direction === 'out' || p.direction === 'inout');
+    const outParams = node.parameters.filter((p: AST.ParameterNode) => p.direction === 'out' || p.direction === 'inout');
     const hasReturn = node.returnType.kind !== 'primitiveType' || node.returnType.type !== 'void';
 
     let returnType: string;
@@ -363,13 +363,13 @@ export class TypeScriptGenerator {
     }
     else if (!hasReturn) {
       // Out parameters but void return - return object with just out params
-      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true)}`).join('; ');
+      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true)}`).join('; ');
       returnType = `Promise<{ ${outParamTypes} }>`;
     }
     else {
       // Both return value and out parameters - return object with both
       const returnValueType = this.mapType(node.returnType, true);
-      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true)}`).join('; ');
+      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true)}`).join('; ');
       returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
     }
 
@@ -653,7 +653,7 @@ export class TypeScriptGenerator {
       if (caseNode.member) {
         const discriminatorValue = caseNode.isDefault
           ? '"default"'
-          : caseNode.labels.map(l => JSON.stringify(l)).join(' | ');
+          : caseNode.labels.map((l: string | number | boolean) => JSON.stringify(l)).join(' | ');
 
         variants.push(`{ discriminator: ${discriminatorValue}; ${caseNode.member.name}: ${this.mapType(caseNode.member.type)} }`);
       }
@@ -748,7 +748,7 @@ export class TypeScriptGenerator {
       this.indent();
       this.emit(`"${repoId}",`);
       this.emit(`"${node.name}",`);
-      this.emit(`[${node.members.map(m => `"${m}"`).join(', ')}]`);
+      this.emit(`[${node.members.map((m: string) => `"${m}"`).join(', ')}]`);
       this.dedent();
       this.emit(`);`);
       this.emit('');
@@ -826,7 +826,7 @@ export class TypeScriptGenerator {
     }
 
     this.emit('');
-    this.emit(`constructor(${node.members.map(m => `${m.name}: ${this.mapType(m.type)}`).join(', ')}) {`);
+    this.emit(`constructor(${node.members.map((m: AST.MemberNode) => `${m.name}: ${this.mapType(m.type)}`).join(', ')}) {`);
     this.indent();
     this.emit(`super('${this.getPrefixedName(node.name)}');`);
 
@@ -941,7 +941,7 @@ export class TypeScriptGenerator {
   private generateStubOperation(node: AST.OperationNode, addBlankLine: boolean = true): void {
     const sourceModule = (node as AST.OperationNode & ExtendedNode).__sourceModule;
     const sourceInterface = (node as AST.OperationNode & ExtendedNode).__sourceInterface;
-    const params = node.parameters.map(p => {
+    const params = node.parameters.map((p: AST.ParameterNode) => {
       // Make out and inout parameters optional since they're not commonly used
       // Prefix unused out-only parameters with underscore to avoid lint warnings
       const isOptional = p.direction === 'out' || p.direction === 'inout';
@@ -952,7 +952,7 @@ export class TypeScriptGenerator {
     }).join(', ');
 
     // Check if we have out parameters
-    const outParams = node.parameters.filter(p => p.direction === 'out' || p.direction === 'inout');
+    const outParams = node.parameters.filter((p: AST.ParameterNode) => p.direction === 'out' || p.direction === 'inout');
     const hasReturn = node.returnType.kind !== 'primitiveType' || node.returnType.type !== 'void';
 
     let returnType: string;
@@ -965,13 +965,13 @@ export class TypeScriptGenerator {
     }
     else if (!hasReturn) {
       // Out parameters but void return - return object with just out params
-      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`).join('; ');
+      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`).join('; ');
       returnType = `Promise<{ ${outParamTypes} }>`;
     }
     else {
       // Both return value and out parameters - return object with both
       const returnValueType = this.mapType(node.returnType, true, sourceModule, sourceInterface);
-      const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`).join('; ');
+      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true, sourceModule, sourceInterface)}`).join('; ');
       returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
     }
 
@@ -1009,8 +1009,8 @@ export class TypeScriptGenerator {
         // Out parameters but void return - return object with just out params
         this.emit('return {');
         this.indent();
-        outParams.forEach((param, index) => {
-          const paramIndex = node.parameters.findIndex(p => p === param);
+        outParams.forEach((param: AST.ParameterNode, index: number) => {
+          const paramIndex = node.parameters.findIndex((p: AST.ParameterNode) => p === param);
           const comma = index < outParams.length - 1 ? ',' : '';
           this.emit(`${param.name}: request.get_arg(${paramIndex}) as ${this.mapType(param.type, true, sourceModule, sourceInterface)}${comma}`);
         });
@@ -1023,8 +1023,8 @@ export class TypeScriptGenerator {
         this.indent();
         const returnValueType = this.mapType(node.returnType, true, sourceModule, sourceInterface);
         this.emit(`returnValue: request.return_value() as ${returnValueType},`);
-        outParams.forEach((param, index) => {
-          const paramIndex = node.parameters.findIndex(p => p === param);
+        outParams.forEach((param: AST.ParameterNode, index: number) => {
+          const paramIndex = node.parameters.findIndex((p: AST.ParameterNode) => p === param);
           const comma = index < outParams.length - 1 ? ',' : '';
           this.emit(`${param.name}: request.get_arg(${paramIndex}) as ${this.mapType(param.type, true, sourceModule, sourceInterface)}${comma}`);
         });
@@ -1097,7 +1097,7 @@ export class TypeScriptGenerator {
     // Only process operations and attributes for skeleton
     for (const member of node.members) {
       if (member.kind === 'operation') {
-        const params = member.parameters.map(p => {
+        const params = member.parameters.map((p: AST.ParameterNode) => {
           // Make out and inout parameters optional since they're not commonly used
           const isOptional = p.direction === 'out' || p.direction === 'inout';
           return isOptional
@@ -1106,7 +1106,7 @@ export class TypeScriptGenerator {
         }).join(', ');
 
         // Check if we have out parameters
-        const outParams = member.parameters.filter(p => p.direction === 'out' || p.direction === 'inout');
+        const outParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === 'out' || p.direction === 'inout');
         const hasReturn = member.returnType.kind !== 'primitiveType' || member.returnType.type !== 'void';
 
         let returnType: string;
@@ -1119,13 +1119,13 @@ export class TypeScriptGenerator {
         }
         else if (!hasReturn) {
           // Out parameters but void return - return object with just out params
-          const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type)}`).join('; ');
+          const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type)}`).join('; ');
           returnType = `Promise<{ ${outParamTypes} }>`;
         }
         else {
           // Both return value and out parameters - return object with both
           const returnValueType = this.mapType(member.returnType);
-          const outParamTypes = outParams.map(p => `${p.name}: ${this.mapType(p.type)}`).join('; ');
+          const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type)}`).join('; ');
           returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
         }
 
@@ -1234,7 +1234,7 @@ export class TypeScriptGenerator {
         return `${this.mapType(node.elementType, isTypeOnly, sourceModule, sourceInterface)}[]`;
       case 'arrayType': {
         const baseType = this.mapType(node.elementType, isTypeOnly, sourceModule, sourceInterface);
-        return node.dimensions.reduce((type) => `${type}[]`, baseType);
+        return node.dimensions.reduce((type: string) => `${type}[]`, baseType);
       }
       case 'stringType':
         return 'string';
