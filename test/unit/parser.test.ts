@@ -1,16 +1,18 @@
-import { IDLParser } from '../../src/parser/IDLParser';
-import * as AST from '../../src/ast/nodes';
-import { parseIDL, validateASTNode, findDefinition, findMember } from '../helpers/test-utils';
+import { describe, it, beforeEach } from '@std/testing/bdd';
+import { assertEquals, assertExists } from '@std/assert';
+import { IDLParser } from '../../src/parser/IDLParser.ts';
+import * as AST from '../../src/ast/nodes.ts';
+import { parseIDL, validateASTNode, findDefinition, findMember } from '../helpers/test-utils.ts';
 
 describe('IDLParser', () => {
-  let parser: IDLParser;
+  let _parser: IDLParser;
 
   beforeEach(() => {
-    parser = new IDLParser();
+    _parser = new IDLParser();
   });
 
   describe('Basic Types', () => {
-    test('should parse primitive types', () => {
+    it('should parse primitive types', () => {
       const idl = `
         module Test {
           typedef short ShortType;
@@ -34,17 +36,17 @@ describe('IDLParser', () => {
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
-      expect(module).toBeDefined();
-      expect(module.kind).toBe('module');
-      expect(module.definitions.length).toBe(15);
+      assertExists(module);
+      assertEquals(module.kind, 'module');
+      assertEquals(module.definitions.length, 15);
       
       const shortType = findMember(module, 'ShortType') as AST.TypedefNode;
-      expect(shortType.kind).toBe('typedef');
-      expect(shortType.type.kind).toBe('primitiveType');
-      expect((shortType.type as any).type).toBe('short');
+      assertEquals(shortType.kind, 'typedef');
+      assertEquals(shortType.type.kind, 'primitiveType');
+      assertEquals((shortType.type as AST.PrimitiveTypeNode).type, 'short');
     });
 
-    test('should parse sequence types', () => {
+    it('should parse sequence types', () => {
       const idl = `
         module Test {
           typedef sequence<long> LongSeq;
@@ -57,14 +59,14 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
       const longSeq = findMember(module, 'LongSeq') as AST.TypedefNode;
-      expect(longSeq.type.kind).toBe('sequenceType');
+      assertEquals(longSeq.type.kind, 'sequenceType');
       
       const seqType = longSeq.type as AST.SequenceTypeNode;
-      expect(seqType.elementType.kind).toBe('primitiveType');
-      expect((seqType.elementType as any).type).toBe('long');
+      assertEquals(seqType.elementType.kind, 'primitiveType');
+      assertEquals((seqType.elementType as AST.PrimitiveTypeNode).type, 'long');
     });
 
-    test('should parse array types', () => {
+    it('should parse array types', () => {
       const idl = `
         module Test {
           typedef long LongArray[10];
@@ -76,16 +78,16 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
       const longArray = findMember(module, 'LongArray') as AST.TypedefNode;
-      expect(longArray.type.kind).toBe('arrayType');
+      assertEquals(longArray.type.kind, 'arrayType');
       
       const arrayType = longArray.type as AST.ArrayTypeNode;
-      expect(arrayType.elementType.kind).toBe('primitiveType');
-      expect(arrayType.dimensions[0]).toBe(10);
+      assertEquals(arrayType.elementType.kind, 'primitiveType');
+      assertEquals(arrayType.dimensions[0], 10);
     });
   });
 
   describe('Modules', () => {
-    test('should parse simple module', () => {
+    it('should parse simple module', () => {
       const idl = `
         module TestModule {
           const long VERSION = 1;
@@ -97,10 +99,10 @@ describe('IDLParser', () => {
       
       const module = findDefinition(ast, 'TestModule');
       validateASTNode(module, 'module');
-      expect((module as AST.ModuleNode).name).toBe('TestModule');
+      assertEquals((module as AST.ModuleNode).name, 'TestModule');
     });
 
-    test('should parse nested modules', () => {
+    it('should parse nested modules', () => {
       const idl = `
         module Outer {
           module Inner {
@@ -111,16 +113,16 @@ describe('IDLParser', () => {
       
       const ast = parseIDL(idl);
       const outer = findDefinition(ast, 'Outer') as AST.ModuleNode;
-      expect(outer.kind).toBe('module');
+      assertEquals(outer.kind, 'module');
       
       const inner = findMember(outer, 'Inner') as AST.ModuleNode;
-      expect(inner.kind).toBe('module');
+      assertEquals(inner.kind, 'module');
       
       const value = findMember(inner, 'VALUE');
-      expect(value.kind).toBe('constant');
+      assertEquals(value?.kind, 'constant');
     });
 
-    test('should parse module reopening', () => {
+    it('should parse module reopening', () => {
       const idl = `
         module Test {
           const long FIRST = 1;
@@ -132,20 +134,20 @@ describe('IDLParser', () => {
       `;
       
       const ast = parseIDL(idl);
-      expect(ast.definitions.length).toBe(2);
+      assertEquals(ast.definitions.length, 2);
       
       const firstModule = ast.definitions[0] as AST.ModuleNode;
       const secondModule = ast.definitions[1] as AST.ModuleNode;
       
-      expect(firstModule.name).toBe('Test');
-      expect(secondModule.name).toBe('Test');
-      expect(findMember(firstModule, 'FIRST')).toBeDefined();
-      expect(findMember(secondModule, 'SECOND')).toBeDefined();
+      assertEquals(firstModule.name, 'Test');
+      assertEquals(secondModule.name, 'Test');
+      assertExists(findMember(firstModule, 'FIRST'));
+      assertExists(findMember(secondModule, 'SECOND'));
     });
   });
 
   describe('Interfaces', () => {
-    test('should parse simple interface', () => {
+    it('should parse simple interface', () => {
       const idl = `
         module Test {
           interface Calculator {
@@ -159,19 +161,19 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const calc = findMember(module, 'Calculator') as AST.InterfaceNode;
       
-      expect(calc.kind).toBe('interface');
-      expect(calc.members.length).toBe(2);
+      assertEquals(calc.kind, 'interface');
+      assertEquals(calc.members.length, 2);
       
       const add = calc.members[0] as AST.OperationNode;
-      expect(add.kind).toBe('operation');
-      expect(add.name).toBe('add');
-      expect(add.returnType.kind).toBe('primitiveType');
-      expect(add.parameters.length).toBe(2);
-      expect(add.parameters[0].direction).toBe('in');
-      expect(add.parameters[0].name).toBe('a');
+      assertEquals(add.kind, 'operation');
+      assertEquals(add.name, 'add');
+      assertEquals(add.returnType.kind, 'primitiveType');
+      assertEquals(add.parameters.length, 2);
+      assertEquals(add.parameters[0].direction, 'in');
+      assertEquals(add.parameters[0].name, 'a');
     });
 
-    test('should parse interface inheritance', () => {
+    it('should parse interface inheritance', () => {
       const idl = `
         module Test {
           interface Base {
@@ -192,13 +194,13 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
       const derived = findMember(module, 'Derived') as AST.InterfaceNode;
-      expect(derived.inheritance).toEqual(['Base']);
+      assertEquals(derived.inheritance, ['Base']);
       
       const multiple = findMember(module, 'Multiple') as AST.InterfaceNode;
-      expect(multiple.inheritance).toEqual(['Base', 'Derived']);
+      assertEquals(multiple.inheritance, ['Base', 'Derived']);
     });
 
-    test('should parse interface with attributes', () => {
+    it('should parse interface with attributes', () => {
       const idl = `
         module Test {
           interface Account {
@@ -214,15 +216,15 @@ describe('IDLParser', () => {
       const account = findMember(module, 'Account') as AST.InterfaceNode;
       
       const id = account.members[0] as AST.AttributeNode;
-      expect(id.kind).toBe('attribute');
-      expect(id.name).toBe('id');
-      expect(id.isReadonly).toBe(true);
+      assertEquals(id.kind, 'attribute');
+      assertEquals(id.name, 'id');
+      assertEquals(id.isReadonly, true);
       
       const balance = account.members[1] as AST.AttributeNode;
-      expect(balance.isReadonly).toBe(false);
+      assertEquals(balance.isReadonly, false);
     });
 
-    test('should parse interface with exceptions', () => {
+    it('should parse interface with exceptions', () => {
       const idl = `
         module Test {
           exception InvalidInput {
@@ -246,10 +248,10 @@ describe('IDLParser', () => {
       const service = findMember(module, 'Service') as AST.InterfaceNode;
       
       const process = service.members[0] as AST.OperationNode;
-      expect(process.raises).toEqual(['InvalidInput', 'OutOfRange']);
+      assertEquals(process.raises, ['InvalidInput', 'OutOfRange']);
     });
 
-    test('should parse interface with nested types', () => {
+    it('should parse interface with nested types', () => {
       const idl = `
         module Test {
           interface Container {
@@ -272,18 +274,18 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const container = findMember(module, 'Container') as AST.InterfaceNode;
       
-      expect(container.members.length).toBe(5);
+      assertEquals(container.members.length, 5);
       
       const status = container.members[0] as AST.EnumNode;
-      expect(status.kind).toBe('enum');
-      expect(status.name).toBe('Status');
+      assertEquals(status.kind, 'enum');
+      assertEquals(status.name, 'Status');
       
       const config = container.members[1] as AST.StructNode;
-      expect(config.kind).toBe('struct');
-      expect(config.name).toBe('Config');
+      assertEquals(config.kind, 'struct');
+      assertEquals(config.name, 'Config');
     });
 
-    test('should parse qualified interface inheritance', () => {
+    it('should parse qualified interface inheritance', () => {
       const idl = `
         module Base {
           interface IBase {
@@ -302,12 +304,12 @@ describe('IDLParser', () => {
       const derivedModule = findDefinition(ast, 'Derived') as AST.ModuleNode;
       const derived = findMember(derivedModule, 'IDerived') as AST.InterfaceNode;
       
-      expect(derived.inheritance).toEqual(['::Base::IBase']);
+      assertEquals(derived.inheritance, ['::Base::IBase']);
     });
   });
 
   describe('Structs', () => {
-    test('should parse simple struct', () => {
+    it('should parse simple struct', () => {
       const idl = `
         module Test {
           struct Point {
@@ -321,13 +323,13 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const point = findMember(module, 'Point') as AST.StructNode;
       
-      expect(point.kind).toBe('struct');
-      expect(point.members.length).toBe(2);
-      expect(point.members[0].name).toBe('x');
-      expect(point.members[0].type.kind).toBe('primitiveType');
+      assertEquals(point.kind, 'struct');
+      assertEquals(point.members.length, 2);
+      assertEquals(point.members[0].name, 'x');
+      assertEquals(point.members[0].type.kind, 'primitiveType');
     });
 
-    test('should parse nested struct', () => {
+    it('should parse nested struct', () => {
       const idl = `
         module Test {
           struct Address {
@@ -347,16 +349,16 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const person = findMember(module, 'Person') as AST.StructNode;
       
-      expect(person.members.length).toBe(3);
+      assertEquals(person.members.length, 3);
       
       const address = person.members[1];
-      expect(address.type.kind).toBe('namedType');
-      expect((address.type as AST.NamedTypeNode).name).toBe('Address');
+      assertEquals(address.type.kind, 'namedType');
+      assertEquals((address.type as AST.NamedTypeNode).name, 'Address');
     });
   });
 
   describe('Enums', () => {
-    test('should parse simple enum', () => {
+    it('should parse simple enum', () => {
       const idl = `
         module Test {
           enum Color {
@@ -371,11 +373,11 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const color = findMember(module, 'Color') as AST.EnumNode;
       
-      expect(color.kind).toBe('enum');
-      expect(color.members).toEqual(['RED', 'GREEN', 'BLUE']);
+      assertEquals(color.kind, 'enum');
+      assertEquals(color.members, ['RED', 'GREEN', 'BLUE']);
     });
 
-    test('should parse enum with trailing comma', () => {
+    it('should parse enum with trailing comma', () => {
       const idl = `
         module Test {
           enum Status {
@@ -390,12 +392,12 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const status = findMember(module, 'Status') as AST.EnumNode;
       
-      expect(status.members).toEqual(['PENDING', 'ACTIVE', 'COMPLETED']);
+      assertEquals(status.members, ['PENDING', 'ACTIVE', 'COMPLETED']);
     });
   });
 
   describe('Unions', () => {
-    test('should parse simple union', () => {
+    it('should parse simple union', () => {
       const idl = `
         module Test {
           union Value switch (long) {
@@ -411,16 +413,16 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const value = findMember(module, 'Value') as AST.UnionNode;
       
-      expect(value.kind).toBe('union');
-      expect(value.discriminatorType.kind).toBe('primitiveType');
-      expect(value.cases.length).toBe(4);
+      assertEquals(value.kind, 'union');
+      assertEquals(value.discriminatorType.kind, 'primitiveType');
+      assertEquals(value.cases.length, 4);
       
       const firstCase = value.cases[0];
-      expect(firstCase.labels).toEqual([1]);
-      expect(firstCase.member?.name).toBe('intValue');
+      assertEquals(firstCase.labels, [1]);
+      assertEquals(firstCase.member?.name, 'intValue');
     });
 
-    test('should parse union with enum discriminator', () => {
+    it('should parse union with enum discriminator', () => {
       const idl = `
         module Test {
           enum DataType { INT, FLOAT, STRING };
@@ -437,11 +439,11 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const data = findMember(module, 'Data') as AST.UnionNode;
       
-      expect(data.discriminatorType.kind).toBe('namedType');
-      expect((data.discriminatorType as AST.NamedTypeNode).name).toBe('DataType');
+      assertEquals(data.discriminatorType.kind, 'namedType');
+      assertEquals((data.discriminatorType as AST.NamedTypeNode).name, 'DataType');
     });
 
-    test('should parse union with multiple case labels', () => {
+    it('should parse union with multiple case labels', () => {
       const idl = `
         module Test {
           union Result switch (long) {
@@ -459,13 +461,13 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const result = findMember(module, 'Result') as AST.UnionNode;
       
-      expect(result.cases[0].labels).toEqual([0, 1, 2]);
-      expect(result.cases[1].labels).toEqual([-1, -2]);
+      assertEquals(result.cases[0].labels, [0, 1, 2]);
+      assertEquals(result.cases[1].labels, [-1, -2]);
     });
   });
 
   describe('Constants', () => {
-    test('should parse integer constants', () => {
+    it('should parse integer constants', () => {
       const idl = `
         module Test {
           const short SHORT_MAX = 32767;
@@ -480,14 +482,14 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
       const shortMax = findMember(module, 'SHORT_MAX') as AST.ConstantNode;
-      expect(shortMax.kind).toBe('constant');
-      expect(shortMax.value).toBe(32767);
+      assertEquals(shortMax.kind, 'constant');
+      assertEquals(shortMax.value, 32767);
       
       const hexValue = findMember(module, 'HEX_VALUE') as AST.ConstantNode;
-      expect(hexValue.value).toBe(255);  // 0xFF = 255
+      assertEquals(hexValue.value, 255);  // 0xFF = 255
     });
 
-    test('should parse floating point constants', () => {
+    it('should parse floating point constants', () => {
       const idl = `
         module Test {
           const float PI = 3.14159;
@@ -500,13 +502,13 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
       const pi = findMember(module, 'PI') as AST.ConstantNode;
-      expect(pi.value).toBe(3.14159);
+      assertEquals(pi.value, 3.14159);
       
       const scientific = findMember(module, 'SCIENTIFIC') as AST.ConstantNode;
-      expect(scientific.value).toBe(0.000123);
+      assertEquals(scientific.value, 0.000123);
     });
 
-    test('should parse string and char constants', () => {
+    it('should parse string and char constants', () => {
       const idl = `
         module Test {
           const string MESSAGE = "Hello World";
@@ -520,15 +522,15 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       
       const message = findMember(module, 'MESSAGE') as AST.ConstantNode;
-      expect(message.value).toBe('Hello World');
+      assertEquals(message.value, 'Hello World');
       
       const newline = findMember(module, 'NEWLINE') as AST.ConstantNode;
-      expect(newline.value).toBe('\n');
+      assertEquals(newline.value, '\n');
     });
   });
 
   describe('Exceptions', () => {
-    test('should parse simple exception', () => {
+    it('should parse simple exception', () => {
       const idl = `
         module Test {
           exception Error {
@@ -541,12 +543,12 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const error = findMember(module, 'Error') as AST.ExceptionNode;
       
-      expect(error.kind).toBe('exception');
-      expect(error.members.length).toBe(1);
-      expect(error.members[0].name).toBe('message');
+      assertEquals(error.kind, 'exception');
+      assertEquals(error.members.length, 1);
+      assertEquals(error.members[0].name, 'message');
     });
 
-    test('should parse complex exception', () => {
+    it('should parse complex exception', () => {
       const idl = `
         module Test {
           exception ValidationError {
@@ -562,13 +564,13 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const error = findMember(module, 'ValidationError') as AST.ExceptionNode;
       
-      expect(error.members.length).toBe(4);
-      expect(error.members[3].type.kind).toBe('sequenceType');
+      assertEquals(error.members.length, 4);
+      assertEquals(error.members[3].type.kind, 'sequenceType');
     });
   });
 
   describe('Operations', () => {
-    test('should parse operations with different parameter directions', () => {
+    it('should parse operations with different parameter directions', () => {
       const idl = `
         module Test {
           interface Service {
@@ -585,21 +587,21 @@ describe('IDLParser', () => {
       const service = findMember(module, 'Service') as AST.InterfaceNode;
       
       const processIn = service.members[0] as AST.OperationNode;
-      expect(processIn.parameters[0].direction).toBe('in');
+      assertEquals(processIn.parameters[0].direction, 'in');
       
       const processOut = service.members[1] as AST.OperationNode;
-      expect(processOut.parameters[0].direction).toBe('out');
+      assertEquals(processOut.parameters[0].direction, 'out');
       
       const processInOut = service.members[2] as AST.OperationNode;
-      expect(processInOut.parameters[0].direction).toBe('inout');
+      assertEquals(processInOut.parameters[0].direction, 'inout');
       
       const processMultiple = service.members[3] as AST.OperationNode;
-      expect(processMultiple.parameters[0].direction).toBe('in');
-      expect(processMultiple.parameters[1].direction).toBe('out');
-      expect(processMultiple.parameters[2].direction).toBe('inout');
+      assertEquals(processMultiple.parameters[0].direction, 'in');
+      assertEquals(processMultiple.parameters[1].direction, 'out');
+      assertEquals(processMultiple.parameters[2].direction, 'inout');
     });
 
-    test('should parse oneway operations', () => {
+    it('should parse oneway operations', () => {
       const idl = `
         module Test {
           interface AsyncService {
@@ -614,15 +616,15 @@ describe('IDLParser', () => {
       const service = findMember(module, 'AsyncService') as AST.InterfaceNode;
       
       const fireAndForget = service.members[0] as AST.OperationNode;
-      expect(fireAndForget.isOneway).toBe(true);
+      assertEquals(fireAndForget.isOneway, true);
       
       const normalMethod = service.members[1] as AST.OperationNode;
-      expect(normalMethod.isOneway).toBe(false);
+      assertEquals(normalMethod.isOneway, false);
     });
   });
 
   describe('Complex Scenarios', () => {
-    test('should parse cross-module references', () => {
+    it('should parse cross-module references', () => {
       const idl = `
         module Common {
           struct Timestamp {
@@ -642,21 +644,21 @@ describe('IDLParser', () => {
       `;
       
       const ast = parseIDL(idl);
-      expect(ast.definitions.length).toBe(2);
+      assertEquals(ast.definitions.length, 2);
       
       const business = findDefinition(ast, 'Business') as AST.ModuleNode;
       const logger = findMember(business, 'Logger') as AST.InterfaceNode;
       
       const log = logger.members[0] as AST.OperationNode;
       const whenParam = log.parameters[1];
-      expect(whenParam.type.kind).toBe('namedType');
-      expect((whenParam.type as AST.NamedTypeNode).name).toBe('::Common::Timestamp');
+      assertEquals(whenParam.type.kind, 'namedType');
+      assertEquals((whenParam.type as AST.NamedTypeNode).name, '::Common::Timestamp');
       
       const getHistory = logger.members[1] as AST.OperationNode;
-      expect((getHistory.returnType as AST.NamedTypeNode).name).toBe('::Common::TimestampList');
+      assertEquals((getHistory.returnType as AST.NamedTypeNode).name, '::Common::TimestampList');
     });
 
-    test('should parse deeply nested modules', () => {
+    it('should parse deeply nested modules', () => {
       const idl = `
         module Level1 {
           module Level2 {
@@ -675,10 +677,10 @@ describe('IDLParser', () => {
       const level3 = findMember(level2, 'Level3') as AST.ModuleNode;
       const deepInterface = findMember(level3, 'DeepInterface') as AST.InterfaceNode;
       
-      expect(deepInterface.kind).toBe('interface');
+      assertEquals(deepInterface.kind, 'interface');
     });
 
-    test('should handle the MediaType ambiguity case', () => {
+    it('should handle the MediaType ambiguity case', () => {
       const idl = `
         module Characteristics {
           interface MediaType {
@@ -696,20 +698,20 @@ describe('IDLParser', () => {
       const module = findDefinition(ast, 'Characteristics') as AST.ModuleNode;
       
       const mediaTypeInterface = findMember(module, 'MediaType') as AST.InterfaceNode;
-      expect(mediaTypeInterface.kind).toBe('interface');
+      assertEquals(mediaTypeInterface.kind, 'interface');
       
       const mediaOutput = findMember(module, 'MediaOutput') as AST.InterfaceNode;
       const nestedEnum = mediaOutput.members[0] as AST.EnumNode;
-      expect(nestedEnum.kind).toBe('enum');
-      expect(nestedEnum.name).toBe('MediaType');
+      assertEquals(nestedEnum.kind, 'enum');
+      assertEquals(nestedEnum.name, 'MediaType');
       
       const getType = mediaOutput.members[1] as AST.OperationNode;
-      expect((getType.returnType as AST.NamedTypeNode).name).toBe('MediaType');
+      assertEquals((getType.returnType as AST.NamedTypeNode).name, 'MediaType');
     });
   });
 
   describe('Error Handling', () => {
-    test('should handle missing semicolons gracefully', () => {
+    it('should handle missing semicolons gracefully', () => {
       const idl = `
         module Test {
           interface Foo {
@@ -722,10 +724,10 @@ describe('IDLParser', () => {
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const foo = findMember(module, 'Foo') as AST.InterfaceNode;
-      expect(foo).toBeDefined();
+      assertExists(foo);
     });
 
-    test('should handle empty modules', () => {
+    it('should handle empty modules', () => {
       const idl = `
         module Empty {
         };
@@ -733,10 +735,10 @@ describe('IDLParser', () => {
       
       const ast = parseIDL(idl);
       const empty = findDefinition(ast, 'Empty') as AST.ModuleNode;
-      expect(empty.definitions).toEqual([]);
+      assertEquals(empty.definitions, []);
     });
 
-    test('should handle empty interfaces', () => {
+    it('should handle empty interfaces', () => {
       const idl = `
         module Test {
           interface Empty {
@@ -747,7 +749,7 @@ describe('IDLParser', () => {
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const empty = findMember(module, 'Empty') as AST.InterfaceNode;
-      expect(empty.members).toEqual([]);
+      assertEquals(empty.members, []);
     });
   });
 });

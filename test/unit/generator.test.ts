@@ -1,13 +1,15 @@
+import { describe, it } from '@std/testing/bdd';
+import { assertEquals, assertExists, assert } from '@std/assert';
 import {
   generateTypeScript,
   compile,
   compileToString,
   CodeMatcher,
-} from '../helpers/test-utils';
+} from '../helpers/test-utils.ts';
 
 describe('TypeScriptGenerator', () => {
   describe('Type Mapping', () => {
-    test('should map primitive types correctly', () => {
+    it('should map primitive types correctly', () => {
       const idl = `
         module Test {
           interface Types {
@@ -32,27 +34,27 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = compileToString(idl, 'Test');
-      const matcher = new CodeMatcher(output);
+      const _matcher = new CodeMatcher(output);
 
-      expect(output).toContain('getShort(): Promise<number>');
-      expect(output).toContain('getLong(): Promise<number>');
-      expect(output).toContain('getLongLong(): Promise<bigint>');
-      expect(output).toContain('getUShort(): Promise<number>');
-      expect(output).toContain('getULong(): Promise<number>');
-      expect(output).toContain('getULongLong(): Promise<bigint>');
-      expect(output).toContain('getFloat(): Promise<number>');
-      expect(output).toContain('getDouble(): Promise<number>');
-      expect(output).toContain('getChar(): Promise<string>');
-      expect(output).toContain('getWChar(): Promise<string>');
-      expect(output).toContain('getBoolean(): Promise<boolean>');
-      expect(output).toContain('getOctet(): Promise<number>');
-      expect(output).toContain('getAny(): Promise<unknown>');
-      expect(output).toContain('doVoid(): Promise<void>');
-      expect(output).toContain('getString(): Promise<string>');
-      expect(output).toContain('getWString(): Promise<string>');
+      assert(output.includes('getShort(): Promise<number>'));
+      assert(output.includes('getLong(): Promise<number>'));
+      assert(output.includes('getLongLong(): Promise<bigint>'));
+      assert(output.includes('getUShort(): Promise<number>'));
+      assert(output.includes('getULong(): Promise<number>'));
+      assert(output.includes('getULongLong(): Promise<bigint>'));
+      assert(output.includes('getFloat(): Promise<number>'));
+      assert(output.includes('getDouble(): Promise<number>'));
+      assert(output.includes('getChar(): Promise<string>'));
+      assert(output.includes('getWChar(): Promise<string>'));
+      assert(output.includes('getBoolean(): Promise<boolean>'));
+      assert(output.includes('getOctet(): Promise<number>'));
+      assert(output.includes('getAny(): Promise<unknown>'));
+      assert(output.includes('doVoid(): Promise<void>'));
+      assert(output.includes('getString(): Promise<string>'));
+      assert(output.includes('getWString(): Promise<string>'));
     });
 
-    test('should map sequence types correctly', () => {
+    it('should map sequence types correctly', () => {
       const idl = `
         module Test {
           typedef sequence<long> LongSeq;
@@ -69,14 +71,14 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export type LongSeq = number[]');
-      expect(output).toContain('export type StringSeq = string[]');
-      expect(output).toContain('export type NestedSeq = number[][]');
-      expect(output).toContain('getLongs(): Promise<LongSeq>');
-      expect(output).toContain('setStrings(strings: StringSeq): Promise<void>');
+      assert(output.includes('export type LongSeq = number[]'));
+      assert(output.includes('export type StringSeq = string[]'));
+      assert(output.includes('export type NestedSeq = number[][]'));
+      assert(output.includes('getLongs(): Promise<LongSeq>'));
+      assert(output.includes('setStrings(strings: StringSeq): Promise<void>'));
     });
 
-    test('should map array types correctly', () => {
+    it('should map array types correctly', () => {
       const idl = `
         module Test {
           typedef long LongArray[10];
@@ -91,13 +93,13 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export type LongArray = number[]');
-      expect(output).toContain('export type StringMatrix = string[][]');
+      assert(output.includes('export type LongArray = number[]'));
+      assert(output.includes('export type StringMatrix = string[][]'));
     });
   });
 
   describe('Module Generation', () => {
-    test('should generate namespace for module', () => {
+    it('should generate namespace for module', () => {
       const idl = `
         module TestModule {
           const long VERSION = 1;
@@ -105,14 +107,14 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = compileToString(idl, 'TestModule');
-      const matcher = new CodeMatcher(output);
+      const _matcher = new CodeMatcher(output);
 
       // Modules create separate files with ES module exports
-      expect(output).not.toContain('namespace');
-      expect(output).toContain('export const VERSION: number = 1');
+      assert(!output.includes('namespace'));
+      assert(output.includes('export const VERSION: number = 1'));
     });
 
-    test('should generate nested modules as separate files', () => {
+    it('should generate nested modules as separate files', () => {
       const idl = `
         module Outer {
           module Inner {
@@ -124,12 +126,13 @@ describe('TypeScriptGenerator', () => {
       const result = compile(idl, 'Outer');
 
       // Nested modules should create separate files
-      expect(result.has('Outer.ts')).toBe(true);
-      expect(result.has('Inner.ts')).toBe(true);
-      expect(result.get('Inner.ts')).toContain('export const VALUE: number = 42');
+      assertEquals(result.has('Outer.ts'), true);
+      assertEquals(result.has('Inner.ts'), true);
+      const innerContent = result.get('Inner.ts')!;
+      assert(innerContent.includes('export const VALUE: number = 42'));
     });
 
-    test('should handle module reopening', () => {
+    it('should handle module reopening', () => {
       const idl = `
         module Test {
           const long FIRST = 1;
@@ -142,13 +145,13 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
 
-      expect(output).toContain('export const FIRST: number = 1');
-      expect(output).toContain('export const SECOND: number = 2');
+      assert(output.includes('export const FIRST: number = 1'));
+      assert(output.includes('export const SECOND: number = 2'));
     });
   });
 
   describe('Interface Generation', () => {
-    test('should generate interface with methods', () => {
+    it('should generate interface with methods', () => {
       const idl = `
         module Test {
           interface Calculator {
@@ -160,15 +163,15 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = compileToString(idl, 'Test');
-      const matcher = new CodeMatcher(output);
+      const _matcher = new CodeMatcher(output);
 
-      expect(matcher.hasInterface('Calculator')).toBe(true);
-      expect(output).toContain('add(a: number, b: number): Promise<number>');
-      expect(output).toContain('subtract(a: number, b: number): Promise<number>');
-      expect(output).toContain('clear(): Promise<void>');
+      assertEquals(_matcher.hasInterface('Calculator'), true);
+      assert(output.includes('add(a: number, b: number): Promise<number>'));
+      assert(output.includes('subtract(a: number, b: number): Promise<number>'));
+      assert(output.includes('clear(): Promise<void>'));
     });
 
-    test('should generate stub class when enabled', () => {
+    it('should generate stub class when enabled', () => {
       const idl = `
         module Test {
           interface Service {
@@ -178,18 +181,18 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = compileToString(idl, 'Test');
-      const matcher = new CodeMatcher(output);
+      const _matcher = new CodeMatcher(output);
 
-      expect(matcher.hasClass('Service_Stub')).toBe(true);
-      expect(output).toContain('export class Service_Stub extends CorbaStub implements Service');
-      expect(output).toContain('constructor(ref: CORBA.ObjectRef)');
-      expect(output).toContain('super(ref);');
-      expect(output).toContain('async process(data: string): Promise<string>');
-      expect(output).toContain('const request = create_request(this._ref, "process")');
-      expect(output).toContain('return request.return_value()');
+      assertEquals(_matcher.hasClass('Service_Stub'), true);
+      assert(output.includes('export class Service_Stub extends CorbaStub implements Service'));
+      assert(output.includes('constructor(ref: CORBA.ObjectRef)'));
+      assert(output.includes('super(ref);'));
+      assert(output.includes('async process(data: string): Promise<string>'));
+      assert(output.includes('const request = create_request(this._ref, "process")'));
+      assert(output.includes('return request.return_value()'));
     });
 
-    test('should not generate stub class when disabled', () => {
+    it('should not generate stub class when disabled', () => {
       const idl = `
         module Test {
           interface Service {
@@ -201,10 +204,10 @@ describe('TypeScriptGenerator', () => {
       const output = generateTypeScript(idl, { includeStubs: false });
       const tsOutput = output.get('Test.ts') || '';
 
-      expect(tsOutput).not.toContain('Service_Stub');
+      assert(!tsOutput.includes('Service_Stub'));
     });
 
-    test('should generate interface inheritance', () => {
+    it('should generate interface inheritance', () => {
       const idl = `
         module Test {
           interface Base {
@@ -219,10 +222,10 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export interface Derived extends Base');
+      assert(output.includes('export interface Derived extends Base'));
     });
 
-    test('should generate attributes as properties', () => {
+    it('should generate attributes as properties', () => {
       const idl = `
         module Test {
           interface Account {
@@ -234,11 +237,11 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('readonly id: string');
-      expect(output).toContain('balance: number');
+      assert(output.includes('readonly id: string'));
+      assert(output.includes('balance: number'));
     });
 
-    test('should handle raises clauses', () => {
+    it('should handle raises clauses', () => {
       const idl = `
         module Test {
           exception DivisionByZero {
@@ -254,14 +257,14 @@ describe('TypeScriptGenerator', () => {
       const output = compileToString(idl, 'Test');
 
       // Exceptions are generated as classes extending CORBA.SystemException
-      expect(output).toContain('export class DivisionByZero extends CORBA.SystemException');
-      expect(output).toContain('message: string');
+      assert(output.includes('export class DivisionByZero extends CORBA.SystemException'));
+      assert(output.includes('message: string'));
 
       // Method signature doesn't change for raises
-      expect(output).toContain('divide(a: number, b: number): Promise<number>');
+      assert(output.includes('divide(a: number, b: number): Promise<number>'));
     });
 
-    test('should handle oneway operations', () => {
+    it('should handle oneway operations', () => {
       const idl = `
         module Test {
           interface AsyncService {
@@ -274,13 +277,13 @@ describe('TypeScriptGenerator', () => {
       const output = compileToString(idl, 'Test');
 
       // Both should have Promise<void> return type
-      expect(output).toContain('fireAndForget(message: string): Promise<void>');
-      expect(output).toContain('normalMethod(message: string): Promise<void>');
+      assert(output.includes('fireAndForget(message: string): Promise<void>'));
+      assert(output.includes('normalMethod(message: string): Promise<void>'));
     });
   });
 
   describe('Struct Generation', () => {
-    test('should generate interface for struct', () => {
+    it('should generate interface for struct', () => {
       const idl = `
         module Test {
           struct Point {
@@ -292,16 +295,16 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = compileToString(idl, 'Test');
-      const matcher = new CodeMatcher(output);
+      const _matcher = new CodeMatcher(output);
 
-      expect(matcher.hasInterface('Point')).toBe(true);
-      expect(output).toContain('export interface Point');
-      expect(output).toContain('x: number');
-      expect(output).toContain('y: number');
-      expect(output).toContain('z: number');
+      assertEquals(_matcher.hasInterface('Point'), true);
+      assert(output.includes('export interface Point'));
+      assert(output.includes('x: number'));
+      assert(output.includes('y: number'));
+      assert(output.includes('z: number'));
     });
 
-    test('should handle nested structs', () => {
+    it('should handle nested structs', () => {
       const idl = `
         module Test {
           struct Inner {
@@ -318,15 +321,15 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export interface Outer');
-      expect(output).toContain('name: string');
-      expect(output).toContain('inner: Inner');
-      expect(output).toContain('inners: Inner[]');
+      assert(output.includes('export interface Outer'));
+      assert(output.includes('name: string'));
+      assert(output.includes('inner: Inner'));
+      assert(output.includes('inners: Inner[]'));
     });
   });
 
   describe('Enum Generation', () => {
-    test('should generate TypeScript enum', () => {
+    it('should generate TypeScript enum', () => {
       const idl = `
         module Test {
           enum Status {
@@ -339,19 +342,19 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = compileToString(idl, 'Test');
-      const matcher = new CodeMatcher(output);
+      const _matcher = new CodeMatcher(output);
 
-      expect(matcher.hasEnum('Status')).toBe(true);
-      expect(output).toContain('export enum Status');
-      expect(output).toContain('PENDING = 0');
-      expect(output).toContain('ACTIVE = 1');
-      expect(output).toContain('COMPLETED = 2');
-      expect(output).toContain('FAILED = 3');
+      assertEquals(_matcher.hasEnum('Status'), true);
+      assert(output.includes('export enum Status'));
+      assert(output.includes('PENDING = 0'));
+      assert(output.includes('ACTIVE = 1'));
+      assert(output.includes('COMPLETED = 2'));
+      assert(output.includes('FAILED = 3'));
     });
   });
 
   describe('Union Generation', () => {
-    test('should generate union type with discriminator', () => {
+    it('should generate union type with discriminator', () => {
       const idl = `
         module Test {
           union Value switch (long) {
@@ -365,14 +368,14 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export type Value =');
-      expect(output).toContain('{ discriminator: 1; intValue: number }');
-      expect(output).toContain('{ discriminator: 2; floatValue: number }');
-      expect(output).toContain('{ discriminator: 3; stringValue: string }');
-      expect(output).toContain('{ discriminator: "default"; boolValue: boolean }');
+      assert(output.includes('export type Value ='));
+      assert(output.includes('{ discriminator: 1; intValue: number }'));
+      assert(output.includes('{ discriminator: 2; floatValue: number }'));
+      assert(output.includes('{ discriminator: 3; stringValue: string }'));
+      assert(output.includes('{ discriminator: "default"; boolValue: boolean }'));
     });
 
-    test('should handle union with enum discriminator', () => {
+    it('should handle union with enum discriminator', () => {
       const idl = `
         module Test {
           enum DataType { INT, FLOAT, STRING };
@@ -387,15 +390,15 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export type Data =');
-      expect(output).toContain('{ discriminator: "INT"; intData: number }');
-      expect(output).toContain('{ discriminator: "FLOAT"; floatData: number }');
-      expect(output).toContain('{ discriminator: "STRING"; stringData: string }');
+      assert(output.includes('export type Data ='));
+      assert(output.includes('{ discriminator: "INT"; intData: number }'));
+      assert(output.includes('{ discriminator: "FLOAT"; floatData: number }'));
+      assert(output.includes('{ discriminator: "STRING"; stringData: string }'));
     });
   });
 
   describe('Constant Generation', () => {
-    test('should generate typed constants', () => {
+    it('should generate typed constants', () => {
       const idl = `
         module Test {
           const short SHORT_VAL = 100;
@@ -410,18 +413,18 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('export const SHORT_VAL: number = 100');
-      expect(output).toContain('export const LONG_VAL: number = 1000000');
-      expect(output).toContain('export const BIG_VAL: bigint = 9999999999');
-      expect(output).toContain('export const FLOAT_VAL: number = 3.14');
-      expect(output).toContain('export const DOUBLE_VAL: number = 2.71828');
-      expect(output).toContain('export const STRING_VAL: string = "Hello"');
-      expect(output).toContain('export const BOOL_VAL: boolean = true');
+      assert(output.includes('export const SHORT_VAL: number = 100'));
+      assert(output.includes('export const LONG_VAL: number = 1000000'));
+      assert(output.includes('export const BIG_VAL: bigint = 9999999999'));
+      assert(output.includes('export const FLOAT_VAL: number = 3.14'));
+      assert(output.includes('export const DOUBLE_VAL: number = 2.71828'));
+      assert(output.includes('export const STRING_VAL: string = "Hello"'));
+      assert(output.includes('export const BOOL_VAL: boolean = true'));
     });
   });
 
   describe('Cross-Module References', () => {
-    test('should generate imports for cross-module types', () => {
+    it('should generate imports for cross-module types', () => {
       const idl = `
         module Common {
           struct Timestamp {
@@ -439,11 +442,11 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const businessOutput = results.get('Business.ts') || '';
 
-      expect(businessOutput).toContain('import type * as Common from "./Common.ts"');
-      expect(businessOutput).toContain('getTime(): Promise<Common.Timestamp>');
+      assert(businessOutput.includes('import type * as Common from "./Common.ts"'));
+      assert(businessOutput.includes('getTime(): Promise<Common.Timestamp>'));
     });
 
-    test('should handle complex cross-module inheritance', () => {
+    it('should handle complex cross-module inheritance', () => {
       const idl = `
         module Base {
           interface IBase {
@@ -461,13 +464,13 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const derivedOutput = results.get('Derived.ts') || '';
 
-      expect(derivedOutput).toContain('import type * as Base from "./Base.ts"');
-      expect(derivedOutput).toContain('export interface IDerived extends Base.IBase');
+      assert(derivedOutput.includes('import type * as Base from "./Base.ts"'));
+      assert(derivedOutput.includes('export interface IDerived extends Base.IBase'));
     });
   });
 
   describe('Nested Types', () => {
-    test('should flatten nested enum types', () => {
+    it('should flatten nested enum types', () => {
       const idl = `
         module Test {
           interface Container {
@@ -480,16 +483,16 @@ describe('TypeScriptGenerator', () => {
       const output = compileToString(idl, 'Test');
 
       // Nested enum should be flattened
-      expect(output).toContain('export enum Container_Status');
-      expect(output).toContain('READY = 0');
-      expect(output).toContain('BUSY = 1');
-      expect(output).toContain('ERROR = 2');
+      assert(output.includes('export enum Container_Status'));
+      assert(output.includes('READY = 0'));
+      assert(output.includes('BUSY = 1'));
+      assert(output.includes('ERROR = 2'));
 
       // Interface should reference flattened type
-      expect(output).toContain('getStatus(): Promise<Container_Status>');
+      assert(output.includes('getStatus(): Promise<Container_Status>'));
     });
 
-    test('should flatten nested struct types', () => {
+    it('should flatten nested struct types', () => {
       const idl = `
         module Test {
           interface Container {
@@ -505,15 +508,15 @@ describe('TypeScriptGenerator', () => {
       const output = compileToString(idl, 'Test');
 
       // Nested struct should be flattened
-      expect(output).toContain('export interface Container_Config');
-      expect(output).toContain('name: string');
-      expect(output).toContain('value: number');
+      assert(output.includes('export interface Container_Config'));
+      assert(output.includes('name: string'));
+      assert(output.includes('value: number'));
 
       // Interface should reference flattened type
-      expect(output).toContain('getConfig(): Promise<Container_Config>');
+      assert(output.includes('getConfig(): Promise<Container_Config>'));
     });
 
-    test('should handle the MediaType ambiguity correctly', () => {
+    it('should handle the MediaType ambiguity correctly', () => {
       const idl = `
         module Characteristics {
           interface MediaType {
@@ -530,16 +533,16 @@ describe('TypeScriptGenerator', () => {
       const output = compileToString(idl, 'Characteristics');
 
       // Should have both MediaType interface and MediaOutput_MediaType enum
-      expect(output).toContain('export interface MediaType');
-      expect(output).toContain('export enum MediaOutput_MediaType');
+      assert(output.includes('export interface MediaType'));
+      assert(output.includes('export enum MediaOutput_MediaType'));
 
       // MediaOutput should use the nested enum type
-      expect(output).toContain('get_type(): Promise<MediaOutput_MediaType>');
+      assert(output.includes('get_type(): Promise<MediaOutput_MediaType>'));
     });
   });
 
   describe('Import Optimization', () => {
-    test('should use type imports for type-only usage', () => {
+    it('should use type imports for type-only usage', () => {
       const idl = `
         module Types {
           struct Data {
@@ -559,10 +562,10 @@ describe('TypeScriptGenerator', () => {
       const serviceOutput = results.get('Service.ts') || '';
 
       // Should use regular import because Types.TC_Data is used as a value in the stub
-      expect(serviceOutput).toContain('import * as Types from "./Types.ts"');
+      assert(serviceOutput.includes('import * as Types from "./Types.ts"'));
     });
 
-    test('should use regular imports when needed for values', () => {
+    it('should use regular imports when needed for values', () => {
       const idl = `
         module Constants {
           const long VALUE = 42;
@@ -578,12 +581,12 @@ describe('TypeScriptGenerator', () => {
 
       // Should use regular import when constants are referenced
       // But in this case, constants are copied by value, so might still be type import
-      expect(serviceOutput).toMatch(/import (type )?\* as Constants from "\.\/Constants\.ts"/);
+      assert(/import (type )?\* as Constants from "\.\/Constants\.ts"/.test(serviceOutput));
     });
   });
 
   describe('Helper Functions', () => {
-    test('should emit helper functions when enabled', () => {
+    it('should emit helper functions when enabled', () => {
       const idl = `
         module Test {
           interface Service {
@@ -597,13 +600,13 @@ describe('TypeScriptGenerator', () => {
 
       // This depends on what helpers are implemented
       // For now, just check that the option is respected
-      expect(outputWithHelpers.get('Test.ts')).toBeDefined();
-      expect(outputWithoutHelpers.get('Test.ts')).toBeDefined();
+      assertExists(outputWithHelpers.get('Test.ts'));
+      assertExists(outputWithoutHelpers.get('Test.ts'));
     });
   });
 
   describe('Output Structure', () => {
-    test('should generate separate files for each module', () => {
+    it('should generate separate files for each module', () => {
       const idl = `
         module ModuleA {
           const long A = 1;
@@ -620,13 +623,13 @@ describe('TypeScriptGenerator', () => {
 
       const results = generateTypeScript(idl);
 
-      expect(results.has('ModuleA.ts')).toBe(true);
-      expect(results.has('ModuleB.ts')).toBe(true);
-      expect(results.has('ModuleC.ts')).toBe(true);
-      expect(results.size).toBe(3);
+      assertEquals(results.has('ModuleA.ts'), true);
+      assertEquals(results.has('ModuleB.ts'), true);
+      assertEquals(results.has('ModuleC.ts'), true);
+      assertEquals(results.size, 3);
     });
 
-    test('should include file header with metadata', () => {
+    it('should include file header with metadata', () => {
       const idl = `
         module Test {
           const long VALUE = 1;
@@ -635,15 +638,15 @@ describe('TypeScriptGenerator', () => {
 
       const output = compileToString(idl, 'Test');
 
-      expect(output).toContain('/**');
-      expect(output).toContain('* This file was automatically generated');
-      expect(output).toContain('* DO NOT EDIT THIS FILE DIRECTLY');
-      expect(output).toContain('* Source: test.idl');
+      assert(output.includes('/**'));
+      assert(output.includes('* This file was automatically generated'));
+      assert(output.includes('* DO NOT EDIT THIS FILE DIRECTLY'));
+      assert(output.includes('* Source: test.idl'));
     });
   });
 
   describe('CORBA Import Path', () => {
-    test('should use custom CORBA import path', () => {
+    it('should use custom CORBA import path', () => {
       const idl = `
         module Test {
           interface Service {
@@ -658,10 +661,10 @@ describe('TypeScriptGenerator', () => {
       const tsOutput = output.get('Test.ts') || '';
 
       // Now we import everything together since we generate interface TypeCodes
-      expect(tsOutput).toContain('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba-lib"');
+      assert(tsOutput.includes('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba-lib"'));
     });
 
-    test('should use default CORBA import path', () => {
+    it('should use default CORBA import path', () => {
       const idl = `
         module Test {
           interface Service {
@@ -674,7 +677,7 @@ describe('TypeScriptGenerator', () => {
       const tsOutput = output.get('Test.ts') || '';
 
       // Now we import everything together since we generate interface TypeCodes
-      expect(tsOutput).toContain('import { TypeCode, CORBA, CorbaStub, create_request } from "corba"');
+      assert(tsOutput.includes('import { TypeCode, CORBA, CorbaStub, create_request } from "corba"'));
     });
   });
 });

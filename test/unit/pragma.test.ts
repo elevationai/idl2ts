@@ -1,7 +1,7 @@
-import { IDLParser } from '../../src/parser/IDLParser';
-import { TypeScriptGenerator } from '../../src/generator/TypeScriptGenerator';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, beforeEach } from '@std/testing/bdd';
+import { assertEquals, assertExists, assert } from '@std/assert';
+import { IDLParser } from '../../src/parser/IDLParser.ts';
+import { TypeScriptGenerator } from '../../src/generator/TypeScriptGenerator.ts';
 
 describe('Pragma Directives', () => {
   let parser: IDLParser;
@@ -31,11 +31,11 @@ module TestModule {
       const result = generator.generate(ast);
       
       const moduleCode = result.get('TestModule.ts');
-      expect(moduleCode).toBeDefined();
+      assertExists(moduleCode);
       
       // Check that repository IDs include the prefix
-      expect(moduleCode).toContain('IDL:com.example.test/TestModule/TestInterface:1.0');
-      expect(moduleCode).toContain('IDL:com.example.test/TestModule/TestStruct:1.0');
+      assert(moduleCode.includes('IDL:com.example.test/TestModule/TestInterface:1.0'));
+      assert(moduleCode.includes('IDL:com.example.test/TestModule/TestStruct:1.0'));
     });
   });
   
@@ -59,13 +59,13 @@ module TestModule {
       const result = generator.generate(ast);
       
       const moduleCode = result.get('TestModule.ts');
-      expect(moduleCode).toBeDefined();
+      assertExists(moduleCode);
       
       // TestInterface should have version 2.5
-      expect(moduleCode).toContain('IDL:test.org/TestModule/TestInterface:2.5');
+      assert(moduleCode.includes('IDL:test.org/TestModule/TestInterface:2.5'));
       
       // OtherInterface should have default version 1.0
-      expect(moduleCode).toContain('IDL:test.org/TestModule/OtherInterface:1.0');
+      assert(moduleCode.includes('IDL:test.org/TestModule/OtherInterface:1.0'));
     });
   });
   
@@ -89,13 +89,13 @@ module TestModule {
       const result = generator.generate(ast);
       
       const moduleCode = result.get('TestModule.ts');
-      expect(moduleCode).toBeDefined();
+      assertExists(moduleCode);
       
       // CustomInterface should have the custom ID
-      expect(moduleCode).toContain('IDL:custom/location/CustomInterface:3.0');
+      assert(moduleCode.includes('IDL:custom/location/CustomInterface:3.0'));
       
       // NormalInterface should use prefix
-      expect(moduleCode).toContain('IDL:test.org/TestModule/NormalInterface:1.0');
+      assert(moduleCode.includes('IDL:test.org/TestModule/NormalInterface:1.0'));
     });
   });
   
@@ -118,14 +118,14 @@ module TestModule {
       const result = generator.generate(ast);
       
       const moduleCode = result.get('TestModule.ts');
-      expect(moduleCode).toBeDefined();
+      assertExists(moduleCode);
       
       // InhibitedInterface should not be generated
-      expect(moduleCode).not.toContain('interface InhibitedInterface');
-      expect(moduleCode).not.toContain('class InhibitedInterface_Stub');
+      assert(!moduleCode.includes('interface InhibitedInterface'));
+      assert(!moduleCode.includes('class InhibitedInterface_Stub'));
       
       // GeneratedInterface should be generated
-      expect(moduleCode).toContain('interface GeneratedInterface');
+      assert(moduleCode.includes('interface GeneratedInterface'));
     });
     
     it('should not generate any code after global inhibit pragma', () => {
@@ -148,10 +148,10 @@ module InhibitedModule {
       const result = generator.generate(ast);
       
       // GeneratedModule should exist
-      expect(result.get('GeneratedModule.ts')).toBeDefined();
+      assertExists(result.get('GeneratedModule.ts'));
       
       // InhibitedModule should not be generated
-      expect(result.get('InhibitedModule.ts')).toBeUndefined();
+      assertEquals(result.get('InhibitedModule.ts'), undefined);
     });
   });
   
@@ -170,11 +170,11 @@ module Components {
       const result = generator.generate(ast);
       
       const moduleCode = result.get('Components.ts');
-      expect(moduleCode).toBeDefined();
+      assertExists(moduleCode);
       
       // Should generate the exact repository ID the Python server expects
-      expect(moduleCode).toContain('IDL:cuss.iata.org/Components/ApplicationManager:1.0');
-      expect(moduleCode).toContain('static override readonly _repository_id = "IDL:cuss.iata.org/Components/ApplicationManager:1.0"');
+      assert(moduleCode.includes('IDL:cuss.iata.org/Components/ApplicationManager:1.0'));
+      assert(moduleCode.includes('static override readonly _repository_id = "IDL:cuss.iata.org/Components/ApplicationManager:1.0"'));
     });
   });
 });

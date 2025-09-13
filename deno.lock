@@ -2,11 +2,17 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/assert@1.0.0": "1.0.0",
+    "jsr:@std/assert@^1.0.13": "1.0.14",
+    "jsr:@std/assert@^1.0.14": "1.0.14",
+    "jsr:@std/data-structures@^1.0.9": "1.0.9",
     "jsr:@std/fs@1.0.0": "1.0.0",
+    "jsr:@std/fs@^1.0.19": "1.0.19",
     "jsr:@std/internal@^1.0.1": "1.0.10",
     "jsr:@std/internal@^1.0.10": "1.0.10",
     "jsr:@std/path@1.0.0": "1.0.0",
     "jsr:@std/path@^1.0.2": "1.1.2",
+    "jsr:@std/path@^1.1.1": "1.1.2",
+    "jsr:@std/testing@^1.0.15": "1.0.15",
     "npm:commander@11.0.0": "11.0.0"
   },
   "jsr": {
@@ -16,10 +22,25 @@
         "jsr:@std/internal@^1.0.1"
       ]
     },
+    "@std/assert@1.0.14": {
+      "integrity": "68d0d4a43b365abc927f45a9b85c639ea18a9fab96ad92281e493e4ed84abaa4",
+      "dependencies": [
+        "jsr:@std/internal@^1.0.10"
+      ]
+    },
+    "@std/data-structures@1.0.9": {
+      "integrity": "033d6e17e64bf1f84a614e647c1b015fa2576ae3312305821e1a4cb20674bb4d"
+    },
     "@std/fs@1.0.0": {
       "integrity": "d72e4a125af7168d717a2ed1dca77a728b422b0d138fd20579e3fa41a77da943",
       "dependencies": [
         "jsr:@std/path@^1.0.2"
+      ]
+    },
+    "@std/fs@1.0.19": {
+      "integrity": "051968c2b1eae4d2ea9f79a08a3845740ef6af10356aff43d3e2ef11ed09fb06",
+      "dependencies": [
+        "jsr:@std/path@^1.1.1"
       ]
     },
     "@std/internal@1.0.10": {
@@ -32,6 +53,16 @@
       "integrity": "c0b13b97dfe06546d5e16bf3966b1cadf92e1cc83e56ba5476ad8b498d9e3038",
       "dependencies": [
         "jsr:@std/internal@^1.0.10"
+      ]
+    },
+    "@std/testing@1.0.15": {
+      "integrity": "a490169f5ccb0f3ae9c94fbc69d2cd43603f2cffb41713a85f99bbb0e3087cbc",
+      "dependencies": [
+        "jsr:@std/assert@^1.0.13",
+        "jsr:@std/data-structures",
+        "jsr:@std/fs@^1.0.19",
+        "jsr:@std/internal@^1.0.10",
+        "jsr:@std/path@^1.1.1"
       ]
     }
   },
@@ -137,5 +168,11 @@
     "https://deno.land/std@0.220.0/path/windows/resolve.ts": "8dae1dadfed9d46ff46cc337c9525c0c7d959fb400a6308f34595c45bdca1972",
     "https://deno.land/std@0.220.0/path/windows/to_file_url.ts": "40e560ee4854fe5a3d4d12976cef2f4e8914125c81b11f1108e127934ced502e",
     "https://deno.land/std@0.220.0/path/windows/to_namespaced_path.ts": "4ffa4fb6fae321448d5fe810b3ca741d84df4d7897e61ee29be961a6aac89a4c"
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@std/assert@^1.0.14",
+      "jsr:@std/testing@^1.0.15"
+    ]
   }
 }

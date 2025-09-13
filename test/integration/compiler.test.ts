@@ -1,26 +1,27 @@
-import { IDLCompiler } from '../../src/compiler/IDLCompiler';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { describe, it, beforeEach, afterEach } from '@std/testing/bdd';
+import { assert } from '@std/assert';
+import { IDLCompiler } from '../../src/compiler/IDLCompiler.ts';
 
 describe('IDLCompiler Integration', () => {
   let tempDir: string;
   
   beforeEach(() => {
     // Create a temp directory for test outputs
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'idl2ts-test-'));
+    tempDir = Deno.makeTempDirSync({ prefix: 'idl2ts-test-' });
   });
   
   afterEach(() => {
     // Clean up temp directory
-    if (fs.existsSync(tempDir)) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+    try {
+      Deno.removeSync(tempDir, { recursive: true });
+    } catch {
+      // Ignore errors if already removed
     }
   });
 
   describe('File Output', () => {
-    test('should compile IDL file to TypeScript', () => {
-      const idlPath = path.join(tempDir, 'test.idl');
+    it('should compile IDL file to TypeScript', () => {
+      const idlPath = `${tempDir}/test.idl`;
       const idlContent = `
         module TestModule {
           interface TestInterface {
@@ -29,7 +30,7 @@ describe('IDLCompiler Integration', () => {
         };
       `;
       
-      fs.writeFileSync(idlPath, idlContent);
+      Deno.writeTextFileSync(idlPath, idlContent);
       
       const compiler = new IDLCompiler({
         outputPath: tempDir,
@@ -38,17 +39,22 @@ describe('IDLCompiler Integration', () => {
       
       compiler.compile(idlPath);
       
-      const outputFile = path.join(tempDir, 'TestModule.ts');
-      expect(fs.existsSync(outputFile)).toBe(true);
+      const outputFile = `${tempDir}/TestModule.ts`;
+      try {
+        const stat = Deno.statSync(outputFile);
+        assert(stat.isFile);
+      } catch {
+        throw new Error(`Output file ${outputFile} was not created`);
+      }
       
-      const output = fs.readFileSync(outputFile, 'utf-8');
-      expect(output).not.toContain('namespace'); // Uses ES modules, not namespaces
-      expect(output).toContain('export interface TestInterface');
-      expect(output).toContain('testMethod(param: string): Promise<number>');
+      const output = Deno.readTextFileSync(outputFile);
+      assert(!output.includes('namespace')); // Uses ES modules, not namespaces
+      assert(output.includes('export interface TestInterface'));
+      assert(output.includes('testMethod(param: string): Promise<number>'));
     });
 
-    test('should generate multiple module files', () => {
-      const idlPath = path.join(tempDir, 'multi.idl');
+    it('should generate multiple module files', () => {
+      const idlPath = `${tempDir}/multi.idl`;
       const idlContent = `
         module ModuleA {
           const long A = 1;
@@ -59,7 +65,7 @@ describe('IDLCompiler Integration', () => {
         };
       `;
       
-      fs.writeFileSync(idlPath, idlContent);
+      Deno.writeTextFileSync(idlPath, idlContent);
       
       const compiler = new IDLCompiler({
         outputPath: tempDir
@@ -67,19 +73,25 @@ describe('IDLCompiler Integration', () => {
       
       compiler.compile(idlPath);
       
-      expect(fs.existsSync(path.join(tempDir, 'ModuleA.ts'))).toBe(true);
-      expect(fs.existsSync(path.join(tempDir, 'ModuleB.ts'))).toBe(true);
+      try {
+        const statA = Deno.statSync(`${tempDir}/ModuleA.ts`);
+        const statB = Deno.statSync(`${tempDir}/ModuleB.ts`);
+        assert(statA.isFile);
+        assert(statB.isFile);
+      } catch (e) {
+        throw new Error(`Module files were not created: ${e}`);
+      }
     });
   });
 
   describe('Include Paths', () => {
-    test('should resolve includes from include paths', () => {
-      const includeDir = path.join(tempDir, 'includes');
-      fs.mkdirSync(includeDir);
+    it('should resolve includes from include paths', () => {
+      const includeDir = `${tempDir}/includes`;
+      Deno.mkdirSync(includeDir);
       
       // Create included file
-      const commonIdl = path.join(includeDir, 'common.idl');
-      fs.writeFileSync(commonIdl, `
+      const commonIdl = `${includeDir}/common.idl`;
+      Deno.writeTextFileSync(commonIdl, `
         module Common {
           struct Timestamp {
             long long value;
@@ -88,8 +100,8 @@ describe('IDLCompiler Integration', () => {
       `);
       
       // Create main file that includes common
-      const mainIdl = path.join(tempDir, 'main.idl');
-      fs.writeFileSync(mainIdl, `
+      const mainIdl = `${tempDir}/main.idl`;
+      Deno.writeTextFileSync(mainIdl, `
         #include "common.idl"
         
         module Main {
@@ -106,22 +118,28 @@ describe('IDLCompiler Integration', () => {
       
       compiler.compile(mainIdl);
       
-      const mainOutput = path.join(tempDir, 'Main.ts');
-      const commonOutput = path.join(tempDir, 'Common.ts');
+      const mainOutput = `${tempDir}/Main.ts`;
+      const commonOutput = `${tempDir}/Common.ts`;
       
-      expect(fs.existsSync(mainOutput)).toBe(true);
-      expect(fs.existsSync(commonOutput)).toBe(true);
+      try {
+        const mainStat = Deno.statSync(mainOutput);
+        const commonStat = Deno.statSync(commonOutput);
+        assert(mainStat.isFile);
+        assert(commonStat.isFile);
+      } catch (e) {
+        throw new Error(`Output files were not created: ${e}`);
+      }
       
-      const mainContent = fs.readFileSync(mainOutput, 'utf-8');
-      expect(mainContent).toContain('import type * as Common from "./Common.ts"');
-      expect(mainContent).toContain('getTime(): Promise<Common.Timestamp>');
+      const mainContent = Deno.readTextFileSync(mainOutput);
+      assert(mainContent.includes('import type * as Common from "./Common.ts"'));
+      assert(mainContent.includes('getTime(): Promise<Common.Timestamp>'));
     });
   });
 
   describe('Compiler Options', () => {
-    test('should respect includeStubs option', () => {
-      const idlPath = path.join(tempDir, 'stubs.idl');
-      fs.writeFileSync(idlPath, `
+    it('should respect includeStubs option', () => {
+      const idlPath = `${tempDir}/stubs.idl`;
+      Deno.writeTextFileSync(idlPath, `
         module Test {
           interface Service {
             void method();
@@ -136,11 +154,10 @@ describe('IDLCompiler Integration', () => {
       });
       compilerWithStubs.compile(idlPath);
       
-      const outputWithStubs = fs.readFileSync(
-        path.join(tempDir, 'Test.ts'), 
-        'utf-8'
+      const outputWithStubs = Deno.readTextFileSync(
+        `${tempDir}/Test.ts`
       );
-      expect(outputWithStubs).toContain('Service_Stub');
+      assert(outputWithStubs.includes('Service_Stub'));
       
       // Without stubs
       const compilerWithoutStubs = new IDLCompiler({
@@ -149,16 +166,15 @@ describe('IDLCompiler Integration', () => {
       });
       compilerWithoutStubs.compile(idlPath);
       
-      const outputWithoutStubs = fs.readFileSync(
-        path.join(tempDir, 'Test.ts'), 
-        'utf-8'
+      const outputWithoutStubs = Deno.readTextFileSync(
+        `${tempDir}/Test.ts`
       );
-      expect(outputWithoutStubs).not.toContain('Service_Stub');
+      assert(!outputWithoutStubs.includes('Service_Stub'));
     });
 
-    test('should use custom CORBA import path', () => {
-      const idlPath = path.join(tempDir, 'corba.idl');
-      fs.writeFileSync(idlPath, `
+    it('should use custom CORBA import path', () => {
+      const idlPath = `${tempDir}/corba.idl`;
+      Deno.writeTextFileSync(idlPath, `
         module Test {
           interface Service {
             void method();
@@ -174,19 +190,18 @@ describe('IDLCompiler Integration', () => {
       
       compiler.compile(idlPath);
       
-      const output = fs.readFileSync(
-        path.join(tempDir, 'Test.ts'), 
-        'utf-8'
+      const output = Deno.readTextFileSync(
+        `${tempDir}/Test.ts`
       );
       
       // Now we import everything together since we generate interface TypeCodes
-      expect(output).toContain('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba"');
+      assert(output.includes('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba"'));
     });
   });
 
   describe('Complex Scenarios', () => {
-    test('should compile complex IDL with cross-module references', () => {
-      const idlPath = path.join(tempDir, 'complex.idl');
+    it('should compile complex IDL with cross-module references', () => {
+      const idlPath = `${tempDir}/complex.idl`;
       const idlContent = `
         module Common {
           struct Address {
@@ -233,7 +248,7 @@ describe('IDLCompiler Integration', () => {
         };
       `;
       
-      fs.writeFileSync(idlPath, idlContent);
+      Deno.writeTextFileSync(idlPath, idlContent);
       
       const compiler = new IDLCompiler({
         outputPath: tempDir,
@@ -243,38 +258,36 @@ describe('IDLCompiler Integration', () => {
       compiler.compile(idlPath);
       
       // Check Common module
-      const commonOutput = fs.readFileSync(
-        path.join(tempDir, 'Common.ts'), 
-        'utf-8'
+      const commonOutput = Deno.readTextFileSync(
+        `${tempDir}/Common.ts`
       );
-      expect(commonOutput).toContain('export interface Address');
-      expect(commonOutput).toContain('export enum AccountType');
-      expect(commonOutput).toContain('export type StringList = string[]');
+      assert(commonOutput.includes('export interface Address'));
+      assert(commonOutput.includes('export enum AccountType'));
+      assert(commonOutput.includes('export type StringList = string[]'));
       
       // Check Banking module
-      const bankingOutput = fs.readFileSync(
-        path.join(tempDir, 'Banking.ts'), 
-        'utf-8'
+      const bankingOutput = Deno.readTextFileSync(
+        `${tempDir}/Banking.ts`
       );
       // Now we import as value because Common.TC_* TypeCodes are used in stubs
-      expect(bankingOutput).toContain('import * as Common from "./Common.ts"');
-      expect(bankingOutput).toContain('export class InsufficientFunds extends CORBA.SystemException');
-      expect(bankingOutput).toContain('export interface Account');
-      expect(bankingOutput).toContain('export interface Bank');
-      expect(bankingOutput).toContain('export class Account_Stub');
-      expect(bankingOutput).toContain('export class Bank_Stub');
+      assert(bankingOutput.includes('import * as Common from "./Common.ts"'));
+      assert(bankingOutput.includes('export class InsufficientFunds extends CORBA.SystemException'));
+      assert(bankingOutput.includes('export interface Account'));
+      assert(bankingOutput.includes('export interface Bank'));
+      assert(bankingOutput.includes('export class Account_Stub'));
+      assert(bankingOutput.includes('export class Bank_Stub'));
       
       // Check cross-module type usage
-      expect(bankingOutput).toContain('type: Common.AccountType');
-      expect(bankingOutput).toContain('getAddress(): Promise<Common.Address>');
-      expect(bankingOutput).toContain('setTags(tags: Common.StringList): Promise<void>');
-      expect(bankingOutput).toContain(
+      assert(bankingOutput.includes('type: Common.AccountType'));
+      assert(bankingOutput.includes('getAddress(): Promise<Common.Address>'));
+      assert(bankingOutput.includes('setTags(tags: Common.StringList): Promise<void>'));
+      assert(bankingOutput.includes(
         'createAccount(customerName: string, type: Common.AccountType, address: Common.Address): Promise<Account>'
-      );
+      ));
     });
 
-    test('should handle nested interface types correctly', () => {
-      const idlPath = path.join(tempDir, 'nested.idl');
+    it('should handle nested interface types correctly', () => {
+      const idlPath = `${tempDir}/nested.idl`;
       const idlContent = `
         module Test {
           interface Container {
@@ -310,7 +323,7 @@ describe('IDLCompiler Integration', () => {
         };
       `;
       
-      fs.writeFileSync(idlPath, idlContent);
+      Deno.writeTextFileSync(idlPath, idlContent);
       
       const compiler = new IDLCompiler({
         outputPath: tempDir,
@@ -319,30 +332,29 @@ describe('IDLCompiler Integration', () => {
       
       compiler.compile(idlPath);
       
-      const output = fs.readFileSync(
-        path.join(tempDir, 'Test.ts'), 
-        'utf-8'
+      const output = Deno.readTextFileSync(
+        `${tempDir}/Test.ts`
       );
       
       // Check flattened nested types
-      expect(output).toContain('export enum Container_Status');
-      expect(output).toContain('export interface Container_Config');
-      expect(output).toContain('export class Container_ConfigError extends CORBA.SystemException');
-      expect(output).toContain('export type Container_ConfigList = Container_Config[]');
+      assert(output.includes('export enum Container_Status'));
+      assert(output.includes('export interface Container_Config'));
+      assert(output.includes('export class Container_ConfigError extends CORBA.SystemException'));
+      assert(output.includes('export type Container_ConfigList = Container_Config[]'));
       
       // Check Container interface uses flattened types
-      expect(output).toContain('getStatus(): Promise<Container_Status>');
-      expect(output).toContain('getConfig(): Promise<Container_Config>');
-      expect(output).toContain('setConfig(config: Container_Config): Promise<void>');
-      expect(output).toContain('getAllConfigs(): Promise<Container_ConfigList>');
+      assert(output.includes('getStatus(): Promise<Container_Status>'));
+      assert(output.includes('getConfig(): Promise<Container_Config>'));
+      assert(output.includes('setConfig(config: Container_Config): Promise<void>'));
+      assert(output.includes('getAllConfigs(): Promise<Container_ConfigList>'));
       
       // Check Manager interface uses flattened types
-      expect(output).toContain('getContainerStatus(): Promise<Container_Status>');
-      expect(output).toContain('getContainerConfig(): Promise<Container_Config>');
+      assert(output.includes('getContainerStatus(): Promise<Container_Status>'));
+      assert(output.includes('getContainerConfig(): Promise<Container_Config>'));
     });
 
-    test('should resolve MediaType-style ambiguity correctly', () => {
-      const idlPath = path.join(tempDir, 'ambiguity.idl');
+    it('should resolve MediaType-style ambiguity correctly', () => {
+      const idlPath = `${tempDir}/ambiguity.idl`;
       const idlContent = `
         module Media {
           // Top-level interface named MediaType
@@ -381,7 +393,7 @@ describe('IDLCompiler Integration', () => {
         };
       `;
       
-      fs.writeFileSync(idlPath, idlContent);
+      Deno.writeTextFileSync(idlPath, idlContent);
       
       const compiler = new IDLCompiler({
         outputPath: tempDir,
@@ -390,45 +402,49 @@ describe('IDLCompiler Integration', () => {
       
       compiler.compile(idlPath);
       
-      const output = fs.readFileSync(
-        path.join(tempDir, 'Media.ts'), 
-        'utf-8'
+      const output = Deno.readTextFileSync(
+        `${tempDir}/Media.ts`
       );
       
       // Should have both types
-      expect(output).toContain('export interface MediaType');
-      expect(output).toContain('export enum MediaOutput_MediaType');
+      assert(output.includes('export interface MediaType'));
+      assert(output.includes('export enum MediaOutput_MediaType'));
       
       // MediaOutput interface should use nested enum
-      expect(output).toContain('get_type(): Promise<MediaOutput_MediaType>');
-      expect(output).toContain('set_type(type: MediaOutput_MediaType): Promise<void>');
+      assert(output.includes('get_type(): Promise<MediaOutput_MediaType>'));
+      assert(output.includes('set_type(type: MediaOutput_MediaType): Promise<void>'));
       
       // MediaInfo struct should use nested enum
-      expect(output).toContain('export interface MediaOutput_MediaInfo');
-      expect(output).toContain('type: MediaOutput_MediaType');
+      assert(output.includes('export interface MediaOutput_MediaInfo'));
+      assert(output.includes('type: MediaOutput_MediaType'));
       
       // MediaProcessor should use appropriate types
-      expect(output).toContain('processMedia(media: MediaOutput_MediaType): Promise<MediaOutput_MediaType>');
-      expect(output).toContain('getOutputType(): Promise<MediaOutput_MediaType>');
+      assert(output.includes('processMedia(media: MediaOutput_MediaType): Promise<MediaOutput_MediaType>'));
+      assert(output.includes('getOutputType(): Promise<MediaOutput_MediaType>'));
     });
   });
 
   describe('Error Recovery', () => {
-    test('should handle empty IDL file gracefully', () => {
-      const idlPath = path.join(tempDir, 'empty.idl');
-      fs.writeFileSync(idlPath, '');
+    it('should handle empty IDL file gracefully', () => {
+      const idlPath = `${tempDir}/empty.idl`;
+      Deno.writeTextFileSync(idlPath, '');
       
       const compiler = new IDLCompiler({
         outputPath: tempDir
       });
       
       // Should not throw
-      expect(() => compiler.compile(idlPath)).not.toThrow();
+      try {
+        compiler.compile(idlPath);
+        assert(true);
+      } catch (e) {
+        throw new Error(`Compiler threw error on empty file: ${e}`);
+      }
     });
 
-    test('should handle IDL with only comments', () => {
-      const idlPath = path.join(tempDir, 'comments.idl');
-      fs.writeFileSync(idlPath, `
+    it('should handle IDL with only comments', () => {
+      const idlPath = `${tempDir}/comments.idl`;
+      Deno.writeTextFileSync(idlPath, `
         // This is a comment
         /* This is a 
            multi-line comment */
@@ -439,13 +455,18 @@ describe('IDLCompiler Integration', () => {
         outputPath: tempDir
       });
       
-      expect(() => compiler.compile(idlPath)).not.toThrow();
+      try {
+        compiler.compile(idlPath);
+        assert(true);
+      } catch (e) {
+        throw new Error(`Compiler threw error on comments-only file: ${e}`);
+      }
     });
   });
 
   describe('Real-world Examples', () => {
-    test.skip('should compile CORBA-style service definition', () => {
-      const idlPath = path.join(tempDir, 'service.idl');
+    it.ignore('should compile CORBA-style service definition', () => {
+      const idlPath = `${tempDir}/service.idl`;
       const idlContent = `
         #pragma prefix "com.example"
         
@@ -513,7 +534,7 @@ describe('IDLCompiler Integration', () => {
         };
       `;
       
-      fs.writeFileSync(idlPath, idlContent);
+      Deno.writeTextFileSync(idlPath, idlContent);
       
       const compiler = new IDLCompiler({
         outputPath: tempDir,
@@ -524,31 +545,36 @@ describe('IDLCompiler Integration', () => {
       compiler.compile(idlPath);
       
       // Check Auth module
-      const authPath = path.join(tempDir, 'Services.ts');
-      expect(fs.existsSync(authPath)).toBe(true);
+      const authPath = `${tempDir}/Services.ts`;
+      try {
+        const stat = Deno.statSync(authPath);
+        assert(stat.isFile);
+      } catch (e) {
+        throw new Error(`Services module was not created: ${e}`);
+      }
       
-      const authOutput = fs.readFileSync(authPath, 'utf-8');
+      const authOutput = Deno.readTextFileSync(authPath);
       
       // Check nested namespace structure
-      expect(authOutput).toContain('export namespace Services');
-      expect(authOutput).toContain('export namespace Auth');
-      expect(authOutput).toContain('export namespace User');
+      assert(authOutput.includes('export namespace Services'));
+      assert(authOutput.includes('export namespace Auth'));
+      assert(authOutput.includes('export namespace User'));
       
       // Check Auth types
-      expect(authOutput).toContain('export interface Credentials');
-      expect(authOutput).toContain('export interface Token');
-      expect(authOutput).toContain('export interface AuthenticationFailed');
-      expect(authOutput).toContain('export interface AuthService');
-      expect(authOutput).toContain('export class AuthService_Stub');
+      assert(authOutput.includes('export interface Credentials'));
+      assert(authOutput.includes('export interface Token'));
+      assert(authOutput.includes('export interface AuthenticationFailed'));
+      assert(authOutput.includes('export interface AuthService'));
+      assert(authOutput.includes('export class AuthService_Stub'));
       
       // Check User types
-      expect(authOutput).toContain('export interface Profile');
-      expect(authOutput).toContain('authToken: Auth.Token');
-      expect(authOutput).toContain('export interface UserService');
-      expect(authOutput).toContain('export class UserService_Stub');
+      assert(authOutput.includes('export interface Profile'));
+      assert(authOutput.includes('authToken: Auth.Token'));
+      assert(authOutput.includes('export interface UserService'));
+      assert(authOutput.includes('export class UserService_Stub'));
       
       // Check CORBA import
-      expect(authOutput).toContain('import type { CORBA } from "@example/corba"');
+      assert(authOutput.includes('import type { CORBA } from "@example/corba"'));
     });
   });
 });

@@ -1,9 +1,8 @@
-import { IDLParser } from '../../src/parser/IDLParser';
-import { TypeScriptGenerator } from '../../src/generator/TypeScriptGenerator';
-import { IDLCompiler } from '../../src/compiler/IDLCompiler';
-import * as AST from '../../src/ast/nodes';
-import * as fs from 'fs';
-import * as path from 'path';
+import { IDLParser } from '../../src/parser/IDLParser.ts';
+import { TypeScriptGenerator } from '../../src/generator/TypeScriptGenerator.ts';
+import { IDLCompiler } from '../../src/compiler/IDLCompiler.ts';
+import * as AST from '../../src/ast/nodes.ts';
+import { assertEquals, assertExists } from '@std/assert';
 
 /**
  * Helper to parse IDL string and return AST
@@ -95,14 +94,14 @@ export function extractEnum(code: string, enumName: string): string | null {
  * Helper to load test fixtures
  */
 export function loadFixture(name: string): string {
-  const fixturePath = path.join(__dirname, '..', 'fixtures', name);
-  return fs.readFileSync(fixturePath, 'utf-8');
+  const fixturePath = new URL(`../fixtures/${name}`, import.meta.url);
+  return Deno.readTextFileSync(fixturePath);
 }
 
 /**
  * Helper to create a test compiler instance
  */
-export function createTestCompiler(options: any = {}): IDLCompiler {
+export function createTestCompiler(options: Partial<import('../../src/compiler/IDLCompiler.ts').CompilerOptions> = {}): IDLCompiler {
   return new IDLCompiler({
     includeStubs: true,
     includeSkeletons: false,
@@ -154,11 +153,11 @@ export class CodeMatcher {
 }
 
 /**
- * Helper to validate AST nodes
+ * Helper to validate AST nodes (Deno-compatible)
  */
-export function validateASTNode(node: any, expectedKind: string): void {
-  expect(node).toBeDefined();
-  expect(node.kind).toBe(expectedKind);
+export function validateASTNode(node: unknown, expectedKind: string): void {
+  assertExists(node);
+  assertEquals((node as AST.BaseNode).kind, expectedKind);
 }
 
 /**
@@ -168,18 +167,18 @@ export function findDefinition(
   ast: AST.SpecificationNode, 
   name: string
 ): AST.DefinitionNode | undefined {
-  return ast.definitions.find((def: any) => def.name === name);
+  return ast.definitions.find((def) => (def as AST.DefinitionNode & { name: string }).name === name);
 }
 
 /**
  * Find a member in a module or interface
  */
 export function findMember(
-  container: any, 
+  container: AST.ModuleNode | AST.InterfaceNode,
   memberName: string
-): any {
+): AST.DefinitionNode | AST.InterfaceMemberNode | undefined {
   // Modules use 'definitions', interfaces use 'members'
-  const collection = container.definitions || container.members;
+  const collection = container.kind === 'module' ? container.definitions : container.members;
   if (!collection) return undefined;
-  return collection.find((m: any) => m.name === memberName);
+  return collection.find((m) => (m as { name: string }).name === memberName);
 }

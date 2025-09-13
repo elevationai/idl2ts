@@ -290,16 +290,16 @@ export class TypeScriptGenerator {
           member.kind === 'exception' || member.kind === 'union') {
         // Generate nested type at module level with parent interface prefix
         const nestedDef = member as AST.DefinitionNode;
-        const originalName = (nestedDef as any).name;
+        const originalName = (nestedDef as { name: string }).name;
         if (originalName) {
           const prefixedName = `${node.name}_${originalName}`;
           // Track this as a nested type
           this.nestedTypes.set(originalName, prefixedName);
           // Temporarily rename for generation
-          (nestedDef as any).name = prefixedName;
+          (nestedDef as { name: string }).name = prefixedName;
           this.generateDefinition(nestedDef);
           // Restore original name
-          (nestedDef as any).name = originalName;
+          (nestedDef as { name: string }).name = originalName;
         } else {
           this.generateDefinition(nestedDef);
         }
