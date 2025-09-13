@@ -11,16 +11,20 @@ function parseIDL(idl: string): AST.SpecificationNode {
 
 function findDefinition(
   ast: AST.SpecificationNode,
-  name: string
+  name: string,
 ): AST.DefinitionNode | undefined {
-  return ast.definitions.find((def) => (def as AST.DefinitionNode & { name: string }).name === name);
+  return ast.definitions.find((def) =>
+    (def as AST.DefinitionNode & { name: string }).name === name
+  );
 }
 
 function findMember(
   container: AST.ModuleNode | AST.InterfaceNode,
-  memberName: string
+  memberName: string,
 ): AST.DefinitionNode | AST.InterfaceMemberNode | undefined {
-  const collection = container.kind === 'module' ? container.definitions : container.members;
+  const collection = container.kind === 'module'
+    ? container.definitions
+    : container.members;
   if (!collection) return undefined;
   return collection.find((m) => (m as { name: string }).name === memberName);
 }

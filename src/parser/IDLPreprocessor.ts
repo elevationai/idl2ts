@@ -22,7 +22,7 @@ export class IDLPreprocessor {
 
   preprocess(content: string, filePath?: string): PreprocessorResult {
     this.baseDir = filePath ? dirname(filePath) : Deno.cwd();
-    
+
     // Track current file in processing stack to prevent circular includes
     const normalizedPath = filePath ? resolve(filePath) : 'inline';
     if (this.processingStack.includes(normalizedPath)) {
@@ -31,17 +31,17 @@ export class IDLPreprocessor {
         processedContent: '',
         includes: this.processedIncludes,
         pragmas: this.pragmas,
-        defines: this.defines
+        defines: this.defines,
       };
     }
     this.processingStack.push(normalizedPath);
-    
+
     // Remove comments first
     content = this.removeComments(content);
-    
+
     // Handle line continuations
     content = this.handleLineContinuations(content);
-    
+
     const lines = content.split('\n');
     const processedLines: string[] = [];
     let insideIfndef = false;
@@ -50,7 +50,7 @@ export class IDLPreprocessor {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      
+
       // Handle #ifndef
       if (line.startsWith('#ifndef')) {
         const guard = line.substring(7).trim();
@@ -61,21 +61,21 @@ export class IDLPreprocessor {
         insideIfndef = true;
         continue;
       }
-      
+
       // Handle #define
       if (line.startsWith('#define')) {
         const parts = line.substring(7).trim().split(/\s+/);
         const name = parts[0];
         const value = parts.slice(1).join(' ') || '1';
-        
+
         if (insideIfndef && name === currentGuard) {
           this.includeGuards.add(name);
         }
-        
+
         this.defines.set(name, value);
         continue;
       }
-      
+
       // Handle #endif
       if (line.startsWith('#endif')) {
         if (insideIfndef) {
@@ -85,7 +85,7 @@ export class IDLPreprocessor {
         }
         continue;
       }
-      
+
       // Handle #ifdef
       if (line.startsWith('#ifdef')) {
         const macro = line.substring(6).trim();
@@ -94,7 +94,7 @@ export class IDLPreprocessor {
         }
         continue;
       }
-      
+
       // Handle #include
       if (line.startsWith('#include')) {
         if (!skipContent) {
@@ -102,26 +102,35 @@ export class IDLPreprocessor {
           if (includeMatch) {
             const includePath = includeMatch[1];
             const resolvedPath = this.resolveIncludePath(includePath);
-            
+
             if (resolvedPath) {
               const normalizedIncludePath = resolve(resolvedPath);
-              
+
               // Check if file is in processing stack (circular include)
               if (this.processingStack.includes(normalizedIncludePath)) {
                 // Skip circular include
-                processedLines.push(`// CIRCULAR INCLUDE SKIPPED: ${includePath}`);
+                processedLines.push(
+                  `// CIRCULAR INCLUDE SKIPPED: ${includePath}`,
+                );
               } else if (!this.processedIncludes.includes(resolvedPath)) {
                 this.processedIncludes.push(resolvedPath);
-                
+
                 try {
                   const includeContent = Deno.readTextFileSync(resolvedPath);
-                  const preprocessed = this.preprocess(includeContent, resolvedPath);
+                  const preprocessed = this.preprocess(
+                    includeContent,
+                    resolvedPath,
+                  );
                   processedLines.push(`// BEGIN INCLUDE: ${includePath}`);
                   processedLines.push(preprocessed.processedContent);
                   processedLines.push(`// END INCLUDE: ${includePath}`);
                 } catch (error) {
-                  console.warn(`Warning: Could not include file ${includePath}: ${error}`);
-                  processedLines.push(`// WARNING: Could not include ${includePath}`);
+                  console.warn(
+                    `Warning: Could not include file ${includePath}: ${error}`,
+                  );
+                  processedLines.push(
+                    `// WARNING: Could not include ${includePath}`,
+                  );
                 }
               }
             }
@@ -129,15 +138,17 @@ export class IDLPreprocessor {
         }
         continue;
       }
-      
+
       // Handle #pragma
       if (line.startsWith('#pragma')) {
         const pragmaMatch = line.match(/#pragma\s+(\w+)(?:\s+(.*))?/);
         if (pragmaMatch) {
           const pragmaType = pragmaMatch[1];
-          const pragmaValue = pragmaMatch[2] ? pragmaMatch[2].trim().replace(/"/g, '') : '';
+          const pragmaValue = pragmaMatch[2]
+            ? pragmaMatch[2].trim().replace(/"/g, '')
+            : '';
           this.pragmas.set(pragmaType, pragmaValue);
-          
+
           // For position-dependent pragmas like inhibit_code_generation,
           // inject a marker into the content
           if (pragmaType === 'inhibit_code_generation' && pragmaValue === '') {
@@ -147,19 +158,19 @@ export class IDLPreprocessor {
         }
         continue;
       }
-      
+
       // Handle #if, #elif, #else
       if (line.startsWith('#if ') || line.startsWith('#elif')) {
         // For now, skip complex conditionals
         skipContent = true;
         continue;
       }
-      
+
       if (line.startsWith('#else')) {
         skipContent = !skipContent;
         continue;
       }
-      
+
       // Handle #error
       if (line.startsWith('#error')) {
         if (!skipContent) {
@@ -168,8 +179,8 @@ export class IDLPreprocessor {
         }
         continue;
       }
-      
-      // Handle #warning  
+
+      // Handle #warning
       if (line.startsWith('#warning')) {
         if (!skipContent) {
           const message = line.substring(8).trim();
@@ -177,32 +188,32 @@ export class IDLPreprocessor {
         }
         continue;
       }
-      
+
       // Skip content if we're in a false conditional
       if (skipContent) {
         continue;
       }
-      
+
       // Replace defined macros in the line
       let processedLine = lines[i];
       for (const [macro, value] of this.defines) {
         const regex = new RegExp(`\\b${macro}\\b`, 'g');
         processedLine = processedLine.replace(regex, value);
       }
-      
+
       processedLines.push(processedLine);
     }
-    
+
     // Pop from processing stack
     this.processingStack.pop();
-    
+
     const finalContent = processedLines.join('\n');
-    
+
     return {
       processedContent: this.removeComments(finalContent),
       includes: this.processedIncludes,
       pragmas: this.pragmas,
-      defines: this.defines
+      defines: this.defines,
     };
   }
 
@@ -214,11 +225,11 @@ export class IDLPreprocessor {
     let inComment = false;
     let inMultiComment = false;
     let i = 0;
-    
+
     while (i < content.length) {
       const char = content[i];
       const nextChar = content[i + 1];
-      
+
       // Handle string literals
       if (char === '"' && !inChar && !inComment && !inMultiComment) {
         if (i === 0 || content[i - 1] !== '\\') {
@@ -228,7 +239,7 @@ export class IDLPreprocessor {
         i++;
         continue;
       }
-      
+
       // Handle char literals
       if (char === "'" && !inString && !inComment && !inMultiComment) {
         if (i === 0 || content[i - 1] !== '\\') {
@@ -238,35 +249,35 @@ export class IDLPreprocessor {
         i++;
         continue;
       }
-      
+
       // Skip if we're in a string or char
       if (inString || inChar) {
         result += char;
         i++;
         continue;
       }
-      
+
       // Handle single-line comments
       if (char === '/' && nextChar === '/' && !inMultiComment) {
         inComment = true;
         i += 2;
         continue;
       }
-      
+
       // Handle multi-line comments
       if (char === '/' && nextChar === '*' && !inComment) {
         inMultiComment = true;
         i += 2;
         continue;
       }
-      
+
       // End multi-line comment
       if (char === '*' && nextChar === '/' && inMultiComment) {
         inMultiComment = false;
         i += 2;
         continue;
       }
-      
+
       // End single-line comment at newline
       if (char === '\n' && inComment) {
         inComment = false;
@@ -274,17 +285,17 @@ export class IDLPreprocessor {
         i++;
         continue;
       }
-      
+
       // Skip comment content
       if (inComment || inMultiComment) {
         i++;
         continue;
       }
-      
+
       result += char;
       i++;
     }
-    
+
     return result;
   }
 
@@ -302,7 +313,7 @@ export class IDLPreprocessor {
     } catch {
       // File doesn't exist, continue
     }
-    
+
     // Then try include paths
     for (const includeDir of this.includePaths) {
       const fullPath = join(includeDir, includePath);
@@ -313,7 +324,7 @@ export class IDLPreprocessor {
         // File doesn't exist, continue
       }
     }
-    
+
     // Try as absolute path
     try {
       Deno.statSync(includePath);
@@ -321,10 +332,10 @@ export class IDLPreprocessor {
     } catch {
       // File doesn't exist
     }
-    
+
     return null;
   }
-  
+
   reset(): void {
     this.includeGuards.clear();
     this.defines.clear();

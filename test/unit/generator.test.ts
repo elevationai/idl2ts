@@ -1,10 +1,10 @@
 import { describe, it } from '@std/testing/bdd';
-import { assertEquals, assertExists, assert } from '@std/assert';
+import { assert, assertEquals, assertExists } from '@std/assert';
 import {
-  generateTypeScript,
+  CodeMatcher,
   compile,
   compileToString,
-  CodeMatcher,
+  generateTypeScript,
 } from '../helpers/test-utils.ts';
 
 describe('TypeScriptGenerator', () => {
@@ -167,7 +167,9 @@ describe('TypeScriptGenerator', () => {
 
       assertEquals(_matcher.hasInterface('Calculator'), true);
       assert(output.includes('add(a: number, b: number): Promise<number>'));
-      assert(output.includes('subtract(a: number, b: number): Promise<number>'));
+      assert(
+        output.includes('subtract(a: number, b: number): Promise<number>'),
+      );
       assert(output.includes('clear(): Promise<void>'));
     });
 
@@ -184,11 +186,17 @@ describe('TypeScriptGenerator', () => {
       const _matcher = new CodeMatcher(output);
 
       assertEquals(_matcher.hasClass('Service_Stub'), true);
-      assert(output.includes('export class Service_Stub extends CorbaStub implements Service'));
+      assert(
+        output.includes(
+          'export class Service_Stub extends CorbaStub implements Service',
+        ),
+      );
       assert(output.includes('constructor(ref: CORBA.ObjectRef)'));
       assert(output.includes('super(ref);'));
       assert(output.includes('async process(data: string): Promise<string>'));
-      assert(output.includes('const request = create_request(this._ref, "process")'));
+      assert(
+        output.includes('const request = create_request(this._ref, "process")'),
+      );
       assert(output.includes('return request.return_value()'));
     });
 
@@ -257,7 +265,11 @@ describe('TypeScriptGenerator', () => {
       const output = compileToString(idl, 'Test');
 
       // Exceptions are generated as classes extending CORBA.SystemException
-      assert(output.includes('export class DivisionByZero extends CORBA.SystemException'));
+      assert(
+        output.includes(
+          'export class DivisionByZero extends CORBA.SystemException',
+        ),
+      );
       assert(output.includes('message: string'));
 
       // Method signature doesn't change for raises
@@ -372,7 +384,9 @@ describe('TypeScriptGenerator', () => {
       assert(output.includes('{ discriminator: 1; intValue: number }'));
       assert(output.includes('{ discriminator: 2; floatValue: number }'));
       assert(output.includes('{ discriminator: 3; stringValue: string }'));
-      assert(output.includes('{ discriminator: "default"; boolValue: boolean }'));
+      assert(
+        output.includes('{ discriminator: "default"; boolValue: boolean }'),
+      );
     });
 
     it('should handle union with enum discriminator', () => {
@@ -393,7 +407,9 @@ describe('TypeScriptGenerator', () => {
       assert(output.includes('export type Data ='));
       assert(output.includes('{ discriminator: "INT"; intData: number }'));
       assert(output.includes('{ discriminator: "FLOAT"; floatData: number }'));
-      assert(output.includes('{ discriminator: "STRING"; stringData: string }'));
+      assert(
+        output.includes('{ discriminator: "STRING"; stringData: string }'),
+      );
     });
   });
 
@@ -442,7 +458,9 @@ describe('TypeScriptGenerator', () => {
       const results = generateTypeScript(idl);
       const businessOutput = results.get('Business.ts') || '';
 
-      assert(businessOutput.includes('import type * as Common from "./Common.ts"'));
+      assert(
+        businessOutput.includes('import type * as Common from "./Common.ts"'),
+      );
       assert(businessOutput.includes('getTime(): Promise<Common.Timestamp>'));
     });
 
@@ -465,7 +483,9 @@ describe('TypeScriptGenerator', () => {
       const derivedOutput = results.get('Derived.ts') || '';
 
       assert(derivedOutput.includes('import type * as Base from "./Base.ts"'));
-      assert(derivedOutput.includes('export interface IDerived extends Base.IBase'));
+      assert(
+        derivedOutput.includes('export interface IDerived extends Base.IBase'),
+      );
     });
   });
 
@@ -581,7 +601,11 @@ describe('TypeScriptGenerator', () => {
 
       // Should use regular import when constants are referenced
       // But in this case, constants are copied by value, so might still be type import
-      assert(/import (type )?\* as Constants from "\.\/Constants\.ts"/.test(serviceOutput));
+      assert(
+        /import (type )?\* as Constants from "\.\/Constants\.ts"/.test(
+          serviceOutput,
+        ),
+      );
     });
   });
 
@@ -596,7 +620,9 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const outputWithHelpers = generateTypeScript(idl, { emitHelpers: true });
-      const outputWithoutHelpers = generateTypeScript(idl, { emitHelpers: false });
+      const outputWithoutHelpers = generateTypeScript(idl, {
+        emitHelpers: false,
+      });
 
       // This depends on what helpers are implemented
       // For now, just check that the option is respected
@@ -656,12 +682,16 @@ describe('TypeScriptGenerator', () => {
       `;
 
       const output = generateTypeScript(idl, {
-        corbaImportPath: '@myorg/corba-lib'
+        corbaImportPath: '@myorg/corba-lib',
       });
       const tsOutput = output.get('Test.ts') || '';
 
       // Now we import everything together since we generate interface TypeCodes
-      assert(tsOutput.includes('import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba-lib"'));
+      assert(
+        tsOutput.includes(
+          'import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba-lib"',
+        ),
+      );
     });
 
     it('should use default CORBA import path', () => {
@@ -677,7 +707,11 @@ describe('TypeScriptGenerator', () => {
       const tsOutput = output.get('Test.ts') || '';
 
       // Now we import everything together since we generate interface TypeCodes
-      assert(tsOutput.includes('import { TypeCode, CORBA, CorbaStub, create_request } from "corba"'));
+      assert(
+        tsOutput.includes(
+          'import { TypeCode, CORBA, CorbaStub, create_request } from "corba"',
+        ),
+      );
     });
   });
 });

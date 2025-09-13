@@ -1,7 +1,7 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env
 
 import { Command } from 'npm:commander@11.0.0';
-import { IDLCompiler, CompilerOptions } from './compiler/IDLCompiler.ts';
+import { CompilerOptions, IDLCompiler } from './compiler/IDLCompiler.ts';
 import { expandGlob } from 'jsr:@std/fs@1.0.0';
 import { basename, dirname, join, resolve } from 'jsr:@std/path@1.0.0';
 
@@ -20,7 +20,10 @@ program
   .option('--no-stubs', 'Do not generate client stubs')
   .option('--skeletons', 'Generate server skeletons')
   .option('--no-helpers', 'Do not emit helper functions')
-  .option('--corba-import <path>', 'Import path for CORBA library (default: corba)')
+  .option(
+    '--corba-import <path>',
+    'Import path for CORBA library (default: corba)',
+  )
   .option('-v, --verbose', 'Verbose output')
   .action(async (input: string, options: {
     output?: string;
@@ -37,12 +40,12 @@ program
       emitHelpers: options.helpers !== false,
       corbaImportPath: options.corbaImport,
       verbose: options.verbose ?? false,
-      includePaths: options.include ?? []
+      includePaths: options.include ?? [],
     };
 
     try {
       const files: string[] = [];
-      
+
       // Handle glob patterns
       if (input.includes('*')) {
         for await (const file of expandGlob(input)) {
@@ -68,14 +71,14 @@ program
         }
 
         let outputPath: string | undefined;
-        
+
         if (options.output) {
           if (files.length === 1) {
             outputPath = options.output;
           } else {
             const baseName = basename(file, '.idl');
             outputPath = join(options.output, `${baseName}.ts`);
-            
+
             const outputDir = dirname(outputPath);
             try {
               await Deno.stat(outputDir);
@@ -87,7 +90,7 @@ program
 
         const compiler = new IDLCompiler({
           ...compilerOptions,
-          outputPath
+          outputPath,
         });
 
         compiler.compile(file);

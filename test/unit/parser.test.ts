@@ -1,8 +1,13 @@
-import { describe, it, beforeEach } from '@std/testing/bdd';
+import { beforeEach, describe, it } from '@std/testing/bdd';
 import { assertEquals, assertExists } from '@std/assert';
 import { IDLParser } from '../../src/parser/IDLParser.ts';
 import * as AST from '../../src/ast/nodes.ts';
-import { parseIDL, validateASTNode, findDefinition, findMember } from '../helpers/test-utils.ts';
+import {
+  findDefinition,
+  findMember,
+  parseIDL,
+  validateASTNode,
+} from '../helpers/test-utils.ts';
 
 describe('IDLParser', () => {
   let _parser: IDLParser;
@@ -32,14 +37,14 @@ describe('IDLParser', () => {
           typedef wstring WStringType;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       assertExists(module);
       assertEquals(module.kind, 'module');
       assertEquals(module.definitions.length, 15);
-      
+
       const shortType = findMember(module, 'ShortType') as AST.TypedefNode;
       assertEquals(shortType.kind, 'typedef');
       assertEquals(shortType.type.kind, 'primitiveType');
@@ -54,13 +59,13 @@ describe('IDLParser', () => {
           typedef sequence<sequence<long>> NestedSeq;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       const longSeq = findMember(module, 'LongSeq') as AST.TypedefNode;
       assertEquals(longSeq.type.kind, 'sequenceType');
-      
+
       const seqType = longSeq.type as AST.SequenceTypeNode;
       assertEquals(seqType.elementType.kind, 'primitiveType');
       assertEquals((seqType.elementType as AST.PrimitiveTypeNode).type, 'long');
@@ -73,13 +78,13 @@ describe('IDLParser', () => {
           typedef string StringMatrix[5][3];
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       const longArray = findMember(module, 'LongArray') as AST.TypedefNode;
       assertEquals(longArray.type.kind, 'arrayType');
-      
+
       const arrayType = longArray.type as AST.ArrayTypeNode;
       assertEquals(arrayType.elementType.kind, 'primitiveType');
       assertEquals(arrayType.dimensions[0], 10);
@@ -93,10 +98,10 @@ describe('IDLParser', () => {
           const long VERSION = 1;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       validateASTNode(ast, 'specification');
-      
+
       const module = findDefinition(ast, 'TestModule');
       validateASTNode(module, 'module');
       assertEquals((module as AST.ModuleNode).name, 'TestModule');
@@ -110,14 +115,14 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const outer = findDefinition(ast, 'Outer') as AST.ModuleNode;
       assertEquals(outer.kind, 'module');
-      
+
       const inner = findMember(outer, 'Inner') as AST.ModuleNode;
       assertEquals(inner.kind, 'module');
-      
+
       const value = findMember(inner, 'VALUE');
       assertEquals(value?.kind, 'constant');
     });
@@ -132,13 +137,13 @@ describe('IDLParser', () => {
           const long SECOND = 2;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       assertEquals(ast.definitions.length, 2);
-      
+
       const firstModule = ast.definitions[0] as AST.ModuleNode;
       const secondModule = ast.definitions[1] as AST.ModuleNode;
-      
+
       assertEquals(firstModule.name, 'Test');
       assertEquals(secondModule.name, 'Test');
       assertExists(findMember(firstModule, 'FIRST'));
@@ -156,14 +161,14 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const calc = findMember(module, 'Calculator') as AST.InterfaceNode;
-      
+
       assertEquals(calc.kind, 'interface');
       assertEquals(calc.members.length, 2);
-      
+
       const add = calc.members[0] as AST.OperationNode;
       assertEquals(add.kind, 'operation');
       assertEquals(add.name, 'add');
@@ -189,13 +194,13 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       const derived = findMember(module, 'Derived') as AST.InterfaceNode;
       assertEquals(derived.inheritance, ['Base']);
-      
+
       const multiple = findMember(module, 'Multiple') as AST.InterfaceNode;
       assertEquals(multiple.inheritance, ['Base', 'Derived']);
     });
@@ -210,16 +215,16 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const account = findMember(module, 'Account') as AST.InterfaceNode;
-      
+
       const id = account.members[0] as AST.AttributeNode;
       assertEquals(id.kind, 'attribute');
       assertEquals(id.name, 'id');
       assertEquals(id.isReadonly, true);
-      
+
       const balance = account.members[1] as AST.AttributeNode;
       assertEquals(balance.isReadonly, false);
     });
@@ -242,11 +247,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const service = findMember(module, 'Service') as AST.InterfaceNode;
-      
+
       const process = service.members[0] as AST.OperationNode;
       assertEquals(process.raises, ['InvalidInput', 'OutOfRange']);
     });
@@ -269,17 +274,17 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const container = findMember(module, 'Container') as AST.InterfaceNode;
-      
+
       assertEquals(container.members.length, 5);
-      
+
       const status = container.members[0] as AST.EnumNode;
       assertEquals(status.kind, 'enum');
       assertEquals(status.name, 'Status');
-      
+
       const config = container.members[1] as AST.StructNode;
       assertEquals(config.kind, 'struct');
       assertEquals(config.name, 'Config');
@@ -299,11 +304,14 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const derivedModule = findDefinition(ast, 'Derived') as AST.ModuleNode;
-      const derived = findMember(derivedModule, 'IDerived') as AST.InterfaceNode;
-      
+      const derived = findMember(
+        derivedModule,
+        'IDerived',
+      ) as AST.InterfaceNode;
+
       assertEquals(derived.inheritance, ['::Base::IBase']);
     });
   });
@@ -318,11 +326,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const point = findMember(module, 'Point') as AST.StructNode;
-      
+
       assertEquals(point.kind, 'struct');
       assertEquals(point.members.length, 2);
       assertEquals(point.members[0].name, 'x');
@@ -344,13 +352,13 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const person = findMember(module, 'Person') as AST.StructNode;
-      
+
       assertEquals(person.members.length, 3);
-      
+
       const address = person.members[1];
       assertEquals(address.type.kind, 'namedType');
       assertEquals((address.type as AST.NamedTypeNode).name, 'Address');
@@ -368,11 +376,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const color = findMember(module, 'Color') as AST.EnumNode;
-      
+
       assertEquals(color.kind, 'enum');
       assertEquals(color.members, ['RED', 'GREEN', 'BLUE']);
     });
@@ -387,11 +395,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const status = findMember(module, 'Status') as AST.EnumNode;
-      
+
       assertEquals(status.members, ['PENDING', 'ACTIVE', 'COMPLETED']);
     });
   });
@@ -408,15 +416,15 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const value = findMember(module, 'Value') as AST.UnionNode;
-      
+
       assertEquals(value.kind, 'union');
       assertEquals(value.discriminatorType.kind, 'primitiveType');
       assertEquals(value.cases.length, 4);
-      
+
       const firstCase = value.cases[0];
       assertEquals(firstCase.labels, [1]);
       assertEquals(firstCase.member?.name, 'intValue');
@@ -434,13 +442,16 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const data = findMember(module, 'Data') as AST.UnionNode;
-      
+
       assertEquals(data.discriminatorType.kind, 'namedType');
-      assertEquals((data.discriminatorType as AST.NamedTypeNode).name, 'DataType');
+      assertEquals(
+        (data.discriminatorType as AST.NamedTypeNode).name,
+        'DataType',
+      );
     });
 
     it('should parse union with multiple case labels', () => {
@@ -456,11 +467,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const result = findMember(module, 'Result') as AST.UnionNode;
-      
+
       assertEquals(result.cases[0].labels, [0, 1, 2]);
       assertEquals(result.cases[1].labels, [-1, -2]);
     });
@@ -477,16 +488,16 @@ describe('IDLParser', () => {
           const long OCT_VALUE = 0755;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       const shortMax = findMember(module, 'SHORT_MAX') as AST.ConstantNode;
       assertEquals(shortMax.kind, 'constant');
       assertEquals(shortMax.value, 32767);
-      
+
       const hexValue = findMember(module, 'HEX_VALUE') as AST.ConstantNode;
-      assertEquals(hexValue.value, 255);  // 0xFF = 255
+      assertEquals(hexValue.value, 255); // 0xFF = 255
     });
 
     it('should parse floating point constants', () => {
@@ -497,13 +508,13 @@ describe('IDLParser', () => {
           const double SCIENTIFIC = 1.23e-4;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       const pi = findMember(module, 'PI') as AST.ConstantNode;
       assertEquals(pi.value, 3.14159);
-      
+
       const scientific = findMember(module, 'SCIENTIFIC') as AST.ConstantNode;
       assertEquals(scientific.value, 0.000123);
     });
@@ -517,13 +528,13 @@ describe('IDLParser', () => {
           const boolean FLAG = TRUE;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
-      
+
       const message = findMember(module, 'MESSAGE') as AST.ConstantNode;
       assertEquals(message.value, 'Hello World');
-      
+
       const newline = findMember(module, 'NEWLINE') as AST.ConstantNode;
       assertEquals(newline.value, '\n');
     });
@@ -538,11 +549,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const error = findMember(module, 'Error') as AST.ExceptionNode;
-      
+
       assertEquals(error.kind, 'exception');
       assertEquals(error.members.length, 1);
       assertEquals(error.members[0].name, 'message');
@@ -559,11 +570,11 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const error = findMember(module, 'ValidationError') as AST.ExceptionNode;
-      
+
       assertEquals(error.members.length, 4);
       assertEquals(error.members[3].type.kind, 'sequenceType');
     });
@@ -581,20 +592,20 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const service = findMember(module, 'Service') as AST.InterfaceNode;
-      
+
       const processIn = service.members[0] as AST.OperationNode;
       assertEquals(processIn.parameters[0].direction, 'in');
-      
+
       const processOut = service.members[1] as AST.OperationNode;
       assertEquals(processOut.parameters[0].direction, 'out');
-      
+
       const processInOut = service.members[2] as AST.OperationNode;
       assertEquals(processInOut.parameters[0].direction, 'inout');
-      
+
       const processMultiple = service.members[3] as AST.OperationNode;
       assertEquals(processMultiple.parameters[0].direction, 'in');
       assertEquals(processMultiple.parameters[1].direction, 'out');
@@ -610,14 +621,14 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const service = findMember(module, 'AsyncService') as AST.InterfaceNode;
-      
+
       const fireAndForget = service.members[0] as AST.OperationNode;
       assertEquals(fireAndForget.isOneway, true);
-      
+
       const normalMethod = service.members[1] as AST.OperationNode;
       assertEquals(normalMethod.isOneway, false);
     });
@@ -642,20 +653,26 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       assertEquals(ast.definitions.length, 2);
-      
+
       const business = findDefinition(ast, 'Business') as AST.ModuleNode;
       const logger = findMember(business, 'Logger') as AST.InterfaceNode;
-      
+
       const log = logger.members[0] as AST.OperationNode;
       const whenParam = log.parameters[1];
       assertEquals(whenParam.type.kind, 'namedType');
-      assertEquals((whenParam.type as AST.NamedTypeNode).name, '::Common::Timestamp');
-      
+      assertEquals(
+        (whenParam.type as AST.NamedTypeNode).name,
+        '::Common::Timestamp',
+      );
+
       const getHistory = logger.members[1] as AST.OperationNode;
-      assertEquals((getHistory.returnType as AST.NamedTypeNode).name, '::Common::TimestampList');
+      assertEquals(
+        (getHistory.returnType as AST.NamedTypeNode).name,
+        '::Common::TimestampList',
+      );
     });
 
     it('should parse deeply nested modules', () => {
@@ -670,13 +687,16 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const level1 = findDefinition(ast, 'Level1') as AST.ModuleNode;
       const level2 = findMember(level1, 'Level2') as AST.ModuleNode;
       const level3 = findMember(level2, 'Level3') as AST.ModuleNode;
-      const deepInterface = findMember(level3, 'DeepInterface') as AST.InterfaceNode;
-      
+      const deepInterface = findMember(
+        level3,
+        'DeepInterface',
+      ) as AST.InterfaceNode;
+
       assertEquals(deepInterface.kind, 'interface');
     });
 
@@ -693,18 +713,24 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Characteristics') as AST.ModuleNode;
-      
-      const mediaTypeInterface = findMember(module, 'MediaType') as AST.InterfaceNode;
+
+      const mediaTypeInterface = findMember(
+        module,
+        'MediaType',
+      ) as AST.InterfaceNode;
       assertEquals(mediaTypeInterface.kind, 'interface');
-      
-      const mediaOutput = findMember(module, 'MediaOutput') as AST.InterfaceNode;
+
+      const mediaOutput = findMember(
+        module,
+        'MediaOutput',
+      ) as AST.InterfaceNode;
       const nestedEnum = mediaOutput.members[0] as AST.EnumNode;
       assertEquals(nestedEnum.kind, 'enum');
       assertEquals(nestedEnum.name, 'MediaType');
-      
+
       const getType = mediaOutput.members[1] as AST.OperationNode;
       assertEquals((getType.returnType as AST.NamedTypeNode).name, 'MediaType');
     });
@@ -719,7 +745,7 @@ describe('IDLParser', () => {
           }
         };
       `;
-      
+
       // Parser should be able to recover from missing semicolon
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
@@ -732,7 +758,7 @@ describe('IDLParser', () => {
         module Empty {
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const empty = findDefinition(ast, 'Empty') as AST.ModuleNode;
       assertEquals(empty.definitions, []);
@@ -745,7 +771,7 @@ describe('IDLParser', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = findDefinition(ast, 'Test') as AST.ModuleNode;
       const empty = findMember(module, 'Empty') as AST.InterfaceNode;

@@ -5,17 +5,20 @@ CORBA IDL to TypeScript compiler for Deno and JSR.
 ## Installation
 
 ### Using directly with Deno
+
 ```bash
 deno run -A jsr:@eai/idl2ts/cli compile myservice.idl -o ./generated
 ```
 
 ### Install globally
+
 ```bash
 deno install -A --name idl2ts jsr:@eai/idl2ts/cli
 idl2ts compile myservice.idl -o ./generated
 ```
 
 ### Using with npx (for Node.js users)
+
 ```bash
 npx jsr:@eai/idl2ts compile myservice.idl -o ./generated
 ```
@@ -37,7 +40,7 @@ idl2ts compile input.idl \
 ## Options
 
 - `-o, --output <path>` - Output directory or file
-- `-I, --include <paths...>` - Include paths for IDL files  
+- `-I, --include <paths...>` - Include paths for IDL files
 - `--no-stubs` - Do not generate client stubs
 - `--skeletons` - Generate server skeletons
 - `--no-helpers` - Do not emit helper functions

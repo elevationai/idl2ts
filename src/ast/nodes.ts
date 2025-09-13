@@ -1,4 +1,4 @@
-export type ASTNode = 
+export type ASTNode =
   | SpecificationNode
   | ModuleNode
   | InterfaceNode
@@ -24,10 +24,10 @@ export interface BaseNode {
 export interface SpecificationNode extends BaseNode {
   kind: 'specification';
   definitions: DefinitionNode[];
-  pragmas?: Map<string, string>;  // Global pragmas like prefix
+  pragmas?: Map<string, string>; // Global pragmas like prefix
 }
 
-export type DefinitionNode = 
+export type DefinitionNode =
   | ModuleNode
   | InterfaceNode
   | StructNode
@@ -52,7 +52,7 @@ export interface InterfaceNode extends BaseNode {
   members: InterfaceMemberNode[];
 }
 
-export type InterfaceMemberNode = 
+export type InterfaceMemberNode =
   | OperationNode
   | AttributeNode
   | ConstantNode
@@ -136,7 +136,7 @@ export interface ExceptionNode extends BaseNode {
   members: MemberNode[];
 }
 
-export type TypeNode = 
+export type TypeNode =
   | PrimitiveTypeNode
   | NamedTypeNode
   | SequenceTypeNode
@@ -146,10 +146,23 @@ export type TypeNode =
 
 export interface PrimitiveTypeNode extends BaseNode {
   kind: 'primitiveType';
-  type: 'void' | 'boolean' | 'char' | 'wchar' | 'octet' | 
-        'short' | 'unsigned short' | 'long' | 'unsigned long' |
-        'long long' | 'unsigned long long' | 'float' | 'double' | 
-        'long double' | 'any' | 'Object';
+  type:
+    | 'void'
+    | 'boolean'
+    | 'char'
+    | 'wchar'
+    | 'octet'
+    | 'short'
+    | 'unsigned short'
+    | 'long'
+    | 'unsigned long'
+    | 'long long'
+    | 'unsigned long long'
+    | 'float'
+    | 'double'
+    | 'long double'
+    | 'any'
+    | 'Object';
 }
 
 export interface NamedTypeNode extends BaseNode {

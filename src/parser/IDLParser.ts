@@ -22,14 +22,12 @@ export class IDLParser {
     // Preprocess the input
     const preprocessed = this.preprocessor.preprocess(input, filePath);
     this.input = preprocessed.processedContent;
-    
-    
+
     this.tokenize();
     this.currentToken = 0;
-    
-    
+
     const definitions: AST.DefinitionNode[] = [];
-    
+
     while (this.currentToken < this.tokens.length) {
       // Check for pragma markers
       if (this.peek() === '__PRAGMA_GLOBAL_INHIBIT__') {
@@ -38,24 +36,23 @@ export class IDLParser {
         // Stop processing entirely after global inhibit
         break;
       }
-      
+
       // Skip definitions if global inhibit is active
       if (this.globalInhibit) {
         // This shouldn't be reached now, but keep as safety
         break;
       }
-      
+
       const def = this.parseDefinition();
       if (def) {
         definitions.push(def);
       }
     }
-    
-    
+
     return {
       kind: 'specification',
       definitions,
-      pragmas: preprocessed.pragmas
+      pragmas: preprocessed.pragmas,
     };
   }
 
@@ -64,15 +61,15 @@ export class IDLParser {
     const cleanInput = this.input
       .replace(/\/\/.*$/gm, '')
       .replace(/\/\*[\s\S]*?\*\//g, '');
-    
+
     // Modified pattern to explicitly match our pragma marker
-    const tokenPattern = /__PRAGMA_GLOBAL_INHIBIT__|"[^"]*"|'[^']*'|::|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+\.?[0-9]*|[{}();,<>[\]=]|./gm;
+    const tokenPattern =
+      /__PRAGMA_GLOBAL_INHIBIT__|"[^"]*"|'[^']*'|::|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+\.?[0-9]*|[{}();,<>[\]=]|./gm;
     const matches = cleanInput.match(tokenPattern) || [];
-    
-    this.tokens = matches.filter(token => {
+
+    this.tokens = matches.filter((token) => {
       return !token.match(/^\s+$/);
     });
-    
   }
 
   private peek(offset: number = 0): string {
@@ -97,7 +94,7 @@ export class IDLParser {
 
   private parseDefinition(): AST.DefinitionNode | null {
     const token = this.peek();
-    
+
     switch (token) {
       case 'module':
         return this.parseModule();
@@ -131,30 +128,30 @@ export class IDLParser {
     this.consume('module');
     const name = this.consume();
     this.consume('{');
-    
+
     const definitions: AST.DefinitionNode[] = [];
-    
+
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
       const def = this.parseDefinition();
       if (def) {
         definitions.push(def);
       }
     }
-    
+
     this.consume('}');
     this.consume(';');
-    
+
     return {
       kind: 'module',
       name,
-      definitions
+      definitions,
     };
   }
 
   private parseInterface(): AST.InterfaceNode {
     this.consume('interface');
     const name = this.consume();
-    
+
     let inheritance: string[] | undefined;
     if (this.peek() === ':') {
       this.consume(':');
@@ -164,32 +161,32 @@ export class IDLParser {
         inheritance.push(this.parseQualifiedName());
       }
     }
-    
+
     this.consume('{');
-    
+
     const members: AST.InterfaceMemberNode[] = [];
-    
+
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
       const member = this.parseInterfaceMember();
       if (member) {
         members.push(member);
       }
     }
-    
+
     this.consume('}');
     this.consumeSemicolon();
-    
+
     return {
       kind: 'interface',
       name,
       inheritance,
-      members
+      members,
     };
   }
 
   private parseInterfaceMember(): AST.InterfaceMemberNode | null {
     const token = this.peek();
-    
+
     if (token === 'readonly') {
       return this.parseAttribute(true);
     } else if (token === 'attribute') {
@@ -211,27 +208,27 @@ export class IDLParser {
     } else if (token === 'void' || token === '::' || this.isType(token)) {
       // Look ahead to determine if this is an operation (has parentheses) or attribute
       const currentPos = this.currentToken;
-      
+
       try {
         this.parseType(); // Parse the type
         this.consume(); // Parse the name
-        
+
         if (this.peek() === '(') {
           // It's an operation - reset and parse as operation
           this.currentToken = currentPos;
           return this.parseOperation(false);
         } else {
-          // It's an attribute - reset and parse as attribute  
+          // It's an attribute - reset and parse as attribute
           this.currentToken = currentPos;
           const type = this.parseType();
           const attrName = this.consume();
           this.consume(';');
-          
+
           return {
             kind: 'attribute',
             name: attrName,
             type: type,
-            isReadonly: false
+            isReadonly: false,
           };
         }
       } catch (_e) {
@@ -250,11 +247,11 @@ export class IDLParser {
   private parseOperation(isOneway: boolean): AST.OperationNode {
     const returnType = this.parseType();
     const name = this.consume();
-    
+
     this.consume('(');
     const parameters = this.parseParameters();
     this.consume(')');
-    
+
     let raises: string[] | undefined;
     if (this.peek() === 'raises') {
       this.consume('raises');
@@ -267,31 +264,31 @@ export class IDLParser {
       }
       this.consume(')');
     }
-    
+
     this.consumeSemicolon();
-    
+
     return {
       kind: 'operation',
       name,
       returnType,
       parameters,
       raises,
-      isOneway
+      isOneway,
     };
   }
 
   private parseParameters(): AST.ParameterNode[] {
     const params: AST.ParameterNode[] = [];
-    
+
     if (this.peek() === ')') {
       return params;
     }
-    
+
     do {
       if (this.peek() === ',') {
         this.consume(',');
       }
-      
+
       let direction: 'in' | 'out' | 'inout' = 'in';
       if (this.peek() === 'in') {
         this.consume('in');
@@ -303,18 +300,18 @@ export class IDLParser {
         this.consume('inout');
         direction = 'inout';
       }
-      
+
       const type = this.parseType();
       const name = this.consume();
-      
+
       params.push({
         kind: 'parameter',
         name,
         type,
-        direction
+        direction,
       });
     } while (this.peek() === ',');
-    
+
     return params;
   }
 
@@ -323,17 +320,17 @@ export class IDLParser {
       this.consume('readonly');
     }
     this.consume('attribute');
-    
+
     const type = this.parseType();
     const name = this.consume();
-    
+
     this.consume(';');
-    
+
     return {
       kind: 'attribute',
       name,
       type,
-      isReadonly
+      isReadonly,
     };
   }
 
@@ -341,33 +338,33 @@ export class IDLParser {
     this.consume('struct');
     const name = this.consume();
     this.consume('{');
-    
+
     const members: AST.MemberNode[] = [];
-    
+
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
       if (this.peek() === '::' || this.isType(this.peek())) {
         const type = this.parseType();
         const memberName = this.consume();
-        
+
         members.push({
           kind: 'member',
           name: memberName,
-          type
+          type,
         });
-        
+
         this.consume(';');
       } else {
         break;
       }
     }
-    
+
     this.consume('}');
     this.consume(';');
-    
+
     return {
       kind: 'struct',
       name,
-      members
+      members,
     };
   }
 
@@ -379,31 +376,31 @@ export class IDLParser {
     const discriminatorType = this.parseType();
     this.consume(')');
     this.consume('{');
-    
+
     const cases: AST.UnionCaseNode[] = [];
-    
+
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
       const unionCase = this.parseUnionCase();
       if (unionCase) {
         cases.push(unionCase);
       }
     }
-    
+
     this.consume('}');
     this.consume(';');
-    
+
     return {
       kind: 'union',
       name,
       discriminatorType,
-      cases
+      cases,
     };
   }
 
   private parseUnionCase(): AST.UnionCaseNode | null {
     const labels: (string | number | boolean)[] = [];
     let isDefault = false;
-    
+
     while (this.peek() === 'case' || this.peek() === 'default') {
       if (this.peek() === 'case') {
         this.consume('case');
@@ -420,11 +417,11 @@ export class IDLParser {
         isDefault = true;
       }
     }
-    
+
     if (labels.length === 0 && !isDefault) {
       return null;
     }
-    
+
     let member: AST.MemberNode | undefined;
     if (this.isType(this.peek())) {
       const type = this.parseType();
@@ -432,16 +429,16 @@ export class IDLParser {
       member = {
         kind: 'member',
         name,
-        type
+        type,
       };
       this.consume(';');
     }
-    
+
     return {
       kind: 'unionCase',
       labels,
       member,
-      isDefault
+      isDefault,
     };
   }
 
@@ -449,33 +446,33 @@ export class IDLParser {
     this.consume('enum');
     const name = this.consume();
     this.consume('{');
-    
+
     const members: string[] = [];
-    
+
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
       members.push(this.consume());
       if (this.peek() === ',') {
         this.consume(',');
       }
     }
-    
+
     this.consume('}');
     this.consume(';');
-    
+
     return {
       kind: 'enum',
       name,
-      members
+      members,
     };
   }
 
   private parseTypedef(): AST.TypedefNode {
     this.consume('typedef');
-    
+
     // Try to parse type, but handle malformed typedef
     let type: AST.TypeNode;
     let name: string;
-    
+
     try {
       const nextToken = this.peek();
       if (nextToken === ';' || !nextToken) {
@@ -496,7 +493,7 @@ export class IDLParser {
       type = { kind: 'primitiveType', type: 'any' };
       name = 'ErrorType';
     }
-    
+
     // Check for array dimensions
     const dimensions: number[] = [];
     while (this.peek() === '[') {
@@ -505,22 +502,22 @@ export class IDLParser {
       dimensions.push(parseInt(dim));
       this.consume(']');
     }
-    
+
     // If we have dimensions, wrap the type in an arrayType
     if (dimensions.length > 0) {
       type = {
         kind: 'arrayType',
         elementType: type,
-        dimensions
+        dimensions,
       };
     }
-    
+
     this.consume(';');
-    
+
     return {
       kind: 'typedef',
       name,
-      type
+      type,
     };
   }
 
@@ -529,32 +526,32 @@ export class IDLParser {
     const type = this.parseType();
     const name = this.consume();
     this.consume('=');
-    
+
     // Handle negative numbers and expressions
     let valueStr = '';
     let parenDepth = 0;
-    
+
     while (this.peek() !== ';' && this.currentToken < this.tokens.length) {
       const token = this.peek();
       if (token === '(') parenDepth++;
       if (token === ')') parenDepth--;
       valueStr += token;
       this.consume();
-      
+
       // If we're not in parentheses and hit certain tokens, stop
       if (parenDepth === 0 && (token === ',' || token === '}')) {
         break;
       }
     }
-    
+
     const value = this.parseValue(valueStr);
     this.consume(';');
-    
+
     return {
       kind: 'constant',
       name,
       type,
-      value
+      value,
     };
   }
 
@@ -562,39 +559,39 @@ export class IDLParser {
     this.consume('exception');
     const name = this.consume();
     this.consume('{');
-    
+
     const members: AST.MemberNode[] = [];
-    
+
     while (this.peek() !== '}' && this.currentToken < this.tokens.length) {
       if (this.isType(this.peek())) {
         const type = this.parseType();
         const memberName = this.consume();
-        
+
         members.push({
           kind: 'member',
           name: memberName,
-          type
+          type,
         });
-        
+
         this.consume(';');
       } else {
         break;
       }
     }
-    
+
     this.consume('}');
     this.consume(';');
-    
+
     return {
       kind: 'exception',
       name,
-      members
+      members,
     };
   }
 
   private parseType(): AST.TypeNode {
     const token = this.peek();
-    
+
     if (token === 'sequence') {
       this.consume('sequence');
       this.consume('<');
@@ -605,14 +602,14 @@ export class IDLParser {
         bound = parseInt(this.consume());
       }
       this.consume('>');
-      
+
       return {
         kind: 'sequenceType',
         elementType,
-        bound
+        bound,
       };
     }
-    
+
     if (token === 'string') {
       this.consume('string');
       let bound: number | undefined;
@@ -624,10 +621,10 @@ export class IDLParser {
       return {
         kind: 'stringType',
         type: 'string',
-        bound
+        bound,
       };
     }
-    
+
     if (token === 'wstring') {
       this.consume('wstring');
       let bound: number | undefined;
@@ -639,71 +636,86 @@ export class IDLParser {
       return {
         kind: 'stringType',
         type: 'wstring',
-        bound
+        bound,
       };
     }
-    
+
     const primitiveTypes = [
-      'void', 'boolean', 'char', 'wchar', 'octet',
-      'short', 'long', 'float', 'double', 'any', 'Object'
+      'void',
+      'boolean',
+      'char',
+      'wchar',
+      'octet',
+      'short',
+      'long',
+      'float',
+      'double',
+      'any',
+      'Object',
     ];
-    
+
     if (primitiveTypes.includes(token)) {
       this.consume();
-      
+
       if (token === 'long' && this.peek() === 'long') {
         this.consume('long');
         return { kind: 'primitiveType', type: 'long long' };
       }
-      
+
       if (token === 'long' && this.peek() === 'double') {
         this.consume('double');
         return { kind: 'primitiveType', type: 'long double' };
       }
-      
-      return { kind: 'primitiveType', type: token as AST.PrimitiveTypeNode['type'] };
+
+      return {
+        kind: 'primitiveType',
+        type: token as AST.PrimitiveTypeNode['type'],
+      };
     }
-    
+
     if (token === 'unsigned') {
       this.consume('unsigned');
       const nextToken = this.consume();
-      
+
       if (nextToken === 'long' && this.peek() === 'long') {
         this.consume('long');
         return { kind: 'primitiveType', type: 'unsigned long long' };
       }
-      
-      return { kind: 'primitiveType', type: `unsigned ${nextToken}` as AST.PrimitiveTypeNode['type'] };
+
+      return {
+        kind: 'primitiveType',
+        type: `unsigned ${nextToken}` as AST.PrimitiveTypeNode['type'],
+      };
     }
-    
+
     const name = this.parseQualifiedName();
     return { kind: 'namedType', name };
   }
 
   private parseQualifiedName(): string {
     const parts: string[] = [];
-    
+
     // Handle leading :: for global scope
     let prefix = '';
     if (this.peek() === '::') {
       prefix = '::';
       this.consume('::');
     }
-    
+
     parts.push(this.consume());
-    
+
     while (this.peek() === '::') {
       this.consume('::');
       parts.push(this.consume());
     }
-    
+
     return prefix + parts.join('::');
   }
 
   private parseValue(token: string): string | number | boolean {
     if (token === 'TRUE' || token === 'true') return true;
     if (token === 'FALSE' || token === 'false') return false;
-    
+
     if (token.startsWith('"') && token.endsWith('"')) {
       let str = token.slice(1, -1);
       // Handle escape sequences in strings - order matters!
@@ -718,7 +730,7 @@ export class IDLParser {
       str = str.replace(/\u0000/g, '\\'); // Restore single backslashes
       return str;
     }
-    
+
     if (token.startsWith("'") && token.endsWith("'")) {
       const char = token.slice(1, -1);
       // Handle escape sequences
@@ -730,24 +742,26 @@ export class IDLParser {
       if (char === '\\"') return '"';
       return char;
     }
-    
+
     // Handle negative numbers
     if (token.match(/^-?[0-9]+$/)) {
       return parseInt(token);
     }
-    
+
     if (token.match(/^-?0x[0-9a-fA-F]+$/)) {
       return parseInt(token, 16);
     }
-    
+
     if (token.match(/^-?[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?$/)) {
       return parseFloat(token);
     }
-    
+
     // Handle expressions (keep as string for now)
-    if (token.includes('(') || token.includes('+') || token.includes('-') || 
-        token.includes('*') || token.includes('/') || token.includes('<<') || 
-        token.includes('>>')) {
+    if (
+      token.includes('(') || token.includes('+') || token.includes('-') ||
+      token.includes('*') || token.includes('/') || token.includes('<<') ||
+      token.includes('>>')
+    ) {
       // Try to evaluate simple expressions
       try {
         // Remove spaces and evaluate
@@ -755,25 +769,44 @@ export class IDLParser {
         // Only evaluate if it's a simple numeric expression
         if (/^[\d\-+*\/()<<>>]+$/.test(cleanExpr)) {
           // Use Function constructor to safely evaluate
-          const result = Function('"use strict"; return (' + cleanExpr.replace(/<</, '*Math.pow(2,').replace(/>>/, ')/Math.pow(2,') + ')')();
+          const result = Function(
+            '"use strict"; return (' +
+              cleanExpr.replace(/<</, '*Math.pow(2,').replace(
+                />>/,
+                ')/Math.pow(2,',
+              ) + ')',
+          )();
           return result;
         }
       } catch (_e) {
         // If evaluation fails, return as string
       }
     }
-    
+
     return token;
   }
 
   private isType(token: string): boolean {
     const types = [
-      'void', 'boolean', 'char', 'wchar', 'octet',
-      'short', 'long', 'float', 'double', 'any', 'Object',
-      'unsigned', 'string', 'wstring', 'sequence', 'fixed'
+      'void',
+      'boolean',
+      'char',
+      'wchar',
+      'octet',
+      'short',
+      'long',
+      'float',
+      'double',
+      'any',
+      'Object',
+      'unsigned',
+      'string',
+      'wstring',
+      'sequence',
+      'fixed',
     ];
-    
-    return types.includes(token) || 
-           (!!token && token.length > 0 && /^[a-zA-Z_]/.test(token));
+
+    return types.includes(token) ||
+      (!!token && token.length > 0 && /^[a-zA-Z_]/.test(token));
   }
 }

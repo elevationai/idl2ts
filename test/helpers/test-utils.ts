@@ -16,13 +16,13 @@ export function parseIDL(idl: string): AST.SpecificationNode {
  * Helper to generate TypeScript from IDL string
  */
 export function generateTypeScript(
-  idl: string, 
+  idl: string,
   options: Partial<{
     includeStubs: boolean;
     includeSkeletons: boolean;
     emitHelpers: boolean;
     corbaImportPath: string;
-  }> = {}
+  }> = {},
 ): Map<string, string> {
   const ast = parseIDL(idl);
   const generator = new TypeScriptGenerator({
@@ -30,7 +30,7 @@ export function generateTypeScript(
     includeSkeletons: options.includeSkeletons ?? false,
     emitHelpers: options.emitHelpers ?? true,
     corbaImportPath: options.corbaImportPath ?? 'corba',
-    sourceFile: 'test.idl'
+    sourceFile: 'test.idl',
   });
   return generator.generate(ast);
 }
@@ -38,14 +38,17 @@ export function generateTypeScript(
 /**
  * Helper to compile IDL and return all generated files
  */
-export function compile(idl: string, sourceFile: string = 'test.idl'): Map<string, string> {
+export function compile(
+  idl: string,
+  sourceFile: string = 'test.idl',
+): Map<string, string> {
   const ast = parseIDL(idl);
   const generator = new TypeScriptGenerator({
     includeStubs: true,
     includeSkeletons: false,
     emitHelpers: true,
     corbaImportPath: 'corba',
-    sourceFile
+    sourceFile,
   });
   return generator.generate(ast);
 }
@@ -53,7 +56,10 @@ export function compile(idl: string, sourceFile: string = 'test.idl'): Map<strin
 /**
  * Helper to compile IDL and get the main module output
  */
-export function compileToString(idl: string, moduleName: string = 'test'): string {
+export function compileToString(
+  idl: string,
+  moduleName: string = 'test',
+): string {
   const result = generateTypeScript(idl);
   return result.get(`${moduleName}.ts`) || '';
 }
@@ -64,22 +70,31 @@ export function compileToString(idl: string, moduleName: string = 'test'): strin
 export function normalizeWhitespace(str: string): string {
   return str
     .split('\n')
-    .map(line => line.trim())
-    .filter(line => line.length > 0)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
     .join('\n');
 }
 
 /**
  * Helper to extract specific constructs from generated code
  */
-export function extractInterface(code: string, interfaceName: string): string | null {
-  const regex = new RegExp(`export interface ${interfaceName}[^{]*{[^}]*}`, 'g');
+export function extractInterface(
+  code: string,
+  interfaceName: string,
+): string | null {
+  const regex = new RegExp(
+    `export interface ${interfaceName}[^{]*{[^}]*}`,
+    'g',
+  );
   const match = code.match(regex);
   return match ? match[0] : null;
 }
 
 export function extractClass(code: string, className: string): string | null {
-  const regex = new RegExp(`export class ${className}[^{]*{[\\s\\S]*?^  }`, 'gm');
+  const regex = new RegExp(
+    `export class ${className}[^{]*{[\\s\\S]*?^  }`,
+    'gm',
+  );
   const match = code.match(regex);
   return match ? match[0] : null;
 }
@@ -101,13 +116,17 @@ export function loadFixture(name: string): string {
 /**
  * Helper to create a test compiler instance
  */
-export function createTestCompiler(options: Partial<import('../../src/compiler/IDLCompiler.ts').CompilerOptions> = {}): IDLCompiler {
+export function createTestCompiler(
+  options: Partial<
+    import('../../src/compiler/IDLCompiler.ts').CompilerOptions
+  > = {},
+): IDLCompiler {
   return new IDLCompiler({
     includeStubs: true,
     includeSkeletons: false,
     emitHelpers: true,
     verbose: false,
-    ...options
+    ...options,
   });
 }
 
@@ -164,10 +183,12 @@ export function validateASTNode(node: unknown, expectedKind: string): void {
  * Find a definition in AST by name
  */
 export function findDefinition(
-  ast: AST.SpecificationNode, 
-  name: string
+  ast: AST.SpecificationNode,
+  name: string,
 ): AST.DefinitionNode | undefined {
-  return ast.definitions.find((def) => (def as AST.DefinitionNode & { name: string }).name === name);
+  return ast.definitions.find((def) =>
+    (def as AST.DefinitionNode & { name: string }).name === name
+  );
 }
 
 /**
@@ -175,10 +196,12 @@ export function findDefinition(
  */
 export function findMember(
   container: AST.ModuleNode | AST.InterfaceNode,
-  memberName: string
+  memberName: string,
 ): AST.DefinitionNode | AST.InterfaceMemberNode | undefined {
   // Modules use 'definitions', interfaces use 'members'
-  const collection = container.kind === 'module' ? container.definitions : container.members;
+  const collection = container.kind === 'module'
+    ? container.definitions
+    : container.members;
   if (!collection) return undefined;
   return collection.find((m) => (m as { name: string }).name === memberName);
 }

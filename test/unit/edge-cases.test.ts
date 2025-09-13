@@ -1,6 +1,6 @@
 import { describe, it } from '@std/testing/bdd';
-import { assertEquals, assert } from '@std/assert';
-import { parseIDL, generateTypeScript } from '../helpers/test-utils.ts';
+import { assert, assertEquals } from '@std/assert';
+import { generateTypeScript, parseIDL } from '../helpers/test-utils.ts';
 import * as AST from '../../src/ast/nodes.ts';
 
 describe('Edge Cases and Error Handling', () => {
@@ -10,7 +10,7 @@ describe('Edge Cases and Error Handling', () => {
         module Empty {
         };
       `;
-      
+
       const ast = parseIDL(idl);
       assertEquals(ast.definitions.length, 1);
       assertEquals(ast.definitions[0].kind, 'module');
@@ -24,7 +24,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const interface_ = module.definitions[0] as AST.InterfaceNode;
@@ -39,7 +39,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const struct = module.definitions[0] as AST.StructNode;
@@ -54,7 +54,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const exception = module.definitions[0] as AST.ExceptionNode;
@@ -70,7 +70,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const enum_ = module.definitions[0] as AST.EnumNode;
@@ -92,10 +92,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       assertEquals(ast.definitions.length, 1);
-      
+
       let current = ast.definitions[0] as AST.ModuleNode;
       for (let i = 1; i <= 4; i++) {
         assertEquals(current.kind, 'module');
@@ -107,7 +107,8 @@ describe('Edge Cases and Error Handling', () => {
     });
 
     it('should handle very long identifiers', () => {
-      const longName = 'VeryLongIdentifierNameThatGoesOnAndOnAndOnAndOnAndOnAndOn';
+      const longName =
+        'VeryLongIdentifierNameThatGoesOnAndOnAndOnAndOnAndOnAndOn';
       const idl = `
         module Test {
           interface ${longName} {
@@ -115,12 +116,15 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const interface_ = module.definitions[0] as AST.InterfaceNode;
       assertEquals(interface_.name, longName);
-      assertEquals((interface_.members[0] as AST.OperationNode).name, `${longName}Method`);
+      assertEquals(
+        (interface_.members[0] as AST.OperationNode).name,
+        `${longName}Method`,
+      );
     });
 
     it('should handle reserved words as identifiers when valid', () => {
@@ -133,7 +137,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       // This might fail depending on parser implementation
       // Some IDL parsers allow reserved words as member names
       // We'll just check it doesn't throw for now
@@ -154,11 +158,19 @@ describe('Edge Cases and Error Handling', () => {
           const wstring WIDE = L"Wide string with émojis 😀";
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
-      assert((module.definitions[0] as AST.ConstantNode).value.toString().includes('世界'));
-      assert((module.definitions[1] as AST.ConstantNode).value.toString().includes('émojis'));
+      assert(
+        (module.definitions[0] as AST.ConstantNode).value.toString().includes(
+          '世界',
+        ),
+      );
+      assert(
+        (module.definitions[1] as AST.ConstantNode).value.toString().includes(
+          'émojis',
+        ),
+      );
     });
 
     it('should handle escaped characters in strings', () => {
@@ -169,12 +181,24 @@ describe('Edge Cases and Error Handling', () => {
           const string QUOTES = "\\"Quoted\\"";
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
-      assert((module.definitions[0] as AST.ConstantNode).value.toString().includes('\n'));
-      assert((module.definitions[1] as AST.ConstantNode).value.toString().includes("'"));
-      assert((module.definitions[2] as AST.ConstantNode).value.toString().includes('"'));
+      assert(
+        (module.definitions[0] as AST.ConstantNode).value.toString().includes(
+          '\n',
+        ),
+      );
+      assert(
+        (module.definitions[1] as AST.ConstantNode).value.toString().includes(
+          "'",
+        ),
+      );
+      assert(
+        (module.definitions[2] as AST.ConstantNode).value.toString().includes(
+          '"',
+        ),
+      );
     });
 
     it('should handle maximum nesting depth', () => {
@@ -191,12 +215,12 @@ describe('Edge Cases and Error Handling', () => {
           > DeeplyNestedSequence;
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const typedef = module.definitions[0];
       assertEquals(typedef.kind, 'typedef');
-      
+
       // Check nesting depth
       let current = (typedef as AST.TypedefNode).type;
       let depth = 0;
@@ -216,7 +240,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const interface_ = module.definitions[0] as AST.InterfaceNode;
@@ -236,7 +260,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
       const interface_ = module.definitions[0] as AST.InterfaceNode;
@@ -254,13 +278,21 @@ describe('Edge Cases and Error Handling', () => {
           exception EmptyException {};
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Empty.ts') || '';
-      
-      assert(output.includes('export interface EmptyInterface extends CORBA.ObjectRef {'));
+
+      assert(
+        output.includes(
+          'export interface EmptyInterface extends CORBA.ObjectRef {',
+        ),
+      );
       assert(output.includes('export interface EmptyStruct {'));
-      assert(output.includes('export class EmptyException extends CORBA.SystemException {'));
+      assert(
+        output.includes(
+          'export class EmptyException extends CORBA.SystemException {',
+        ),
+      );
     });
 
     it('should handle name collisions with TypeScript keywords', () => {
@@ -274,10 +306,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       // Methods should be generated even with keyword names
       assert(output.includes('delete(): Promise<void>'));
       assert(output.includes('function(): Promise<void>'));
@@ -300,10 +332,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('export interface Node'));
       assert(output.includes('children: Node[]'));
       assert(output.includes('parent: Node'));
@@ -317,10 +349,10 @@ describe('Edge Cases and Error Handling', () => {
           const double PI_PRECISE = 3.141592653589793238462643383279;
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('9007199254740991'));
       assert(output.includes('1000000000000000000'));
       assert(output.includes('3.141592653589793'));
@@ -334,10 +366,10 @@ describe('Edge Cases and Error Handling', () => {
           const string BACKSLASH = "\\\\path\\\\to\\\\file";
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       // Should properly escape special characters
       assert(output.includes('"`template`"'));
       assert(output.includes('"$variable"'));
@@ -364,10 +396,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('export interface A'));
       assert(output.includes('export interface B extends A'));
       assert(output.includes('export interface C extends B'));
@@ -394,10 +426,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('export interface Combined extends A, B, C'));
     });
 
@@ -419,10 +451,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('export type ManyTypes ='));
       assert(output.includes('{ discriminator: 1; boolVal: boolean }'));
       assert(output.includes('{ discriminator: 10; wstringVal: string }'));
@@ -441,7 +473,7 @@ describe('Edge Cases and Error Handling', () => {
           }
         };
       `;
-      
+
       // Parser should be able to recover
       const ast = parseIDL(idl);
       assertEquals(ast.definitions.length, 1);
@@ -460,7 +492,7 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       // Should not crash, though behavior is undefined
       try {
         parseIDL(idl);
@@ -478,10 +510,14 @@ describe('Edge Cases and Error Handling', () => {
           const string VERY_LONG = "${longString}";
         };
       `;
-      
+
       const ast = parseIDL(idl);
       const module = ast.definitions[0] as AST.ModuleNode;
-      assert((module.definitions[0] as AST.ConstantNode).value.toString().includes(longString));
+      assert(
+        (module.definitions[0] as AST.ConstantNode).value.toString().includes(
+          longString,
+        ),
+      );
     });
   });
 
@@ -499,14 +535,14 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       // Should generate both types
       assert(output.includes('export interface MediaType'));
       assert(output.includes('export enum MediaOutput_MediaType'));
-      
+
       // MediaOutput should use the nested enum
       assert(output.includes('get_type(): Promise<MediaOutput_MediaType>'));
     });
@@ -528,12 +564,12 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
-      assert(output.includes('export interface Data'));  // Module level
-      assert(output.includes('export interface Service_Data'));  // Nested
+
+      assert(output.includes('export interface Data')); // Module level
+      assert(output.includes('export interface Service_Data')); // Nested
       assert(output.includes('getData(): Promise<Service_Data>'));
       assert(output.includes('getGlobalData(): Promise<Data>'));
     });
@@ -550,10 +586,10 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('getValue(): Promise<unknown>'));
       assert(output.includes('setValue(value: unknown): Promise<void>'));
     });
@@ -570,11 +606,11 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       // Fixed-point should be treated as number
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('export type Money = number'));
       assert(output.includes('getBalance(): Promise<Money>'));
     });
@@ -588,11 +624,11 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       // Context should be ignored in TypeScript generation
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('methodWithContext(): Promise<void>'));
     });
 
@@ -607,11 +643,11 @@ describe('Edge Cases and Error Handling', () => {
           };
         };
       `;
-      
+
       // Native types should be treated as any
       const results = generateTypeScript(idl);
       const output = results.get('Test.ts') || '';
-      
+
       assert(output.includes('export type NativeHandle = any'));
       assert(output.includes('getHandle(): Promise<NativeHandle>'));
     });

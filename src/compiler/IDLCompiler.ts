@@ -1,5 +1,8 @@
 import { IDLParser, ParserOptions } from '../parser/IDLParser.ts';
-import { TypeScriptGenerator, GeneratorOptions } from '../generator/TypeScriptGenerator.ts';
+import {
+  GeneratorOptions,
+  TypeScriptGenerator,
+} from '../generator/TypeScriptGenerator.ts';
 import * as AST from '../ast/nodes.ts';
 import { basename, dirname, join } from 'jsr:@std/path@1.0.0';
 
@@ -18,7 +21,7 @@ export class IDLCompiler {
       includeSkeletons: false,
       emitHelpers: true,
       verbose: false,
-      ...options
+      ...options,
     };
   }
 
@@ -29,30 +32,30 @@ export class IDLCompiler {
 
     const idlContent = Deno.readTextFileSync(idlPath);
     const ast = this.parse(idlContent, idlPath);
-    
+
     // Pass source file to generator
     const generatorOptions: GeneratorOptions = {
       ...this.options,
-      sourceFile: basename(idlPath)
+      sourceFile: basename(idlPath),
     };
     const generator = new TypeScriptGenerator(generatorOptions);
     const result = generator.generate(ast);
 
     // Multi-file output
     const outputDir = this.options.outputPath || dirname(idlPath);
-    
+
     // Create output directory
     try {
       Deno.statSync(outputDir);
     } catch {
       Deno.mkdirSync(outputDir, { recursive: true });
     }
-    
+
     // Write each module file
     for (const [filename, content] of result) {
       const filePath = join(outputDir, filename);
       Deno.writeTextFileSync(filePath, content);
-      
+
       if (this.options.verbose) {
         console.log(`Generated ${filePath}`);
       }
@@ -67,8 +70,8 @@ export class IDLCompiler {
   parse(idlContent: string, filePath?: string): AST.SpecificationNode {
     const parserOptions: ParserOptions = {
       includePaths: this.options.includePaths || [
-        filePath ? dirname(filePath) : Deno.cwd()
-      ]
+        filePath ? dirname(filePath) : Deno.cwd(),
+      ],
     };
     const parser = new IDLParser(parserOptions);
     return parser.parse(idlContent, filePath);

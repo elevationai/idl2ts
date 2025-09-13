@@ -1,16 +1,16 @@
-import { describe, it, beforeEach, afterEach } from '@std/testing/bdd';
-import { assertEquals, assert } from '@std/assert';
+import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
+import { assert, assertEquals } from '@std/assert';
 import { IDLPreprocessor } from '../../src/parser/IDLPreprocessor.ts';
 
 describe('IDLPreprocessor', () => {
   let tempDir: string;
   let preprocessor: IDLPreprocessor;
-  
+
   beforeEach(() => {
     tempDir = Deno.makeTempDirSync({ prefix: 'idl-preproc-test-' });
     preprocessor = new IDLPreprocessor([tempDir]);
   });
-  
+
   afterEach(() => {
     try {
       Deno.removeSync(tempDir, { recursive: true });
@@ -27,9 +27,9 @@ describe('IDLPreprocessor', () => {
           // Full line comment
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assert(!result.processedContent.includes('// This is a comment'));
       assert(!result.processedContent.includes('// Another comment'));
       assert(!result.processedContent.includes('// Full line comment'));
@@ -49,9 +49,9 @@ describe('IDLPreprocessor', () => {
              comment */
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assert(!result.processedContent.includes('/*'));
       assert(!result.processedContent.includes('*/'));
       assert(!result.processedContent.includes('multi-line'));
@@ -67,9 +67,9 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 42;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assert(!result.processedContent.includes('Outer comment'));
       assert(!result.processedContent.includes('nested'));
       assert(result.processedContent.includes('module Test'));
@@ -83,9 +83,9 @@ describe('IDLPreprocessor', () => {
           const string MULTI = "/* Also not a comment */";
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assert(result.processedContent.includes('"http://example.com"'));
       assert(result.processedContent.includes('"// This is not a comment"'));
       assert(result.processedContent.includes('"/* Also not a comment */"'));
@@ -95,15 +95,18 @@ describe('IDLPreprocessor', () => {
   describe('Include Directives', () => {
     it('should process #include with quoted filename', () => {
       const includedFile = `${tempDir}/types.idl`;
-      Deno.writeTextFileSync(includedFile, `
+      Deno.writeTextFileSync(
+        includedFile,
+        `
         module Types {
           struct Point {
             double x;
             double y;
           };
         };
-      `);
-      
+      `,
+      );
+
       const input = `
         #include "types.idl"
         
@@ -113,9 +116,9 @@ describe('IDLPreprocessor', () => {
           };
         };
       `;
-      
+
       const result = preprocessor.preprocess(input, `${tempDir}/main.idl`);
-      
+
       assert(result.processedContent.includes('module Types'));
       assert(result.processedContent.includes('struct Point'));
       assert(result.processedContent.includes('module Main'));
@@ -125,12 +128,15 @@ describe('IDLPreprocessor', () => {
 
     it('should process #include with angle brackets', () => {
       const includedFile = `${tempDir}/system.idl`;
-      Deno.writeTextFileSync(includedFile, `
+      Deno.writeTextFileSync(
+        includedFile,
+        `
         module System {
           const long VERSION = 1;
         };
-      `);
-      
+      `,
+      );
+
       const input = `
         #include <system.idl>
         
@@ -138,9 +144,9 @@ describe('IDLPreprocessor', () => {
           const long APP_VERSION = ::System::VERSION;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input, `${tempDir}/app.idl`);
-      
+
       assert(result.processedContent.includes('module System'));
       assert(result.processedContent.includes('const long VERSION = 1'));
       assert(result.processedContent.includes('module App'));
@@ -149,39 +155,48 @@ describe('IDLPreprocessor', () => {
     it('should handle nested includes', () => {
       // Create level3.idl
       const level3File = `${tempDir}/level3.idl`;
-      Deno.writeTextFileSync(level3File, `
+      Deno.writeTextFileSync(
+        level3File,
+        `
         module Level3 {
           const long VALUE = 3;
         };
-      `);
-      
+      `,
+      );
+
       // Create level2.idl that includes level3.idl
       const level2File = `${tempDir}/level2.idl`;
-      Deno.writeTextFileSync(level2File, `
+      Deno.writeTextFileSync(
+        level2File,
+        `
         #include "level3.idl"
         module Level2 {
           const long VALUE = 2;
         };
-      `);
-      
+      `,
+      );
+
       // Create level1.idl that includes level2.idl
       const level1File = `${tempDir}/level1.idl`;
-      Deno.writeTextFileSync(level1File, `
+      Deno.writeTextFileSync(
+        level1File,
+        `
         #include "level2.idl"
         module Level1 {
           const long VALUE = 1;
         };
-      `);
-      
+      `,
+      );
+
       const input = `
         #include "level1.idl"
         module Main {
           const long VALUE = 0;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input, `${tempDir}/main.idl`);
-      
+
       assert(result.processedContent.includes('module Level3'));
       assert(result.processedContent.includes('module Level2'));
       assert(result.processedContent.includes('module Level1'));
@@ -192,27 +207,33 @@ describe('IDLPreprocessor', () => {
     it('should prevent circular includes', () => {
       // Create a.idl that includes b.idl
       const aFile = `${tempDir}/a.idl`;
-      Deno.writeTextFileSync(aFile, `
+      Deno.writeTextFileSync(
+        aFile,
+        `
         #include "b.idl"
         module A {
           const long VALUE_A = 1;
         };
-      `);
-      
+      `,
+      );
+
       // Create b.idl that includes a.idl (circular)
       const bFile = `${tempDir}/b.idl`;
-      Deno.writeTextFileSync(bFile, `
+      Deno.writeTextFileSync(
+        bFile,
+        `
         #include "a.idl"
         module B {
           const long VALUE_B = 2;
         };
-      `);
-      
-      const result = preprocessor.preprocess(
-        Deno.readTextFileSync(aFile), 
-        aFile
+      `,
       );
-      
+
+      const result = preprocessor.preprocess(
+        Deno.readTextFileSync(aFile),
+        aFile,
+      );
+
       // Should include b.idl but not re-include a.idl
       assert(result.processedContent.includes('module A'));
       assert(result.processedContent.includes('module B'));
@@ -222,28 +243,31 @@ describe('IDLPreprocessor', () => {
     it('should resolve includes from include paths', () => {
       const includeDir = `${tempDir}/includes`;
       Deno.mkdirSync(includeDir);
-      
+
       const commonFile = `${includeDir}/common.idl`;
-      Deno.writeTextFileSync(commonFile, `
+      Deno.writeTextFileSync(
+        commonFile,
+        `
         module Common {
           typedef long ID;
         };
-      `);
-      
+      `,
+      );
+
       const preprocessorWithPath = new IDLPreprocessor([tempDir, includeDir]);
-      
+
       const input = `
         #include "common.idl"
         module Main {
           typedef ::Common::ID MainID;
         };
       `;
-      
+
       const result = preprocessorWithPath.preprocess(
-        input, 
-        `${tempDir}/main.idl`
+        input,
+        `${tempDir}/main.idl`,
       );
-      
+
       assert(result.processedContent.includes('module Common'));
       assert(result.processedContent.includes('typedef long ID'));
     });
@@ -255,9 +279,9 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input, `${tempDir}/main.idl`);
-      
+
       // Should continue processing despite missing include
       assert(result.processedContent.includes('module Main'));
       assert(result.processedContent.includes('const long VALUE = 1'));
@@ -273,9 +297,9 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assertEquals(result.pragmas.has('prefix'), true);
       assertEquals(result.pragmas.get('prefix'), 'com.example');
       assert(!result.processedContent.includes('#pragma'));
@@ -289,9 +313,9 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assertEquals(result.pragmas.has('version'), true);
       assertEquals(result.pragmas.get('version'), 'Test 1.0');
     });
@@ -304,9 +328,9 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assertEquals(result.pragmas.has('ID'), true);
       assertEquals(result.pragmas.get('ID'), 'Test IDL:Test:1.0');
     });
@@ -322,9 +346,9 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assertEquals(result.pragmas.size, 4);
       assertEquals(result.pragmas.get('prefix'), 'com.example');
       assertEquals(result.pragmas.get('version'), 'Test 1.0');
@@ -345,14 +369,14 @@ describe('IDLPreprocessor', () => {
         
         #endif
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       // These directives should be removed
       assert(!result.processedContent.includes('#ifndef'));
       assert(!result.processedContent.includes('#define'));
       assert(!result.processedContent.includes('#endif'));
-      
+
       // Content should remain
       assert(result.processedContent.includes('module Test'));
     });
@@ -369,9 +393,9 @@ describe('IDLPreprocessor', () => {
         };
         #endif
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       // #ifdef is not implemented, only handled as #if which skips content
       // #else toggles the skip state
       // Since #ifdef is treated as #if, it will skip the first branch
@@ -395,9 +419,9 @@ describe('IDLPreprocessor', () => {
         };
         #endif
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       // #if and #elif cause content to be skipped
       // #else toggles skip state, so only else branch is included
       assert(!result.processedContent.includes('module V3'));
@@ -414,7 +438,7 @@ describe('IDLPreprocessor', () => {
         errorCalled = true;
         errorMessage = msg;
       };
-      
+
       const input = `
         #error "This should not be compiled"
         
@@ -422,15 +446,18 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       // Error directive should be removed but content continues
       assert(!result.processedContent.includes('#error'));
       assert(result.processedContent.includes('module Test'));
       assertEquals(errorCalled, true);
-      assertEquals(errorMessage, 'Preprocessor error: "This should not be compiled"');
-      
+      assertEquals(
+        errorMessage,
+        'Preprocessor error: "This should not be compiled"',
+      );
+
       console.error = originalError;
     });
 
@@ -443,7 +470,7 @@ describe('IDLPreprocessor', () => {
         warnCalled = true;
         warnMessage = msg;
       };
-      
+
       const input = `
         #warning "This is deprecated"
         
@@ -451,14 +478,14 @@ describe('IDLPreprocessor', () => {
           const long VALUE = 1;
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assert(!result.processedContent.includes('#warning'));
       assert(result.processedContent.includes('module Test'));
       assertEquals(warnCalled, true);
       assertEquals(warnMessage, 'Preprocessor warning: "This is deprecated"');
-      
+
       console.warn = originalWarn;
     });
   });
@@ -472,12 +499,12 @@ describe('IDLPreprocessor', () => {
             "continues across multiple lines";
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       // Line continuations should be joined
       assert(result.processedContent.includes(
-        'const string LONG_STRING =  "This is a very long string that "  "continues across multiple lines"'
+        'const string LONG_STRING =  "This is a very long string that "  "continues across multiple lines"',
       ));
     });
 
@@ -493,12 +520,13 @@ describe('IDLPreprocessor', () => {
           };
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       // Should be on one line
       assert(
-        /void veryLongMethodName\(\s*in string param1,\s*in string param2,\s*in string param3\s*\)/.test(result.processedContent)
+        /void veryLongMethodName\(\s*in string param1,\s*in string param2,\s*in string param3\s*\)/
+          .test(result.processedContent),
       );
     });
   });
@@ -506,12 +534,15 @@ describe('IDLPreprocessor', () => {
   describe('Mixed Content', () => {
     it('should handle complex file with all features', () => {
       const typesFile = `${tempDir}/types.idl`;
-      Deno.writeTextFileSync(typesFile, `
+      Deno.writeTextFileSync(
+        typesFile,
+        `
         module Types {
           typedef long ID;
         };
-      `);
-      
+      `,
+      );
+
       const input = `
         // File header comment
         /* Multi-line
@@ -541,23 +572,23 @@ describe('IDLPreprocessor', () => {
         
         #endif // SERVICE_IDL
       `;
-      
+
       const result = preprocessor.preprocess(input, `${tempDir}/service.idl`);
-      
+
       // Check pragmas
       assertEquals(result.pragmas.get('prefix'), 'com.example');
       assertEquals(result.pragmas.get('version'), 'Service 2.0');
-      
+
       // Check includes
       assert(result.includes.includes(typesFile));
-      
+
       // Check content
       assert(result.processedContent.includes('module Types'));
       assert(result.processedContent.includes('typedef long ID'));
       assert(result.processedContent.includes('module Service'));
       assert(result.processedContent.includes('const long VERSION = 2'));
       assert(result.processedContent.includes('interface TestService'));
-      
+
       // Check removed content
       assert(!result.processedContent.includes('//'));
       assert(!result.processedContent.includes('/*'));
@@ -572,7 +603,7 @@ describe('IDLPreprocessor', () => {
   describe('Edge Cases', () => {
     it('should handle empty input', () => {
       const result = preprocessor.preprocess('');
-      
+
       assertEquals(result.processedContent, '');
       assertEquals(result.pragmas.size, 0);
       assertEquals(result.includes.length, 0);
@@ -584,9 +615,9 @@ describe('IDLPreprocessor', () => {
         /* Another comment */
         // More comments
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assertEquals(result.processedContent.trim(), '');
     });
 
@@ -597,9 +628,9 @@ describe('IDLPreprocessor', () => {
         #define GUARD
         #endif
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assertEquals(result.pragmas.get('prefix'), 'com.example');
       assertEquals(result.processedContent.trim(), '');
     });
@@ -612,9 +643,9 @@ describe('IDLPreprocessor', () => {
           const string NEWLINES = "line1\\nline2\\nline3";
         };
       `;
-      
+
       const result = preprocessor.preprocess(input);
-      
+
       assert(result.processedContent.includes('"  spaces  "'));
       assert(result.processedContent.includes('"\\t\\ttabs\\t\\t"'));
       assert(result.processedContent.includes('"line1\\nline2\\nline3"'));
