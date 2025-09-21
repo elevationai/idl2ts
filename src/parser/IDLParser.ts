@@ -151,6 +151,16 @@ export class IDLParser {
     this.consume("interface");
     const name = this.consume();
 
+    // Check for forward declaration
+    if (this.peek() === ";") {
+      this.consume(";");
+      return {
+        kind: "interface",
+        name,
+        members: [],
+      };
+    }
+
     let inheritance: string[] | undefined;
     if (this.peek() === ":") {
       this.consume(":");
@@ -350,6 +360,17 @@ export class IDLParser {
   private parseStruct(): AST.StructNode {
     this.consume("struct");
     const name = this.consume();
+
+    // Check for forward declaration
+    if (this.peek() === ";") {
+      this.consume(";");
+      return {
+        kind: "struct",
+        name,
+        members: [],
+      };
+    }
+
     this.consume("{");
 
     const members: AST.MemberNode[] = [];
@@ -385,6 +406,18 @@ export class IDLParser {
   private parseUnion(): AST.UnionNode {
     this.consume("union");
     const name = this.consume();
+
+    // Check for forward declaration
+    if (this.peek() === ";") {
+      this.consume(";");
+      return {
+        kind: "union",
+        name,
+        discriminatorType: { kind: "primitiveType", type: "long" }, // Default discriminator for forward declarations
+        cases: [],
+      };
+    }
+
     this.consume("switch");
     this.consume("(");
     const discriminatorType = this.parseType();
