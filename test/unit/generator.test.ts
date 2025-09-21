@@ -689,7 +689,7 @@ describe('TypeScriptGenerator', () => {
       // Now we import everything together since we generate interface TypeCodes
       assert(
         tsOutput.includes(
-          'import { TypeCode, CORBA, CorbaStub, create_request } from "@myorg/corba-lib"',
+          'import { CorbaStub, create_request, TypeCode, CORBA } from "@myorg/corba-lib"',
         ),
       );
     });
@@ -709,7 +709,7 @@ describe('TypeScriptGenerator', () => {
       // Now we import everything together since we generate interface TypeCodes
       assert(
         tsOutput.includes(
-          'import { TypeCode, CORBA, CorbaStub, create_request } from "corba"',
+          'import { CorbaStub, create_request, TypeCode, CORBA } from "corba"',
         ),
       );
     });

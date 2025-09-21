@@ -18,8 +18,8 @@ interface ModuleOutput {
   content: string[];
   imports: Set<string>; // Track dependencies on other modules
   typeImports: Set<string>; // Track type-only imports
-  usesCorba: boolean; // Track if CORBA is used for values
-  usesCorbaTypes: boolean; // Track if CORBA is used for types
+  corbaImports: Set<string>; // Track which CORBA imports are used (TypeCode, create_request, CorbaStub, etc.)
+  corbaTypeImports: Set<string>; // Track which CORBA type imports are used (CORBA)
   definitions: AST.DefinitionNode[]; // Store the AST definitions for lookup
 }
 
@@ -56,15 +56,15 @@ export class TypeScriptGenerator {
     }
   }
 
-  private markCorbaUsed(): void {
+  private markCorbaImportUsed(importName: string): void {
     if (this.currentModuleOutput) {
-      this.currentModuleOutput.usesCorba = true;
+      this.currentModuleOutput.corbaImports.add(importName);
     }
   }
 
   private markCorbaTypeUsed(): void {
     if (this.currentModuleOutput) {
-      this.currentModuleOutput.usesCorbaTypes = true;
+      this.currentModuleOutput.corbaTypeImports.add('CORBA');
     }
   }
 
@@ -112,8 +112,8 @@ export class TypeScriptGenerator {
       content: [],
       imports: new Set<string>(),
       typeImports: new Set<string>(),
-      usesCorba: false,
-      usesCorbaTypes: false,
+      corbaImports: new Set<string>(),
+      corbaTypeImports: new Set<string>(),
       definitions: ast.definitions,
     };
     this.currentModuleOutput = this.rootModule;
@@ -161,25 +161,31 @@ export class TypeScriptGenerator {
     lines.push(' */');
     lines.push('');
 
-    // Add CORBA import only if needed
-    if (module.usesCorba && module.usesCorbaTypes) {
-      // Both value and type usage - separate type and value imports
+    // Add CORBA imports only if needed
+    const hasValueImports = module.corbaImports.size > 0;
+    const hasTypeImports = module.corbaTypeImports.size > 0;
+
+    if (hasValueImports && hasTypeImports) {
+      // Both value and type usage - combine them and deduplicate
+      const allImports = [...new Set([...module.corbaImports, ...module.corbaTypeImports])];
       lines.push(
-        `import { TypeCode, CORBA, CorbaStub, create_request } from "${
+        `import { ${allImports.join(', ')} } from "${
           this.options.corbaImportPath || 'corba'
         }";`,
       );
-    } else if (module.usesCorbaTypes) {
+    } else if (hasTypeImports && !hasValueImports) {
       // Type-only usage
+      const typeImports = [...module.corbaTypeImports];
       lines.push(
-        `import type { CORBA } from "${
+        `import type { ${typeImports.join(', ')} } from "${
           this.options.corbaImportPath || 'corba'
         }";`,
       );
-    } else if (module.usesCorba) {
-      // Value-only usage (rare but possible)
+    } else if (hasValueImports) {
+      // Value-only usage
+      const valueImports = [...module.corbaImports];
       lines.push(
-        `import { TypeCode, create_request } from "${
+        `import { ${valueImports.join(', ')} } from "${
           this.options.corbaImportPath || 'corba'
         }";`,
       );
@@ -204,7 +210,7 @@ export class TypeScriptGenerator {
     }
 
     // Add empty line after imports if any were added
-    const hasImports = module.usesCorba || module.usesCorbaTypes ||
+    const hasImports = module.corbaImports.size > 0 || module.corbaTypeImports.size > 0 ||
       module.imports.size > 0 || module.typeImports.size > 0;
     if (hasImports) {
       lines.push('');
@@ -263,8 +269,8 @@ export class TypeScriptGenerator {
         content: [],
         imports: new Set<string>(),
         typeImports: new Set<string>(),
-        usesCorba: false,
-        usesCorbaTypes: false,
+        corbaImports: new Set<string>(),
+        corbaTypeImports: new Set<string>(),
         definitions: [],
       };
       this.modules.set(node.name, moduleOutput);
@@ -554,7 +560,7 @@ export class TypeScriptGenerator {
     this.dedent();
     this.emit(`);`);
     this.emit('');
-    this.markCorbaUsed();
+    this.markCorbaImportUsed('TypeCode');
   }
 
   private getTypeCodeForTypeWithContext(
@@ -796,7 +802,7 @@ export class TypeScriptGenerator {
     this.emit(`);`);
     this.emit('');
 
-    this.markCorbaUsed();
+    this.markCorbaImportUsed('TypeCode');
   }
 
   private generateEnum(node: AST.EnumNode): void {
@@ -828,7 +834,7 @@ export class TypeScriptGenerator {
       this.dedent();
       this.emit(`);`);
       this.emit('');
-      this.markCorbaUsed();
+      this.markCorbaImportUsed('TypeCode');
     }
   }
 
@@ -843,7 +849,10 @@ export class TypeScriptGenerator {
       const baseTypeCode = this.getTypeCodeForType(node.type);
       this.emit(`export const TC_${name} = ${baseTypeCode};`);
       this.emit('');
-      this.markCorbaUsed();
+      // Mark TypeCode used if it's being referenced
+      if (baseTypeCode.includes('TypeCode')) {
+        this.markCorbaImportUsed('TypeCode');
+      }
     }
   }
 
@@ -893,7 +902,7 @@ export class TypeScriptGenerator {
   private generateException(node: AST.ExceptionNode): void {
     const name = this.getPrefixedName(node.name);
     this.emit(`export class ${name} extends CORBA.SystemException {`);
-    this.markCorbaUsed(); // Exception uses CORBA as value
+    this.markCorbaImportUsed('CORBA'); // Exception uses CORBA as value
     this.indent();
 
     for (const member of node.members) {
@@ -939,7 +948,7 @@ export class TypeScriptGenerator {
     this.emit(`);`);
     this.emit('');
 
-    this.markCorbaUsed();
+    this.markCorbaImportUsed('TypeCode');
   }
 
   private generateClientStub(node: AST.InterfaceNode): void {
@@ -1021,7 +1030,7 @@ export class TypeScriptGenerator {
       this.emit('');
     }
 
-    this.markCorbaUsed();
+    this.markCorbaImportUsed('CorbaStub');
     this.markCorbaTypeUsed();
 
     // Generate stub implementations for all members
@@ -1105,7 +1114,7 @@ export class TypeScriptGenerator {
     this.indent();
 
     this.emit(`const request = create_request(this._ref, "${node.name}");`);
-    this.markCorbaUsed(); // Using CORBA.create_request function
+    this.markCorbaImportUsed('create_request');
 
     for (const param of node.parameters) {
       if (param.direction === 'in' || param.direction === 'inout') {
@@ -1117,6 +1126,10 @@ export class TypeScriptGenerator {
         this.emit(
           `request.add_named_in_arg("${param.name}", ${param.name}, ${typeCode});`,
         );
+        // Mark TypeCode used if it's being referenced
+        if (typeCode.includes('TypeCode') || typeCode.includes('TC_')) {
+          this.markCorbaImportUsed('TypeCode');
+        }
       }
       if (param.direction === 'out' || param.direction === 'inout') {
         const typeCode = this.getTypeCodeForTypeWithContext(
@@ -1125,6 +1138,10 @@ export class TypeScriptGenerator {
           sourceInterface,
         );
         this.emit(`request.add_out_arg(${typeCode});`);
+        // Mark TypeCode used if it's being referenced
+        if (typeCode.includes('TypeCode') || typeCode.includes('TC_')) {
+          this.markCorbaImportUsed('TypeCode');
+        }
       }
     }
 
@@ -1211,7 +1228,7 @@ export class TypeScriptGenerator {
     this.emit(
       `const request = create_request(this._ref, "_get_${node.name}");`,
     );
-    this.markCorbaUsed(); // Using create_request function
+    this.markCorbaImportUsed('create_request');
     this.emit('await request.invoke();');
     this.emit(`return request.return_value() as ${tsType};`);
     this.dedent();
@@ -1224,13 +1241,17 @@ export class TypeScriptGenerator {
       this.emit(
         `const request = create_request(this._ref, "_set_${node.name}");`,
       );
-      this.markCorbaUsed(); // Using create_request function
+      this.markCorbaImportUsed('create_request');
       const typeCode = this.getTypeCodeForTypeWithContext(
         node.type,
         sourceModule,
         sourceInterface,
       );
       this.emit(`request.add_named_in_arg("value", value, ${typeCode});`);
+      // Mark TypeCode used if it's being referenced
+      if (typeCode.includes('TypeCode') || typeCode.includes('TC_')) {
+        this.markCorbaImportUsed('TypeCode');
+      }
       this.emit('await request.invoke();');
       this.dedent();
       this.emit('}');
@@ -1266,7 +1287,7 @@ export class TypeScriptGenerator {
     this.emit(
       `export abstract class ${name}_POA extends CORBA.PortableServer.Servant implements ${name} {`,
     );
-    this.markCorbaUsed(); // POA uses CORBA as value
+    this.markCorbaImportUsed('CORBA'); // POA uses CORBA as value
     this.indent();
 
     // Only process operations and attributes for skeleton
