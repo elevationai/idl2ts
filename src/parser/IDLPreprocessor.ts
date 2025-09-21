@@ -1,4 +1,4 @@
-import { dirname, join, resolve } from 'jsr:@std/path@1.0.0';
+import { dirname, join, resolve } from "jsr:@std/path@1.0.0";
 
 export interface PreprocessorResult {
   processedContent: string;
@@ -13,7 +13,7 @@ export class IDLPreprocessor {
   private pragmas: Map<string, string> = new Map();
   private includePaths: string[] = [];
   private processedIncludes: string[] = [];
-  private baseDir: string = '';
+  private baseDir: string = "";
   private processingStack: string[] = [];
 
   constructor(includePaths: string[] = []) {
@@ -24,11 +24,11 @@ export class IDLPreprocessor {
     this.baseDir = filePath ? dirname(filePath) : Deno.cwd();
 
     // Track current file in processing stack to prevent circular includes
-    const normalizedPath = filePath ? resolve(filePath) : 'inline';
+    const normalizedPath = filePath ? resolve(filePath) : "inline";
     if (this.processingStack.includes(normalizedPath)) {
       // Circular include detected, skip processing
       return {
-        processedContent: '',
+        processedContent: "",
         includes: this.processedIncludes,
         pragmas: this.pragmas,
         defines: this.defines,
@@ -42,17 +42,17 @@ export class IDLPreprocessor {
     // Handle line continuations
     content = this.handleLineContinuations(content);
 
-    const lines = content.split('\n');
+    const lines = content.split("\n");
     const processedLines: string[] = [];
     let insideIfndef = false;
     let skipContent = false;
-    let currentGuard = '';
+    let currentGuard = "";
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
       // Handle #ifndef
-      if (line.startsWith('#ifndef')) {
+      if (line.startsWith("#ifndef")) {
         const guard = line.substring(7).trim();
         currentGuard = guard;
         if (this.includeGuards.has(guard)) {
@@ -63,10 +63,10 @@ export class IDLPreprocessor {
       }
 
       // Handle #define
-      if (line.startsWith('#define')) {
+      if (line.startsWith("#define")) {
         const parts = line.substring(7).trim().split(/\s+/);
         const name = parts[0];
-        const value = parts.slice(1).join(' ') || '1';
+        const value = parts.slice(1).join(" ") || "1";
 
         if (insideIfndef && name === currentGuard) {
           this.includeGuards.add(name);
@@ -77,17 +77,17 @@ export class IDLPreprocessor {
       }
 
       // Handle #endif
-      if (line.startsWith('#endif')) {
+      if (line.startsWith("#endif")) {
         if (insideIfndef) {
           insideIfndef = false;
           skipContent = false;
-          currentGuard = '';
+          currentGuard = "";
         }
         continue;
       }
 
       // Handle #ifdef
-      if (line.startsWith('#ifdef')) {
+      if (line.startsWith("#ifdef")) {
         const macro = line.substring(6).trim();
         if (!this.defines.has(macro)) {
           skipContent = true;
@@ -96,7 +96,7 @@ export class IDLPreprocessor {
       }
 
       // Handle #include
-      if (line.startsWith('#include')) {
+      if (line.startsWith("#include")) {
         if (!skipContent) {
           const includeMatch = line.match(/#include\s*["<]([^">]+)[">]/);
           if (includeMatch) {
@@ -112,7 +112,8 @@ export class IDLPreprocessor {
                 processedLines.push(
                   `// CIRCULAR INCLUDE SKIPPED: ${includePath}`,
                 );
-              } else if (!this.processedIncludes.includes(resolvedPath)) {
+              }
+              else if (!this.processedIncludes.includes(resolvedPath)) {
                 this.processedIncludes.push(resolvedPath);
 
                 try {
@@ -124,7 +125,8 @@ export class IDLPreprocessor {
                   processedLines.push(`// BEGIN INCLUDE: ${includePath}`);
                   processedLines.push(preprocessed.processedContent);
                   processedLines.push(`// END INCLUDE: ${includePath}`);
-                } catch (error) {
+                }
+                catch (error) {
                   console.warn(
                     `Warning: Could not include file ${includePath}: ${error}`,
                   );
@@ -140,18 +142,16 @@ export class IDLPreprocessor {
       }
 
       // Handle #pragma
-      if (line.startsWith('#pragma')) {
+      if (line.startsWith("#pragma")) {
         const pragmaMatch = line.match(/#pragma\s+(\w+)(?:\s+(.*))?/);
         if (pragmaMatch) {
           const pragmaType = pragmaMatch[1];
-          const pragmaValue = pragmaMatch[2]
-            ? pragmaMatch[2].trim().replace(/"/g, '')
-            : '';
+          const pragmaValue = pragmaMatch[2] ? pragmaMatch[2].trim().replace(/"/g, "") : "";
           this.pragmas.set(pragmaType, pragmaValue);
 
           // For position-dependent pragmas like inhibit_code_generation,
           // inject a marker into the content
-          if (pragmaType === 'inhibit_code_generation' && pragmaValue === '') {
+          if (pragmaType === "inhibit_code_generation" && pragmaValue === "") {
             // Global inhibit - inject marker
             processedLines.push(`__PRAGMA_GLOBAL_INHIBIT__`);
           }
@@ -160,19 +160,19 @@ export class IDLPreprocessor {
       }
 
       // Handle #if, #elif, #else
-      if (line.startsWith('#if ') || line.startsWith('#elif')) {
+      if (line.startsWith("#if ") || line.startsWith("#elif")) {
         // For now, skip complex conditionals
         skipContent = true;
         continue;
       }
 
-      if (line.startsWith('#else')) {
+      if (line.startsWith("#else")) {
         skipContent = !skipContent;
         continue;
       }
 
       // Handle #error
-      if (line.startsWith('#error')) {
+      if (line.startsWith("#error")) {
         if (!skipContent) {
           const message = line.substring(6).trim();
           console.error(`Preprocessor error: ${message}`);
@@ -181,7 +181,7 @@ export class IDLPreprocessor {
       }
 
       // Handle #warning
-      if (line.startsWith('#warning')) {
+      if (line.startsWith("#warning")) {
         if (!skipContent) {
           const message = line.substring(8).trim();
           console.warn(`Preprocessor warning: ${message}`);
@@ -197,7 +197,7 @@ export class IDLPreprocessor {
       // Replace defined macros in the line
       let processedLine = lines[i];
       for (const [macro, value] of this.defines) {
-        const regex = new RegExp(`\\b${macro}\\b`, 'g');
+        const regex = new RegExp(`\\b${macro}\\b`, "g");
         processedLine = processedLine.replace(regex, value);
       }
 
@@ -207,7 +207,7 @@ export class IDLPreprocessor {
     // Pop from processing stack
     this.processingStack.pop();
 
-    const finalContent = processedLines.join('\n');
+    const finalContent = processedLines.join("\n");
 
     return {
       processedContent: this.removeComments(finalContent),
@@ -219,7 +219,7 @@ export class IDLPreprocessor {
 
   private removeComments(content: string): string {
     // More careful comment removal that preserves strings
-    let result = '';
+    let result = "";
     let inString = false;
     let inChar = false;
     let inComment = false;
@@ -232,7 +232,7 @@ export class IDLPreprocessor {
 
       // Handle string literals
       if (char === '"' && !inChar && !inComment && !inMultiComment) {
-        if (i === 0 || content[i - 1] !== '\\') {
+        if (i === 0 || content[i - 1] !== "\\") {
           inString = !inString;
         }
         result += char;
@@ -242,7 +242,7 @@ export class IDLPreprocessor {
 
       // Handle char literals
       if (char === "'" && !inString && !inComment && !inMultiComment) {
-        if (i === 0 || content[i - 1] !== '\\') {
+        if (i === 0 || content[i - 1] !== "\\") {
           inChar = !inChar;
         }
         result += char;
@@ -258,28 +258,28 @@ export class IDLPreprocessor {
       }
 
       // Handle single-line comments
-      if (char === '/' && nextChar === '/' && !inMultiComment) {
+      if (char === "/" && nextChar === "/" && !inMultiComment) {
         inComment = true;
         i += 2;
         continue;
       }
 
       // Handle multi-line comments
-      if (char === '/' && nextChar === '*' && !inComment) {
+      if (char === "/" && nextChar === "*" && !inComment) {
         inMultiComment = true;
         i += 2;
         continue;
       }
 
       // End multi-line comment
-      if (char === '*' && nextChar === '/' && inMultiComment) {
+      if (char === "*" && nextChar === "/" && inMultiComment) {
         inMultiComment = false;
         i += 2;
         continue;
       }
 
       // End single-line comment at newline
-      if (char === '\n' && inComment) {
+      if (char === "\n" && inComment) {
         inComment = false;
         result += char;
         i++;
@@ -301,7 +301,7 @@ export class IDLPreprocessor {
 
   private handleLineContinuations(content: string): string {
     // Join lines ending with backslash, preserve space
-    return content.replace(/\\\s*\n\s*/g, ' ');
+    return content.replace(/\\\s*\n\s*/g, " ");
   }
 
   private resolveIncludePath(includePath: string): string | null {
@@ -310,7 +310,8 @@ export class IDLPreprocessor {
     try {
       Deno.statSync(relativePath);
       return relativePath;
-    } catch {
+    }
+    catch {
       // File doesn't exist, continue
     }
 
@@ -320,7 +321,8 @@ export class IDLPreprocessor {
       try {
         Deno.statSync(fullPath);
         return fullPath;
-      } catch {
+      }
+      catch {
         // File doesn't exist, continue
       }
     }
@@ -329,7 +331,8 @@ export class IDLPreprocessor {
     try {
       Deno.statSync(includePath);
       return includePath;
-    } catch {
+    }
+    catch {
       // File doesn't exist
     }
 

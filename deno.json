@@ -10,9 +10,9 @@
     "test": "deno test --allow-read --allow-write test/"
   },
   "fmt": {
-    "indentWidth": 2,
-    "semiColons": true,
-    "singleQuote": true
+    "lineWidth": 140,
+    "proseWrap": "preserve",
+    "nextControlFlowPosition": "nextLine"
   },
   "lint": {
     "rules": {

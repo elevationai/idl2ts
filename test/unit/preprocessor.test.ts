@@ -1,26 +1,27 @@
-import { afterEach, beforeEach, describe, it } from '@std/testing/bdd';
-import { assert, assertEquals } from '@std/assert';
-import { IDLPreprocessor } from '../../src/parser/IDLPreprocessor.ts';
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
+import { assert, assertEquals } from "@std/assert";
+import { IDLPreprocessor } from "../../src/parser/IDLPreprocessor.ts";
 
-describe('IDLPreprocessor', () => {
+describe("IDLPreprocessor", () => {
   let tempDir: string;
   let preprocessor: IDLPreprocessor;
 
   beforeEach(() => {
-    tempDir = Deno.makeTempDirSync({ prefix: 'idl-preproc-test-' });
+    tempDir = Deno.makeTempDirSync({ prefix: "idl-preproc-test-" });
     preprocessor = new IDLPreprocessor([tempDir]);
   });
 
   afterEach(() => {
     try {
       Deno.removeSync(tempDir, { recursive: true });
-    } catch {
+    }
+    catch {
       // Ignore errors if already removed
     }
   });
 
-  describe('Comment Removal', () => {
-    it('should remove single-line comments', () => {
+  describe("Comment Removal", () => {
+    it("should remove single-line comments", () => {
       const input = `
         module Test { // This is a comment
           const long VALUE = 42; // Another comment
@@ -30,14 +31,14 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assert(!result.processedContent.includes('// This is a comment'));
-      assert(!result.processedContent.includes('// Another comment'));
-      assert(!result.processedContent.includes('// Full line comment'));
-      assert(result.processedContent.includes('module Test'));
-      assert(result.processedContent.includes('const long VALUE = 42'));
+      assert(!result.processedContent.includes("// This is a comment"));
+      assert(!result.processedContent.includes("// Another comment"));
+      assert(!result.processedContent.includes("// Full line comment"));
+      assert(result.processedContent.includes("module Test"));
+      assert(result.processedContent.includes("const long VALUE = 42"));
     });
 
-    it('should remove multi-line comments', () => {
+    it("should remove multi-line comments", () => {
       const input = `
         /* This is a 
            multi-line
@@ -52,15 +53,15 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assert(!result.processedContent.includes('/*'));
-      assert(!result.processedContent.includes('*/'));
-      assert(!result.processedContent.includes('multi-line'));
-      assert(!result.processedContent.includes('inline comment'));
-      assert(result.processedContent.includes('module Test'));
-      assert(result.processedContent.includes('const long VALUE =  42'));
+      assert(!result.processedContent.includes("/*"));
+      assert(!result.processedContent.includes("*/"));
+      assert(!result.processedContent.includes("multi-line"));
+      assert(!result.processedContent.includes("inline comment"));
+      assert(result.processedContent.includes("module Test"));
+      assert(result.processedContent.includes("const long VALUE =  42"));
     });
 
-    it('should handle nested multi-line comments', () => {
+    it("should handle nested multi-line comments", () => {
       const input = `
         /* Outer comment /* nested */ still in comment */
         module Test {
@@ -70,12 +71,12 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assert(!result.processedContent.includes('Outer comment'));
-      assert(!result.processedContent.includes('nested'));
-      assert(result.processedContent.includes('module Test'));
+      assert(!result.processedContent.includes("Outer comment"));
+      assert(!result.processedContent.includes("nested"));
+      assert(result.processedContent.includes("module Test"));
     });
 
-    it('should preserve strings containing comment-like sequences', () => {
+    it("should preserve strings containing comment-like sequences", () => {
       const input = `
         module Test {
           const string URL = "http://example.com";
@@ -92,8 +93,8 @@ describe('IDLPreprocessor', () => {
     });
   });
 
-  describe('Include Directives', () => {
-    it('should process #include with quoted filename', () => {
+  describe("Include Directives", () => {
+    it("should process #include with quoted filename", () => {
       const includedFile = `${tempDir}/types.idl`;
       Deno.writeTextFileSync(
         includedFile,
@@ -119,14 +120,14 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input, `${tempDir}/main.idl`);
 
-      assert(result.processedContent.includes('module Types'));
-      assert(result.processedContent.includes('struct Point'));
-      assert(result.processedContent.includes('module Main'));
+      assert(result.processedContent.includes("module Types"));
+      assert(result.processedContent.includes("struct Point"));
+      assert(result.processedContent.includes("module Main"));
       assertEquals(result.includes.length, 1);
       assert(result.includes.includes(includedFile));
     });
 
-    it('should process #include with angle brackets', () => {
+    it("should process #include with angle brackets", () => {
       const includedFile = `${tempDir}/system.idl`;
       Deno.writeTextFileSync(
         includedFile,
@@ -147,12 +148,12 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input, `${tempDir}/app.idl`);
 
-      assert(result.processedContent.includes('module System'));
-      assert(result.processedContent.includes('const long VERSION = 1'));
-      assert(result.processedContent.includes('module App'));
+      assert(result.processedContent.includes("module System"));
+      assert(result.processedContent.includes("const long VERSION = 1"));
+      assert(result.processedContent.includes("module App"));
     });
 
-    it('should handle nested includes', () => {
+    it("should handle nested includes", () => {
       // Create level3.idl
       const level3File = `${tempDir}/level3.idl`;
       Deno.writeTextFileSync(
@@ -197,14 +198,14 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input, `${tempDir}/main.idl`);
 
-      assert(result.processedContent.includes('module Level3'));
-      assert(result.processedContent.includes('module Level2'));
-      assert(result.processedContent.includes('module Level1'));
-      assert(result.processedContent.includes('module Main'));
+      assert(result.processedContent.includes("module Level3"));
+      assert(result.processedContent.includes("module Level2"));
+      assert(result.processedContent.includes("module Level1"));
+      assert(result.processedContent.includes("module Main"));
       assertEquals(result.includes.length, 3);
     });
 
-    it('should prevent circular includes', () => {
+    it("should prevent circular includes", () => {
       // Create a.idl that includes b.idl
       const aFile = `${tempDir}/a.idl`;
       Deno.writeTextFileSync(
@@ -235,12 +236,12 @@ describe('IDLPreprocessor', () => {
       );
 
       // Should include b.idl but not re-include a.idl
-      assert(result.processedContent.includes('module A'));
-      assert(result.processedContent.includes('module B'));
+      assert(result.processedContent.includes("module A"));
+      assert(result.processedContent.includes("module B"));
       assertEquals(result.includes.length, 1); // Only b.idl should be included
     });
 
-    it('should resolve includes from include paths', () => {
+    it("should resolve includes from include paths", () => {
       const includeDir = `${tempDir}/includes`;
       Deno.mkdirSync(includeDir);
 
@@ -268,11 +269,11 @@ describe('IDLPreprocessor', () => {
         `${tempDir}/main.idl`,
       );
 
-      assert(result.processedContent.includes('module Common'));
-      assert(result.processedContent.includes('typedef long ID'));
+      assert(result.processedContent.includes("module Common"));
+      assert(result.processedContent.includes("typedef long ID"));
     });
 
-    it('should handle missing include files gracefully', () => {
+    it("should handle missing include files gracefully", () => {
       const input = `
         #include "nonexistent.idl"
         module Main {
@@ -283,13 +284,13 @@ describe('IDLPreprocessor', () => {
       const result = preprocessor.preprocess(input, `${tempDir}/main.idl`);
 
       // Should continue processing despite missing include
-      assert(result.processedContent.includes('module Main'));
-      assert(result.processedContent.includes('const long VALUE = 1'));
+      assert(result.processedContent.includes("module Main"));
+      assert(result.processedContent.includes("const long VALUE = 1"));
     });
   });
 
-  describe('Pragma Directives', () => {
-    it('should extract #pragma prefix', () => {
+  describe("Pragma Directives", () => {
+    it("should extract #pragma prefix", () => {
       const input = `
         #pragma prefix "com.example"
         
@@ -300,12 +301,12 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assertEquals(result.pragmas.has('prefix'), true);
-      assertEquals(result.pragmas.get('prefix'), 'com.example');
-      assert(!result.processedContent.includes('#pragma'));
+      assertEquals(result.pragmas.has("prefix"), true);
+      assertEquals(result.pragmas.get("prefix"), "com.example");
+      assert(!result.processedContent.includes("#pragma"));
     });
 
-    it('should extract #pragma version', () => {
+    it("should extract #pragma version", () => {
       const input = `
         #pragma version Test 1.0
         
@@ -316,11 +317,11 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assertEquals(result.pragmas.has('version'), true);
-      assertEquals(result.pragmas.get('version'), 'Test 1.0');
+      assertEquals(result.pragmas.has("version"), true);
+      assertEquals(result.pragmas.get("version"), "Test 1.0");
     });
 
-    it('should extract #pragma ID', () => {
+    it("should extract #pragma ID", () => {
       const input = `
         #pragma ID Test "IDL:Test:1.0"
         
@@ -331,11 +332,11 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assertEquals(result.pragmas.has('ID'), true);
-      assertEquals(result.pragmas.get('ID'), 'Test IDL:Test:1.0');
+      assertEquals(result.pragmas.has("ID"), true);
+      assertEquals(result.pragmas.get("ID"), "Test IDL:Test:1.0");
     });
 
-    it('should handle multiple pragmas', () => {
+    it("should handle multiple pragmas", () => {
       const input = `
         #pragma prefix "com.example"
         #pragma version Test 1.0
@@ -350,15 +351,15 @@ describe('IDLPreprocessor', () => {
       const result = preprocessor.preprocess(input);
 
       assertEquals(result.pragmas.size, 4);
-      assertEquals(result.pragmas.get('prefix'), 'com.example');
-      assertEquals(result.pragmas.get('version'), 'Test 1.0');
-      assertEquals(result.pragmas.get('ID'), 'Test IDL:Test:1.0');
-      assertEquals(result.pragmas.get('custom'), 'value');
+      assertEquals(result.pragmas.get("prefix"), "com.example");
+      assertEquals(result.pragmas.get("version"), "Test 1.0");
+      assertEquals(result.pragmas.get("ID"), "Test IDL:Test:1.0");
+      assertEquals(result.pragmas.get("custom"), "value");
     });
   });
 
-  describe('Other Preprocessor Directives', () => {
-    it('should handle #ifndef / #define / #endif', () => {
+  describe("Other Preprocessor Directives", () => {
+    it("should handle #ifndef / #define / #endif", () => {
       const input = `
         #ifndef TEST_IDL
         #define TEST_IDL
@@ -373,15 +374,15 @@ describe('IDLPreprocessor', () => {
       const result = preprocessor.preprocess(input);
 
       // These directives should be removed
-      assert(!result.processedContent.includes('#ifndef'));
-      assert(!result.processedContent.includes('#define'));
-      assert(!result.processedContent.includes('#endif'));
+      assert(!result.processedContent.includes("#ifndef"));
+      assert(!result.processedContent.includes("#define"));
+      assert(!result.processedContent.includes("#endif"));
 
       // Content should remain
-      assert(result.processedContent.includes('module Test'));
+      assert(result.processedContent.includes("module Test"));
     });
 
-    it('should handle #ifdef / #else / #endif', () => {
+    it("should handle #ifdef / #else / #endif", () => {
       const input = `
         #ifdef FEATURE_X
         module FeatureX {
@@ -399,11 +400,11 @@ describe('IDLPreprocessor', () => {
       // #ifdef is not implemented, only handled as #if which skips content
       // #else toggles the skip state
       // Since #ifdef is treated as #if, it will skip the first branch
-      assert(!result.processedContent.includes('module FeatureX'));
-      assert(result.processedContent.includes('module NoFeature'));
+      assert(!result.processedContent.includes("module FeatureX"));
+      assert(result.processedContent.includes("module NoFeature"));
     });
 
-    it('should handle #if / #elif / #endif', () => {
+    it("should handle #if / #elif / #endif", () => {
       const input = `
         #if VERSION > 2
         module V3 {
@@ -424,16 +425,16 @@ describe('IDLPreprocessor', () => {
 
       // #if and #elif cause content to be skipped
       // #else toggles skip state, so only else branch is included
-      assert(!result.processedContent.includes('module V3'));
-      assert(!result.processedContent.includes('module V2'));
-      assert(result.processedContent.includes('module V1'));
+      assert(!result.processedContent.includes("module V3"));
+      assert(!result.processedContent.includes("module V2"));
+      assert(result.processedContent.includes("module V1"));
     });
 
-    it('should handle #error directive', () => {
+    it("should handle #error directive", () => {
       // Mock console.error for Deno
       const originalError = console.error;
       let errorCalled = false;
-      let errorMessage = '';
+      let errorMessage = "";
       console.error = (msg: string) => {
         errorCalled = true;
         errorMessage = msg;
@@ -450,8 +451,8 @@ describe('IDLPreprocessor', () => {
       const result = preprocessor.preprocess(input);
 
       // Error directive should be removed but content continues
-      assert(!result.processedContent.includes('#error'));
-      assert(result.processedContent.includes('module Test'));
+      assert(!result.processedContent.includes("#error"));
+      assert(result.processedContent.includes("module Test"));
       assertEquals(errorCalled, true);
       assertEquals(
         errorMessage,
@@ -461,11 +462,11 @@ describe('IDLPreprocessor', () => {
       console.error = originalError;
     });
 
-    it('should handle #warning directive', () => {
+    it("should handle #warning directive", () => {
       // Mock console.warn for Deno
       const originalWarn = console.warn;
       let warnCalled = false;
-      let warnMessage = '';
+      let warnMessage = "";
       console.warn = (msg: string) => {
         warnCalled = true;
         warnMessage = msg;
@@ -481,8 +482,8 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assert(!result.processedContent.includes('#warning'));
-      assert(result.processedContent.includes('module Test'));
+      assert(!result.processedContent.includes("#warning"));
+      assert(result.processedContent.includes("module Test"));
       assertEquals(warnCalled, true);
       assertEquals(warnMessage, 'Preprocessor warning: "This is deprecated"');
 
@@ -490,8 +491,8 @@ describe('IDLPreprocessor', () => {
     });
   });
 
-  describe('Line Continuation', () => {
-    it('should handle line continuation with backslash', () => {
+  describe("Line Continuation", () => {
+    it("should handle line continuation with backslash", () => {
       const input = `
         module Test {
           const string LONG_STRING = \\
@@ -508,7 +509,7 @@ describe('IDLPreprocessor', () => {
       ));
     });
 
-    it('should handle line continuation in interface definitions', () => {
+    it("should handle line continuation in interface definitions", () => {
       const input = `
         module Test {
           interface Service {
@@ -531,8 +532,8 @@ describe('IDLPreprocessor', () => {
     });
   });
 
-  describe('Mixed Content', () => {
-    it('should handle complex file with all features', () => {
+  describe("Mixed Content", () => {
+    it("should handle complex file with all features", () => {
       const typesFile = `${tempDir}/types.idl`;
       Deno.writeTextFileSync(
         typesFile,
@@ -576,40 +577,40 @@ describe('IDLPreprocessor', () => {
       const result = preprocessor.preprocess(input, `${tempDir}/service.idl`);
 
       // Check pragmas
-      assertEquals(result.pragmas.get('prefix'), 'com.example');
-      assertEquals(result.pragmas.get('version'), 'Service 2.0');
+      assertEquals(result.pragmas.get("prefix"), "com.example");
+      assertEquals(result.pragmas.get("version"), "Service 2.0");
 
       // Check includes
       assert(result.includes.includes(typesFile));
 
       // Check content
-      assert(result.processedContent.includes('module Types'));
-      assert(result.processedContent.includes('typedef long ID'));
-      assert(result.processedContent.includes('module Service'));
-      assert(result.processedContent.includes('const long VERSION = 2'));
-      assert(result.processedContent.includes('interface TestService'));
+      assert(result.processedContent.includes("module Types"));
+      assert(result.processedContent.includes("typedef long ID"));
+      assert(result.processedContent.includes("module Service"));
+      assert(result.processedContent.includes("const long VERSION = 2"));
+      assert(result.processedContent.includes("interface TestService"));
 
       // Check removed content
-      assert(!result.processedContent.includes('//'));
-      assert(!result.processedContent.includes('/*'));
-      assert(!result.processedContent.includes('#pragma'));
-      assert(!result.processedContent.includes('#ifndef'));
-      assert(!result.processedContent.includes('#define'));
-      assert(!result.processedContent.includes('#endif'));
-      assert(!result.processedContent.includes('#include'));
+      assert(!result.processedContent.includes("//"));
+      assert(!result.processedContent.includes("/*"));
+      assert(!result.processedContent.includes("#pragma"));
+      assert(!result.processedContent.includes("#ifndef"));
+      assert(!result.processedContent.includes("#define"));
+      assert(!result.processedContent.includes("#endif"));
+      assert(!result.processedContent.includes("#include"));
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle empty input', () => {
-      const result = preprocessor.preprocess('');
+  describe("Edge Cases", () => {
+    it("should handle empty input", () => {
+      const result = preprocessor.preprocess("");
 
-      assertEquals(result.processedContent, '');
+      assertEquals(result.processedContent, "");
       assertEquals(result.pragmas.size, 0);
       assertEquals(result.includes.length, 0);
     });
 
-    it('should handle input with only comments', () => {
+    it("should handle input with only comments", () => {
       const input = `
         // Comment only
         /* Another comment */
@@ -618,10 +619,10 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assertEquals(result.processedContent.trim(), '');
+      assertEquals(result.processedContent.trim(), "");
     });
 
-    it('should handle input with only preprocessor directives', () => {
+    it("should handle input with only preprocessor directives", () => {
       const input = `
         #pragma prefix "com.example"
         #ifndef GUARD
@@ -631,11 +632,11 @@ describe('IDLPreprocessor', () => {
 
       const result = preprocessor.preprocess(input);
 
-      assertEquals(result.pragmas.get('prefix'), 'com.example');
-      assertEquals(result.processedContent.trim(), '');
+      assertEquals(result.pragmas.get("prefix"), "com.example");
+      assertEquals(result.processedContent.trim(), "");
     });
 
-    it('should preserve whitespace in strings', () => {
+    it("should preserve whitespace in strings", () => {
       const input = `
         module Test {
           const string SPACES = "  spaces  ";

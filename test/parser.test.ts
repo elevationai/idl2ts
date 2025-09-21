@@ -1,7 +1,7 @@
-import { describe, it } from '@std/testing/bdd';
-import { assertEquals, assertExists } from '@std/assert';
-import { IDLParser } from '../src/parser/IDLParser.ts';
-import * as AST from '../src/ast/nodes.ts';
+import { describe, it } from "@std/testing/bdd";
+import { assertEquals, assertExists } from "@std/assert";
+import { IDLParser } from "../src/parser/IDLParser.ts";
+import * as AST from "../src/ast/nodes.ts";
 
 // Helper functions
 function parseIDL(idl: string): AST.SpecificationNode {
@@ -13,24 +13,20 @@ function findDefinition(
   ast: AST.SpecificationNode,
   name: string,
 ): AST.DefinitionNode | undefined {
-  return ast.definitions.find((def) =>
-    (def as AST.DefinitionNode & { name: string }).name === name
-  );
+  return ast.definitions.find((def) => (def as AST.DefinitionNode & { name: string }).name === name);
 }
 
 function findMember(
   container: AST.ModuleNode | AST.InterfaceNode,
   memberName: string,
 ): AST.DefinitionNode | AST.InterfaceMemberNode | undefined {
-  const collection = container.kind === 'module'
-    ? container.definitions
-    : container.members;
+  const collection = container.kind === "module" ? container.definitions : container.members;
   if (!collection) return undefined;
   return collection.find((m) => (m as { name: string }).name === memberName);
 }
 
-describe('IDLParser', () => {
-  it('should parse primitive types', () => {
+describe("IDLParser", () => {
+  it("should parse primitive types", () => {
     const idl = `
       module Test {
         typedef short ShortType;
@@ -52,19 +48,19 @@ describe('IDLParser', () => {
     `;
 
     const ast = parseIDL(idl);
-    const module = findDefinition(ast, 'Test') as AST.ModuleNode;
+    const module = findDefinition(ast, "Test") as AST.ModuleNode;
 
     assertExists(module);
-    assertEquals(module.kind, 'module');
+    assertEquals(module.kind, "module");
     assertEquals(module.definitions.length, 15);
 
-    const shortType = findMember(module, 'ShortType') as AST.TypedefNode;
-    assertEquals(shortType.kind, 'typedef');
-    assertEquals(shortType.type.kind, 'primitiveType');
-    assertEquals((shortType.type as AST.PrimitiveTypeNode).type, 'short');
+    const shortType = findMember(module, "ShortType") as AST.TypedefNode;
+    assertEquals(shortType.kind, "typedef");
+    assertEquals(shortType.type.kind, "primitiveType");
+    assertEquals((shortType.type as AST.PrimitiveTypeNode).type, "short");
   });
 
-  it('should parse sequence types', () => {
+  it("should parse sequence types", () => {
     const idl = `
       module Test {
         typedef sequence<long> LongSeq;
@@ -74,17 +70,17 @@ describe('IDLParser', () => {
     `;
 
     const ast = parseIDL(idl);
-    const module = findDefinition(ast, 'Test') as AST.ModuleNode;
+    const module = findDefinition(ast, "Test") as AST.ModuleNode;
 
-    const longSeq = findMember(module, 'LongSeq') as AST.TypedefNode;
-    assertEquals(longSeq.type.kind, 'sequenceType');
+    const longSeq = findMember(module, "LongSeq") as AST.TypedefNode;
+    assertEquals(longSeq.type.kind, "sequenceType");
 
     const seqType = longSeq.type as AST.SequenceTypeNode;
-    assertEquals(seqType.elementType.kind, 'primitiveType');
-    assertEquals((seqType.elementType as AST.PrimitiveTypeNode).type, 'long');
+    assertEquals(seqType.elementType.kind, "primitiveType");
+    assertEquals((seqType.elementType as AST.PrimitiveTypeNode).type, "long");
   });
 
-  it('should parse array types', () => {
+  it("should parse array types", () => {
     const idl = `
       module Test {
         typedef long LongArray[10];
@@ -93,17 +89,17 @@ describe('IDLParser', () => {
     `;
 
     const ast = parseIDL(idl);
-    const module = findDefinition(ast, 'Test') as AST.ModuleNode;
+    const module = findDefinition(ast, "Test") as AST.ModuleNode;
 
-    const longArray = findMember(module, 'LongArray') as AST.TypedefNode;
-    assertEquals(longArray.type.kind, 'arrayType');
+    const longArray = findMember(module, "LongArray") as AST.TypedefNode;
+    assertEquals(longArray.type.kind, "arrayType");
 
     const arrayType = longArray.type as AST.ArrayTypeNode;
-    assertEquals(arrayType.elementType.kind, 'primitiveType');
+    assertEquals(arrayType.elementType.kind, "primitiveType");
     assertEquals(arrayType.dimensions[0], 10);
   });
 
-  it('should parse simple module', () => {
+  it("should parse simple module", () => {
     const idl = `
       module TestModule {
         const long VERSION = 1;
@@ -112,15 +108,15 @@ describe('IDLParser', () => {
 
     const ast = parseIDL(idl);
     assertExists(ast);
-    assertEquals(ast.kind, 'specification');
+    assertEquals(ast.kind, "specification");
 
-    const module = findDefinition(ast, 'TestModule') as AST.ModuleNode;
+    const module = findDefinition(ast, "TestModule") as AST.ModuleNode;
     assertExists(module);
-    assertEquals(module.kind, 'module');
-    assertEquals(module.name, 'TestModule');
+    assertEquals(module.kind, "module");
+    assertEquals(module.name, "TestModule");
   });
 
-  it('should parse interface with operations', () => {
+  it("should parse interface with operations", () => {
     const idl = `
       interface Calculator {
         long add(in long a, in long b);
@@ -130,19 +126,19 @@ describe('IDLParser', () => {
     `;
 
     const ast = parseIDL(idl);
-    const iface = findDefinition(ast, 'Calculator') as AST.InterfaceNode;
+    const iface = findDefinition(ast, "Calculator") as AST.InterfaceNode;
 
     assertExists(iface);
-    assertEquals(iface.kind, 'interface');
+    assertEquals(iface.kind, "interface");
     assertEquals(iface.members.length, 3);
 
     const addOp = iface.members[0] as AST.OperationNode;
-    assertEquals(addOp.kind, 'operation');
-    assertEquals(addOp.name, 'add');
+    assertEquals(addOp.kind, "operation");
+    assertEquals(addOp.name, "add");
     assertEquals(addOp.parameters.length, 2);
   });
 
-  it('should parse enum', () => {
+  it("should parse enum", () => {
     const idl = `
       enum Color {
         RED,
@@ -152,17 +148,17 @@ describe('IDLParser', () => {
     `;
 
     const ast = parseIDL(idl);
-    const enumDef = findDefinition(ast, 'Color') as AST.EnumNode;
+    const enumDef = findDefinition(ast, "Color") as AST.EnumNode;
 
     assertExists(enumDef);
-    assertEquals(enumDef.kind, 'enum');
+    assertEquals(enumDef.kind, "enum");
     assertEquals(enumDef.members.length, 3);
-    assertEquals(enumDef.members[0], 'RED');
-    assertEquals(enumDef.members[1], 'GREEN');
-    assertEquals(enumDef.members[2], 'BLUE');
+    assertEquals(enumDef.members[0], "RED");
+    assertEquals(enumDef.members[1], "GREEN");
+    assertEquals(enumDef.members[2], "BLUE");
   });
 
-  it('should parse struct', () => {
+  it("should parse struct", () => {
     const idl = `
       struct Point {
         long x;
@@ -172,14 +168,14 @@ describe('IDLParser', () => {
     `;
 
     const ast = parseIDL(idl);
-    const struct = findDefinition(ast, 'Point') as AST.StructNode;
+    const struct = findDefinition(ast, "Point") as AST.StructNode;
 
     assertExists(struct);
-    assertEquals(struct.kind, 'struct');
+    assertEquals(struct.kind, "struct");
     assertEquals(struct.members.length, 3);
 
     const xMember = struct.members[0];
-    assertEquals(xMember.name, 'x');
-    assertEquals(xMember.type.kind, 'primitiveType');
+    assertEquals(xMember.name, "x");
+    assertEquals(xMember.type.kind, "primitiveType");
   });
 });

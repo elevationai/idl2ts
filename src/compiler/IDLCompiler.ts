@@ -1,10 +1,7 @@
-import { IDLParser, ParserOptions } from '../parser/IDLParser.ts';
-import {
-  GeneratorOptions,
-  TypeScriptGenerator,
-} from '../generator/TypeScriptGenerator.ts';
-import * as AST from '../ast/nodes.ts';
-import { basename, dirname, join } from 'jsr:@std/path@1.0.0';
+import { IDLParser, ParserOptions } from "../parser/IDLParser.ts";
+import { GeneratorOptions, TypeScriptGenerator } from "../generator/TypeScriptGenerator.ts";
+import * as AST from "../ast/nodes.ts";
+import { basename, dirname, join } from "jsr:@std/path@1.0.0";
 
 export interface CompilerOptions extends GeneratorOptions {
   outputPath?: string;
@@ -47,7 +44,8 @@ export class IDLCompiler {
     // Create output directory
     try {
       Deno.statSync(outputDir);
-    } catch {
+    }
+    catch {
       Deno.mkdirSync(outputDir, { recursive: true });
     }
 

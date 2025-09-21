@@ -22,7 +22,7 @@ export interface BaseNode {
 }
 
 export interface SpecificationNode extends BaseNode {
-  kind: 'specification';
+  kind: "specification";
   definitions: DefinitionNode[];
   pragmas?: Map<string, string>; // Global pragmas like prefix
 }
@@ -38,13 +38,13 @@ export type DefinitionNode =
   | ExceptionNode;
 
 export interface ModuleNode extends BaseNode {
-  kind: 'module';
+  kind: "module";
   name: string;
   definitions: DefinitionNode[];
 }
 
 export interface InterfaceNode extends BaseNode {
-  kind: 'interface';
+  kind: "interface";
   name: string;
   isAbstract?: boolean;
   isLocal?: boolean;
@@ -63,7 +63,7 @@ export type InterfaceMemberNode =
   | ExceptionNode;
 
 export interface OperationNode extends BaseNode {
-  kind: 'operation';
+  kind: "operation";
   name: string;
   returnType: TypeNode;
   parameters: ParameterNode[];
@@ -72,66 +72,66 @@ export interface OperationNode extends BaseNode {
 }
 
 export interface ParameterNode extends BaseNode {
-  kind: 'parameter';
+  kind: "parameter";
   name: string;
   type: TypeNode;
-  direction: 'in' | 'out' | 'inout';
+  direction: "in" | "out" | "inout";
 }
 
 export interface AttributeNode extends BaseNode {
-  kind: 'attribute';
+  kind: "attribute";
   name: string;
   type: TypeNode;
   isReadonly?: boolean;
 }
 
 export interface StructNode extends BaseNode {
-  kind: 'struct';
+  kind: "struct";
   name: string;
   members: MemberNode[];
 }
 
 export interface MemberNode extends BaseNode {
-  kind: 'member';
+  kind: "member";
   name: string;
   type: TypeNode;
 }
 
 export interface UnionNode extends BaseNode {
-  kind: 'union';
+  kind: "union";
   name: string;
   discriminatorType: TypeNode;
   cases: UnionCaseNode[];
 }
 
 export interface UnionCaseNode extends BaseNode {
-  kind: 'unionCase';
+  kind: "unionCase";
   labels: (string | number | boolean)[];
   member?: MemberNode;
   isDefault?: boolean;
 }
 
 export interface EnumNode extends BaseNode {
-  kind: 'enum';
+  kind: "enum";
   name: string;
   members: string[];
 }
 
 export interface TypedefNode extends BaseNode {
-  kind: 'typedef';
+  kind: "typedef";
   name: string;
   type: TypeNode;
 }
 
 export interface ConstantNode extends BaseNode {
-  kind: 'constant';
+  kind: "constant";
   name: string;
   type: TypeNode;
   value: string | number | boolean;
 }
 
 export interface ExceptionNode extends BaseNode {
-  kind: 'exception';
+  kind: "exception";
   name: string;
   members: MemberNode[];
 }
@@ -145,52 +145,52 @@ export type TypeNode =
   | FixedTypeNode;
 
 export interface PrimitiveTypeNode extends BaseNode {
-  kind: 'primitiveType';
+  kind: "primitiveType";
   type:
-    | 'void'
-    | 'boolean'
-    | 'char'
-    | 'wchar'
-    | 'octet'
-    | 'short'
-    | 'unsigned short'
-    | 'long'
-    | 'unsigned long'
-    | 'long long'
-    | 'unsigned long long'
-    | 'float'
-    | 'double'
-    | 'long double'
-    | 'any'
-    | 'Object';
+    | "void"
+    | "boolean"
+    | "char"
+    | "wchar"
+    | "octet"
+    | "short"
+    | "unsigned short"
+    | "long"
+    | "unsigned long"
+    | "long long"
+    | "unsigned long long"
+    | "float"
+    | "double"
+    | "long double"
+    | "any"
+    | "Object";
 }
 
 export interface NamedTypeNode extends BaseNode {
-  kind: 'namedType';
+  kind: "namedType";
   name: string;
   scopedName?: string[];
 }
 
 export interface SequenceTypeNode extends BaseNode {
-  kind: 'sequenceType';
+  kind: "sequenceType";
   elementType: TypeNode;
   bound?: number;
 }
 
 export interface ArrayTypeNode extends BaseNode {
-  kind: 'arrayType';
+  kind: "arrayType";
   elementType: TypeNode;
   dimensions: number[];
 }
 
 export interface StringTypeNode extends BaseNode {
-  kind: 'stringType';
-  type: 'string' | 'wstring';
+  kind: "stringType";
+  type: "string" | "wstring";
   bound?: number;
 }
 
 export interface FixedTypeNode extends BaseNode {
-  kind: 'fixedType';
+  kind: "fixedType";
   totalDigits: number;
   fractionalDigits: number;
 }

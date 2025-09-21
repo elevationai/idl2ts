@@ -1,8 +1,8 @@
-import { IDLParser } from '../../src/parser/IDLParser.ts';
-import { TypeScriptGenerator } from '../../src/generator/TypeScriptGenerator.ts';
-import { IDLCompiler } from '../../src/compiler/IDLCompiler.ts';
-import * as AST from '../../src/ast/nodes.ts';
-import { assertEquals, assertExists } from '@std/assert';
+import { IDLParser } from "../../src/parser/IDLParser.ts";
+import { TypeScriptGenerator } from "../../src/generator/TypeScriptGenerator.ts";
+import { IDLCompiler } from "../../src/compiler/IDLCompiler.ts";
+import * as AST from "../../src/ast/nodes.ts";
+import { assertEquals, assertExists } from "@std/assert";
 
 /**
  * Helper to parse IDL string and return AST
@@ -29,8 +29,8 @@ export function generateTypeScript(
     includeStubs: options.includeStubs ?? true,
     includeSkeletons: options.includeSkeletons ?? false,
     emitHelpers: options.emitHelpers ?? true,
-    corbaImportPath: options.corbaImportPath ?? 'corba',
-    sourceFile: 'test.idl',
+    corbaImportPath: options.corbaImportPath ?? "corba",
+    sourceFile: "test.idl",
   });
   return generator.generate(ast);
 }
@@ -40,14 +40,14 @@ export function generateTypeScript(
  */
 export function compile(
   idl: string,
-  sourceFile: string = 'test.idl',
+  sourceFile: string = "test.idl",
 ): Map<string, string> {
   const ast = parseIDL(idl);
   const generator = new TypeScriptGenerator({
     includeStubs: true,
     includeSkeletons: false,
     emitHelpers: true,
-    corbaImportPath: 'corba',
+    corbaImportPath: "corba",
     sourceFile,
   });
   return generator.generate(ast);
@@ -58,10 +58,10 @@ export function compile(
  */
 export function compileToString(
   idl: string,
-  moduleName: string = 'test',
+  moduleName: string = "test",
 ): string {
   const result = generateTypeScript(idl);
-  return result.get(`${moduleName}.ts`) || '';
+  return result.get(`${moduleName}.ts`) || "";
 }
 
 /**
@@ -69,10 +69,10 @@ export function compileToString(
  */
 export function normalizeWhitespace(str: string): string {
   return str
-    .split('\n')
+    .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .join('\n');
+    .join("\n");
 }
 
 /**
@@ -84,7 +84,7 @@ export function extractInterface(
 ): string | null {
   const regex = new RegExp(
     `export interface ${interfaceName}[^{]*{[^}]*}`,
-    'g',
+    "g",
   );
   const match = code.match(regex);
   return match ? match[0] : null;
@@ -93,14 +93,14 @@ export function extractInterface(
 export function extractClass(code: string, className: string): string | null {
   const regex = new RegExp(
     `export class ${className}[^{]*{[\\s\\S]*?^  }`,
-    'gm',
+    "gm",
   );
   const match = code.match(regex);
   return match ? match[0] : null;
 }
 
 export function extractEnum(code: string, enumName: string): string | null {
-  const regex = new RegExp(`export enum ${enumName}[^{]*{[^}]*}`, 'g');
+  const regex = new RegExp(`export enum ${enumName}[^{]*{[^}]*}`, "g");
   const match = code.match(regex);
   return match ? match[0] : null;
 }
@@ -118,7 +118,7 @@ export function loadFixture(name: string): string {
  */
 export function createTestCompiler(
   options: Partial<
-    import('../../src/compiler/IDLCompiler.ts').CompilerOptions
+    import("../../src/compiler/IDLCompiler.ts").CompilerOptions
   > = {},
 ): IDLCompiler {
   return new IDLCompiler({
@@ -186,9 +186,7 @@ export function findDefinition(
   ast: AST.SpecificationNode,
   name: string,
 ): AST.DefinitionNode | undefined {
-  return ast.definitions.find((def) =>
-    (def as AST.DefinitionNode & { name: string }).name === name
-  );
+  return ast.definitions.find((def) => (def as AST.DefinitionNode & { name: string }).name === name);
 }
 
 /**
@@ -199,9 +197,7 @@ export function findMember(
   memberName: string,
 ): AST.DefinitionNode | AST.InterfaceMemberNode | undefined {
   // Modules use 'definitions', interfaces use 'members'
-  const collection = container.kind === 'module'
-    ? container.definitions
-    : container.members;
+  const collection = container.kind === "module" ? container.definitions : container.members;
   if (!collection) return undefined;
   return collection.find((m) => (m as { name: string }).name === memberName);
 }

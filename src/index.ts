@@ -1,1 +1,1 @@
-export * from './compiler/IDLCompiler.ts';
+export * from "./compiler/IDLCompiler.ts";
