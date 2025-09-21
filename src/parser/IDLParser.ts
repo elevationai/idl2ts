@@ -91,6 +91,32 @@ export class IDLParser {
     }
   }
 
+  /**
+   * Parses array dimensions and wraps the given type in an arrayType if dimensions are found.
+   * This is used consistently across struct members, union cases, exceptions, parameters, and typedefs.
+   */
+  private parseArrayDimensions(type: AST.TypeNode): AST.TypeNode {
+    const dimensions: number[] = [];
+
+    while (this.peek() === "[") {
+      this.consume("[");
+      const dim = this.consume();
+      dimensions.push(parseInt(dim));
+      this.consume("]");
+    }
+
+    // If we have dimensions, wrap the type in an arrayType
+    if (dimensions.length > 0) {
+      return {
+        kind: "arrayType",
+        elementType: type,
+        dimensions,
+      };
+    }
+
+    return type;
+  }
+
   private parseDefinition(): AST.DefinitionNode | null {
     const token = this.peek();
 
@@ -323,8 +349,9 @@ export class IDLParser {
         direction = "inout";
       }
 
-      const type = this.parseType();
+      let type = this.parseType();
       const name = this.consume();
+      type = this.parseArrayDimensions(type);
 
       params.push({
         kind: "parameter",
@@ -377,8 +404,9 @@ export class IDLParser {
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
       if (this.peek() === "::" || this.isType(this.peek())) {
-        const type = this.parseType();
+        let type = this.parseType();
         const memberName = this.consume();
+        type = this.parseArrayDimensions(type);
 
         members.push({
           kind: "member",
@@ -472,8 +500,10 @@ export class IDLParser {
 
     let member: AST.MemberNode | undefined;
     if (this.isType(this.peek())) {
-      const type = this.parseType();
+      let type = this.parseType();
       const name = this.consume();
+      type = this.parseArrayDimensions(type);
+
       member = {
         kind: "member",
         name,
@@ -534,8 +564,10 @@ export class IDLParser {
         type = { kind: "primitiveType", type: "any" };
       }
       else {
-        // Normal case: type name
+        // Normal case: parse the base type first
         type = this.parseType();
+
+        // Now get the typedef name
         name = this.consume();
       }
     }
@@ -545,23 +577,8 @@ export class IDLParser {
       name = "ErrorType";
     }
 
-    // Check for array dimensions
-    const dimensions: number[] = [];
-    while (this.peek() === "[") {
-      this.consume("[");
-      const dim = this.consume();
-      dimensions.push(parseInt(dim));
-      this.consume("]");
-    }
-
-    // If we have dimensions, wrap the type in an arrayType
-    if (dimensions.length > 0) {
-      type = {
-        kind: "arrayType",
-        elementType: type,
-        dimensions,
-      };
-    }
+    // Check for array dimensions after the name
+    type = this.parseArrayDimensions(type);
 
     this.consume(";");
 
@@ -615,8 +632,9 @@ export class IDLParser {
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
       if (this.isType(this.peek())) {
-        const type = this.parseType();
+        let type = this.parseType();
         const memberName = this.consume();
+        type = this.parseArrayDimensions(type);
 
         members.push({
           kind: "member",
