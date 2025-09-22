@@ -434,6 +434,9 @@ export class IDLParser {
     else if (token === "struct") {
       return this.parseStruct();
     }
+    else if (token === "union") {
+      return this.parseUnion();
+    }
     else if (token === "typedef") {
       return this.parseTypedef();
     }
@@ -498,10 +501,11 @@ export class IDLParser {
       this.consume("raises");
       this.consume("(");
       raises = [];
-      raises.push(this.consume());
+      // Handle qualified exception names (e.g., MosQuery::LoginFailure)
+      raises.push(this.parseQualifiedName());
       while (this.peek() === ",") {
         this.consume(",");
-        raises.push(this.consume());
+        raises.push(this.parseQualifiedName());
       }
       this.consume(")");
     }
