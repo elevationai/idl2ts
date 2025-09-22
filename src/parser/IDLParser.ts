@@ -92,6 +92,154 @@ export class IDLParser {
   }
 
   /**
+   * Parses anonymous struct body (just the members, not creating a definition)
+   */
+  private parseAnonymousStruct(): AST.MemberNode[] {
+    this.consume("{");
+    const members: AST.MemberNode[] = [];
+
+    while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
+      if (this.peek() === "::" || this.isType(this.peek())) {
+        let type = this.parseType();
+        const memberName = this.consume();
+        type = this.parseArrayDimensions(type);
+
+        members.push({
+          kind: "member",
+          name: memberName,
+          type,
+        });
+
+        this.consume(";");
+      }
+      else {
+        break;
+      }
+    }
+
+    this.consume("}");
+    return members;
+  }
+
+  /**
+   * Parses anonymous union body (just the cases, not creating a definition)
+   */
+  private parseAnonymousUnion(): AST.UnionCaseNode[] {
+    this.consume("switch");
+    this.consume("(");
+    this.parseType(); // Parse and consume discriminator type
+    this.consume(")");
+    this.consume("{");
+
+    const cases: AST.UnionCaseNode[] = [];
+
+    while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
+      const unionCase = this.parseUnionCase();
+      if (unionCase) {
+        cases.push(unionCase);
+      }
+    }
+
+    this.consume("}");
+    return cases;
+  }
+
+  /**
+   * Parses anonymous enum body (just the members, not creating a definition)
+   */
+  private parseAnonymousEnum(): string[] {
+    this.consume("{");
+    const members: string[] = [];
+
+    while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
+      members.push(this.consume());
+      if (this.peek() === ",") {
+        this.consume(",");
+      }
+      else if (this.peek() !== "}") {
+        break;
+      }
+    }
+
+    this.consume("}");
+    return members;
+  }
+
+  /**
+   * Parses a struct member, handling both regular types and inline definitions.
+   * @returns The parsed member node or null if not a valid member
+   */
+  private parseStructMember(): AST.MemberNode | null {
+    const token = this.peek();
+    let type: AST.TypeNode;
+    let memberName: string;
+
+    // Handle inline type definitions (enum, struct, union)
+    if (token === "enum") {
+      this.consume("enum");
+      let enumName: string | undefined;
+      if (this.peek() !== "{") {
+        enumName = this.consume();
+      }
+      if (this.peek() === "{") {
+        this.parseAnonymousEnum(); // Parse inline enum definition
+        memberName = this.consume();
+        type = { kind: "namedType", name: enumName || memberName };
+      } else {
+        memberName = this.consume();
+        type = { kind: "namedType", name: enumName! };
+      }
+    }
+    else if (token === "struct") {
+      this.consume("struct");
+      let structName: string | undefined;
+      if (this.peek() !== "{") {
+        structName = this.consume();
+      }
+      if (this.peek() === "{") {
+        this.parseAnonymousStruct(); // Parse inline struct definition
+        memberName = this.consume();
+        type = { kind: "namedType", name: structName || memberName };
+      } else {
+        memberName = this.consume();
+        type = { kind: "namedType", name: structName! };
+      }
+    }
+    else if (token === "union") {
+      this.consume("union");
+      let unionName: string | undefined;
+      if (this.peek() !== "switch") {
+        unionName = this.consume();
+      }
+      if (this.peek() === "switch") {
+        this.parseAnonymousUnion(); // Parse inline union definition
+        memberName = this.consume();
+        type = { kind: "namedType", name: unionName || memberName };
+      } else {
+        memberName = this.consume();
+        type = { kind: "namedType", name: unionName! };
+      }
+    }
+    // Handle regular types
+    else if (this.peek() === "::" || this.isType(this.peek())) {
+      type = this.parseType();
+      memberName = this.consume();
+    } else {
+      return null;
+    }
+
+    // Check for array dimensions
+    type = this.parseArrayDimensions(type);
+    this.consume(";");
+
+    return {
+      kind: "member",
+      name: memberName,
+      type,
+    };
+  }
+
+  /**
    * Parses array dimensions and wraps the given type in an arrayType if dimensions are found.
    * This is used consistently across struct members, union cases, exceptions, parameters, and typedefs.
    */
@@ -403,20 +551,10 @@ export class IDLParser {
     const members: AST.MemberNode[] = [];
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
-      if (this.peek() === "::" || this.isType(this.peek())) {
-        let type = this.parseType();
-        const memberName = this.consume();
-        type = this.parseArrayDimensions(type);
-
-        members.push({
-          kind: "member",
-          name: memberName,
-          type,
-        });
-
-        this.consume(";");
-      }
-      else {
+      const member = this.parseStructMember();
+      if (member) {
+        members.push(member);
+      } else {
         break;
       }
     }
@@ -562,6 +700,54 @@ export class IDLParser {
         // Only name provided, no type (e.g., typedef MissingType;)
         name = this.consume();
         type = { kind: "primitiveType", type: "any" };
+      }
+      else if (nextToken === "struct") {
+        // Anonymous struct: typedef struct [Name] { ... } AliasName;
+        this.consume("struct");
+        let structName: string | undefined;
+        if (this.peek() !== "{") {
+          structName = this.consume();
+        }
+        if (this.peek() === "{") {
+          this.parseAnonymousStruct(); // Parse anonymous struct body
+          name = this.consume(); // The typedef alias name comes after the struct definition
+          type = { kind: "namedType", name: structName || name };
+        } else {
+          type = { kind: "namedType", name: structName! };
+          name = this.consume();
+        }
+      }
+      else if (nextToken === "union") {
+        // Anonymous union: typedef union [Name] switch(...) { ... } AliasName;
+        this.consume("union");
+        let unionName: string | undefined;
+        if (this.peek() !== "switch") {
+          unionName = this.consume();
+        }
+        if (this.peek() === "switch") {
+          this.parseAnonymousUnion(); // Parse anonymous union body
+          name = this.consume(); // The typedef alias name comes after the union definition
+          type = { kind: "namedType", name: unionName || name };
+        } else {
+          type = { kind: "namedType", name: unionName! };
+          name = this.consume();
+        }
+      }
+      else if (nextToken === "enum") {
+        // Anonymous enum: typedef enum [Name] { ... } AliasName;
+        this.consume("enum");
+        let enumName: string | undefined;
+        if (this.peek() !== "{") {
+          enumName = this.consume();
+        }
+        if (this.peek() === "{") {
+          this.parseAnonymousEnum(); // Parse anonymous enum body
+          name = this.consume(); // The typedef alias name comes after the enum definition
+          type = { kind: "namedType", name: enumName || name };
+        } else {
+          type = { kind: "namedType", name: enumName! };
+          name = this.consume();
+        }
       }
       else {
         // Normal case: parse the base type first
