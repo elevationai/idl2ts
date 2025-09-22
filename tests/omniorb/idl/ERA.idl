@@ -1,0 +1,529 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// ======================================================================
+//
+//     IDL Describing the interfaces to the process gathering clients
+//     === ========== === ========== == === ======= ========= =======
+// 
+//  By Paul M. Webster (First version: 17/12/96. This version: 26/01/97)
+//
+//      Modified structure suggested by Pete Steggles 16/01/97
+//
+// ======================================================================
+//
+//  Machine indentification sent only once at boot time.
+// 
+//  Send network and machine stats every 30 seconds.
+// 
+//  Send static process information each time an application is launced.
+//
+//  Send dynamic process information every 10-30 seconds (only once
+//   application has run for at least 30 seconds?)
+//
+// ----------------------------------------------------------------------
+//
+//  Server objects, network objects and program objects are persistent,
+//  so are never deleted (but can send `stale' exceptions). Process
+//  objects have a time out of (for example) 3 minutes and if they are
+//  not updated in this time are deleted.
+//
+// ======================================================================
+
+// This version adds factory objects, which manufacture the other objects
+// within the database server. At startup, the database server creates
+// each of the factory objects and the pool objects. Clients wanting to
+// read data use the pool objects to find the currently active object.
+// clients writing information use the factory objects to create new
+// objects. One slight problem is that when creating/destroying objects
+// program objects can be `created' multiple times, and will all relate
+// to the same object. From the user's point of view, this does not
+// make any difference to them. However, from the database perspective
+// all the objects must be mapped to the same item.
+
+// Care must be taken with processes, as these are transient objects
+// which are created and destroyed. Is it up the the user providing
+// the objects to later kill them, or is it the responsibility of the
+// database server to have time outs on the objects and destroy them
+// automatically if they are not updated for a number of minutes?
+
+// This version assumes the server will destroy the process objects
+// after a number of minutes have elapsed. This timeout is reset
+// whenever the statistics are updated and the timeout allows objects
+// to read the statistics for a finite time after the process has
+// exited for display programs.
+
+// ======================================================================
+
+interface network;                  // Information on the networks found...
+interface ethernetNetwork;          //  ... specialised for ethernet
+interface atmNetwork;               //  ... specialised for ATM
+
+interface server;                   // Information on the processing servers
+
+interface process;                  // Information on a running process
+interface program;                  // Information on a program (for particular architecture)
+
+interface terminal;                 // Information on end-point terminals
+
+interface serverPool;               // Containers holding all objects
+interface processPool;
+
+interface statisticsClient;         // Client using the information (for callbacks)
+
+// ======================================================================
+
+enum networkType {Ethernet, ATM, Other};
+
+enum serverState {Running, Shutdown, Maintainance, Reserved};
+enum serverType  {Solaris, OSF1, Linux};
+
+enum programType {Xapplication, textApplication, serverApplication, miscApplication};
+
+// ======================================================================
+
+typedef sequence <string> stringList;
+
+// ======================================================================
+//       Root Object -- Defines Exceptions and Database ID Key
+// ======================================================================
+
+interface myObject {
+  // Exceptions that can be generated
+  exception notAvailable { };                 // Information element is empty
+  exception staleInformation { };             // Information time stamp is too far in the past
+};
+
+// ======================================================================
+//                  Networking Objects and Statistics
+// ======================================================================
+
+struct networkInformationType {
+  server owningServer;                                                  // Server the network belongs to
+
+  unsigned long bandwidth;                                              // Bandwidth of network (in bits/second)
+  string IpAddress;                                                     // Dotted IP address of the card (assumes running IP)
+};
+
+struct networkStatisticsType {
+  server owningServer;                                                  // Server name (to identify client to the server)
+
+  unsigned long packetsSent;                                            // Total number of packets sent
+  unsigned short deltaPacketsSent;                                      // Number of packets sent last sample
+  unsigned long packetsReceived;                                        // Total number of packets received
+  unsigned short deltaPacketsReceived;                                  // Number of packets received last sample
+
+  unsigned long inputErrors;                                            // Total number of input errors
+  unsigned short deltaInputErrors;                                      // Input errors in last sample
+  float averageInputErrors;                                             // Average input errors per sample
+  unsigned long outputErrors;                                           // Total number of output errors
+  unsigned short deltaOutputErrors;                                     // Output errors in last sample
+  float averageOutputErrors;                                            // Average output errors per sample
+};
+
+struct ethernetNetworkStatisticsType {
+  unsigned long collisions;                                             // Total number of collisions
+  unsigned short deltaCollisions;                                       // Number of collisions in last sample
+  float averageCollisions;                                              // Average collisions per sample
+};
+
+struct atmNetworkStatisticsType {
+  string atmAddress;                                                    // Address of the ATM card (can change!!)
+
+  unsigned long rawTransmits;                                           // Total raw ATM transmissions
+  unsigned short deltaTransmits;                                        // Raw ATM transmissions last sample
+  float averageTransmits;                                               // Average tranmissions since boot time
+
+  unsigned long rawReceives;                                            // Total raw ATM receives
+  unsigned short deltaReceives;                                         // Raw ATM receives last sample
+  float averageReceives;                                                // Average receives since boot time
+};
+
+
+interface network : myObject {
+  // Block send/receive methods
+  void fetchNetworkStatistics() raises (staleInformation);
+
+  // Method to register a callback interest when the object changes
+  oneway void registerInterest(in statisticsClient self);
+  oneway void unregisterInterest(in statisticsClient self);
+
+  // Get the type of the network (can this be done with object narrowing?)
+  networkType getNetworkType();                                         // Whether network adaptor is ethernet or ATM (can be extended)
+
+  // Static network information
+  unsigned long getBandwidth();                                        // Bandwidth eg 10Mbit, 100Mbit, 155Mbit etc.
+
+  string getIpAddress() raises (notAvailable);                         // Network address (assumes IP addressing available)
+
+  // Dynamic network statistics information (again, assumes IP is running over the network)
+  unsigned long getIpPacketsSent() raises (notAvailable);              // Retrieve total number of packets sent
+  unsigned short getDeltaIpPacketsSent() raises (notAvailable);        // Retrieve number of packets sent this sample
+  unsigned long getIpPacketsReceieved() raises (notAvailable);         // Retrieve total number of packets received
+  unsigned short getDeltaIpPacketsReceieved() raises (notAvailable);   // Retrieve number of packets received this sample
+
+  // Dynamic generic networking items
+  unsigned long getInputErrors();                                      // Retrieve number of input errors
+  unsigned short getDeltaInputErrors();                                // Number of input errors in last sample
+  float getAvgInputErrors();                                           // Retrieve average number of input errors
+
+  unsigned long outputErrors();                                        // Retrieve number of output errors
+  unsigned short deltaOutputErrors();                                  // Number of output errors in last sample
+  float avgOutputErrors();                                             // Retrieve average number of input errors
+};
+
+typedef sequence <network> networkList;
+
+
+// Specialise for Ethernet based networks
+interface ethernetNetworkFactory {
+  ethernetNetwork buildNewNetworkObject(in networkInformationType info);
+};
+
+interface ethernetNetwork : network {
+  // Specialise the update and fetch functions
+  oneway void updateNetworkStatistics(in ethernetNetworkStatisticsType ethernetStats, in networkStatisticsType generalStats);
+
+  // Dynamic network statistics information
+  unsigned long getNumberOfCollisions();                             // Retrieve total number of collisions
+  unsigned short getDeltaCollisions();                               // Retrieve collisions last sample
+  float getAvgCollisions();                                          // Retrieve average number of collisions
+};
+ 
+
+// Specilaise for ATM based networks
+interface atmNetworkFactory {
+  atmNetwork buildNewNetworkObject(in networkInformationType info);
+};
+
+interface atmNetwork : network {
+  // Specialise the update and fetch functions
+  oneway void updateNetworkStatistics(in atmNetworkStatisticsType atmStats, in networkStatisticsType generalStats);
+
+  // Dynamic network statistics information
+  string getAtmAddress();                                            // Machine's ATM Network address
+
+  unsigned long getRawTransmits();                                   // Total raw ATM transmissions
+  unsigned short getDeltaTransmits();                                // Raw ATM transmissions last sample
+  float getAvgTransmits();                                           // Average tranmissions since boot time
+
+  unsigned long getRawReceives();                                    // Total raw ATM receives
+  unsigned short getDeltaReceives();                                 // Raw ATM receives last sample
+  float getAvgReceives();                                            // Average receives since boot time
+};
+
+// ======================================================================
+//                    Server Object and Statistics
+// ======================================================================
+
+struct serverInformationType {
+  string serverName;                                                    // Server name (machine name)
+  serverType machineClassification;                                     // Machine classification
+
+  string cpuType;                                                       // Make of CPU
+
+  double dhrystones;                                                    // Integer speed of the machine (in VAX MIPS)
+  double whetstones;                                                    // Floating point speed of machine (in MFLOPS)
+
+  unsigned short numberOfCPUs;                                          // Number of CPUs in machine
+
+  string osName;                                                        // Name of the operating system
+  string osVersion;                                                     // Operating system version number
+};
+
+struct serverStatisticsType { 
+  double upTime;                                                        // Up time (in seconds) of the server
+
+  float loadAverage1min;                                                // Load average over last minute (5 seconds for OSF/1)
+  float loadAverage5min;                                                // Load average over last 5 minutes (30 seconds for OSF/1)
+  float loadAverage15min;                                               // Load average over last 15 minutes (60 seconds for OSF/1)
+
+  boolean isLoadRising;                                                 // True if load this time is greater than previous sample
+
+  float idlePercent;                                                    // % of previous sample period spent in idle process
+  float userPercent;                                                    // % of previous sample period spent in user process
+  float systemPercent;                                                  // % of previous sample period spent in system process
+
+  unsigned long realMemoryUsed;                                         // Real memory used on the server (in bytes)
+  unsigned long realMemoryFree;                                         // Real memory free on the server (in bytes)
+
+  unsigned long swapMemoryUsed;                                         // Swap memory used on the server (in bytes)
+  unsigned long swapMemoryFree;                                         // Swap memory free on the server (in bytes)
+
+  unsigned long tempSpaceFree;                                          // Temp drive space free on the server (in bytes)
+
+  unsigned short numberOfProcesses;                                     // Number of processes running on the server
+
+  float averageHogFactor;                                               // Average `hogging' factor on the server
+  float averageContextFactor;                                           // Average context factor for the server (currently Solaris only)
+
+  unsigned short deltaContextSwitches;                                  // Context switches in the last sample period
+  float averageContextSwitches;                                         // Average context switches since server booted
+
+  unsigned short deltaPageFaults;                                       // Page faults in the last sample period
+  float averagePageFaults;                                              // Average number of page faults since server booted
+};
+
+
+interface serverFactory {
+  server buildNewServerObject(in serverInformationType info);
+};
+
+interface server : myObject {
+  // Block send/receive methods
+  oneway void updateServerStatistics(in serverStatisticsType stats);
+
+  void fetchServerStatistics() raises (staleInformation);
+
+  // Method to register a callback interest when the object changes
+  oneway void registerInterest(in statisticsClient self);
+  oneway void unregisterInterest(in statisticsClient self);
+
+  // Allow access status of machine to be accessed and modified
+  oneway void setMachineState(in serverState newState, in string authentication);
+  serverState getMachineState();
+
+  // Static server information
+  string getServerName();                                               // Retrieve the server name
+  serverType getServerClassification();                                 // Machine classification
+
+  string getCpuType();                                                  // Retrieve CPU type for the server
+
+  double getDhrystones();                                               // Retrieve integer speed (in VAX MIPS)
+  double getWhetstones();                                               // Retrieve floating point speed (in MFLOPS)
+
+  string getOsName();                                                   // Retrieve name of the operating system
+  string getOsVersion();                                                // Retrieve version number for the operating system
+
+  networkList getNetworkConnections();                                  // Object refs. to network connections from this server
+
+  // Dynamic server information
+  double getUpTime();                                                   // Retrieve up time of the server
+
+  boolean isLoadRising();                                               // True if load has increased since last sample
+
+  float getLoadAverage1min();                                           // Retrieve load average for past minute
+  float getLoadAverage5min();                                           // Retrieve load average for last 5 minutes
+  float getLoadAverage15min();                                          // Retrieve load average for last 15 minutes
+
+  float getIdlePercent();                                               // Get % time spent idle since last sample
+  float getUserPercent();                                               // Get % time spent in user processes since last sample
+  float getSystemPercent();                                             // Get % time spent in system process since last sample
+
+  unsigned long getTotalRealMemory();                                   // Get total physical memory of server (here as logically grouped to next bits)
+  unsigned long getRealMemoryUsed();                                    // Retrieve real physical memory used (bytes)
+  unsigned long getRealMemoryFree();                                    // Retrieve real physical memory free (bytes)
+
+  unsigned long getTotalSwapMemory();                                   // Get total swap memory of server (here as logically grouped to next bits)
+  unsigned long getSwapMemoryUsed();                                    // Retrieve swap space used (bytes)
+  unsigned long getSwapMemoryFree();                                    // Retrieve swap space free (bytes)
+
+  unsigned long getFreeTempDriveSpace();                                // Retreive temp drive space free (bytes)
+
+  unsigned short getNumberOfProcesses();                                // Retrieve number of processes
+
+  float getAverageHogFactor();                                          // Get average `hogging' factor (Defined by: (user+system)/real)
+  float getAverageContextFactor() raises (notAvailable);                // Get average context factor (valid on Solaris only)
+
+  unsigned short getDeltaContextSwitches();                             // Retrieve context switches in last sample period
+  float getAverageContextSwitches();                                    // Retrieve average context switches since start up
+
+  unsigned short getDeltaPageFaults();                                  // Retrieve page faults in last sample period
+  float getAveragePageFaults();                                         // Retrieve average page faults since start up
+
+  // Some operations to retrieve logically `grouped' data 
+  void getLoadAverages(out float loadAverage1min, out float loadAverage5min, out float loadAverage15min);
+
+  void getSystemPercentages(out float idlePercent, out float userPercent, out float systemPercent);
+
+  void getRealMemoryStats(out unsigned long totalRealMemory, out unsigned long usedRealMemory, out unsigned long freeRealMemory);
+  void getSwapMemoryStats(out unsigned long totalSwapMemory, out unsigned long usedSwapMemory, out unsigned long freeSwapMemory);
+};
+
+// ======================================================================
+//     Process Information (Process = Running Program Instance)
+// ======================================================================
+
+struct processStatisticsType {
+  server runServer;                                                     // Server the process is running on
+  unsigned short processId;                                             // Process ID on the particular server
+
+  unsigned short owner;                                                 // Username of who has run this process (UID)
+
+  unsigned short numberOfThreads;                                       // Number of threads in the process (Solaris only??)
+
+  unsigned long processSize;                                            // Size of the process image (in bytes)
+
+  unsigned long heapUsage;                                              // Size of the heap used by the program (in bytes)
+  unsigned long stackUsage;                                             // Size of the stack used by the program (in bytes)
+
+  unsigned long residentSize;                                           // Size of resident portion of the program (in bytes)
+
+  float hogFactor;                                                      // `Hogging' factor of the program
+  float contextFactor;                                                  // Context factor of the program (for Solaris only)
+
+  double currentRunTime;                                                // Current `real' run time of the program
+};
+
+
+interface processFactory {
+  process buildNewProcessObject(in processStatisticsType stats);
+};
+
+interface process : myObject {
+  // Block send/receive methods
+  oneway void updateProcessStatistics(in processStatisticsType stats);
+  
+  void fetchProcessStatistics() raises (staleInformation);
+
+  // Method to register a callback interest when the object changes
+  oneway void registerInterest(in statisticsClient self);
+  oneway void unregisterInterest(in statisticsClient self);
+
+  // Dynamic process statistics
+  server getServerMachine();                                            // Get name of server that the process is running on 
+  unsigned short getProcessId();                                        // Get process ID of process
+
+  unsigned short getOwner();                                            // Get whoever owns this process (UID)
+
+  unsigned long getProcessSize();                                       // Retrieve total process size of this process
+
+  unsigned long getHeapUsage();                                         // Retrieve heap usage of this process
+  unsigned long getStackUsage();                                        // Retrieve stack usage of this process
+
+  unsigned long getResidentSize();                                      // Retrieve resident size of this process
+
+  float getHogFactor();                                                 // Retrieve hogging factor for this process
+  float getContextFactor() raises (notAvailable);                       // Retrieve context factor (Solaris only) for this process
+
+  float getCurrentRunTime();                                            // Retrieve current run time of this process
+
+  // Link to the global process information
+  program getProgramInformation();                                      // Static information for the process 
+
+  // Now link running process to it's display terminal
+  terminal getOwningTerminal();                                         // Terminal that the process is displayed upon
+};
+
+typedef sequence <process> processList;
+
+// ======================================================================
+
+struct programInformationType {
+  string programName;                                                   // Name of the program (makes database self-updating)
+
+  server runServer;                                                     // Server this program is being run on
+  unsigned short processId;                                             // Process ID of process created for this program
+
+  unsigned long staticCodeSize;                                         // Static code/data size (in bytes) -- taken from file size
+
+  stringList library;                                                   // Libraries which this process uses (specific to server architecture)
+};
+
+
+interface programFactory {
+  program buildNewProgramObject(in programInformationType info);
+};
+
+interface program : myObject {
+  // Block send/receive methods (doesn't need an update function as derrived)
+  void fetchProgramStatistics() raises (staleInformation);    
+
+  // Method to register a callback interest when the object changes
+  oneway void registerInterest(in statisticsClient self);
+  oneway void unregisterInterest(in statisticsClient self);
+
+  // Static program information 
+  serverType getMachineClassification();                                // Program information is for a particular machine type
+  programType getProgramClassification();                               // Classification of the process
+
+  unsigned long getStaticCodeSize();                                    // Static code size (no libraries/data)
+
+  stringList getLibrariesUsed();                                        // Get libraries used
+
+  // Dynamic derrived information (for all process instances of this machine type)
+  unsigned long getAverageProcessSize();                                // Average process size (with libraries and typical data)
+
+  unsigned long getAverageHeapUsage();                                  // Average heap usage for the program (on this architecture)
+  unsigned long getAverageStackUsage();                                 // Average stack usage for the program (on this architecture)
+
+  unsigned long getAverageResidentSize();                               // Average resident size of the program (on this architecture)
+
+  double getAverageTotalRunTime();                                      // Average total run time for this program
+
+  // Link this program to the current running instances
+  processList getRunningInstances();                                    // List of current instances of this process
+};
+
+typedef sequence <program> programList;
+
+// ======================================================================
+
+interface terminal : myObject {
+  string getTerminalName();                                             // Get identity of terminal
+
+  // WILL ALSO NEED TO INCLUDE MAC ADDRESS, FEATURES, LOCATION etc
+
+  server getDisplayServer();                                            // Get server in-charge of terminal display
+  processList getRunningProcesses();                                    // Processes currently associated with the terminal
+};
+
+// ======================================================================
+//    All processes and servers are collected into a generic ``pool''
+// ======================================================================
+
+interface serverPool {
+  readonly attribute stringList serverNames;                            // List of all known server names
+  readonly attribute stringList terminalNames;                          // List of all known terminal names
+
+  terminal getTerminalInformation(in string terminalName);              // Get terminal information
+
+  server getServerInformation(in string serverName);                    // Get server information
+
+  string allocateServer(in string application, in string constraints);  // Return next suitable machine
+};
+
+
+interface processPool {
+  programList getAllKnownPrograms();                                    // Get list of all known programs
+  processList getAllKnownProcesses();                                   // Get list of all known processes
+
+  processList getServerProcesses(in string serverName);                 // Get processes running on a server
+  processList getTerminalProcesses(in string tileName);                 // Get processes `owned' by a terminal
+
+  programList getAllVariations(in string programName);                  // Get all server specific versions of a program
+};
+
+// ======================================================================
+//    Used to provide client side callbacks when information changes
+// ======================================================================
+
+interface statisticsClient {
+  oneway void serverInformationChanged(in server serverRef);    // Statistics about a server machine
+
+  oneway void networkInformationChanged(in network networkRef); // Statistics about a network on a server machine
+
+  oneway void processInformationChanged(in process processRef); // Statistics about a particular running process
+  oneway void programInformationChanged(in program programRef); // Statistics about a program on particular architecture
+};
+
+// ======================================================================
+

@@ -1,0 +1,43 @@
+typedef wchar      WChr;
+typedef sequence<wchar> Seqwchar;
+typedef sequence<WChr>  SeqWChr;
+typedef wchar           Arrwchar[10];
+typedef WChr            ArrWChr[10];
+
+typedef wstring    WStr;
+typedef sequence<wstring> Seqwstring;
+typedef sequence<WStr>    SeqWStr;
+typedef wstring           Arrwstring[10];
+typedef WStr              ArrWStr[10];
+
+struct WStruct {
+  wstring<10>  str_10;
+  wstring     wstr;
+};
+
+union WUnion switch(boolean) {
+ case TRUE:
+  wstring wstr;
+ case FALSE:
+   wstring<10> wstr_10;
+};
+
+interface wideTypes {
+
+  wchar do_wchar(in wchar arg, out wchar res, inout wchar io);
+  WChr do_WChr(in WChr arg, out WChr res, inout WChr io);
+  Seqwchar do_Seqwchar(in Seqwchar arg, out Seqwchar res, inout Seqwchar io); 
+  SeqWChr do_SeqWChr(in SeqWChr arg, out SeqWChr res, inout SeqWChr io);
+  Arrwchar do_Arrwchar(in Arrwchar arg, out Arrwchar res, inout Arrwchar io);
+  ArrWChr do_ArrWChr(in ArrWChr arg, out ArrWChr res, inout ArrWChr io);
+
+  wstring do_wstring(in wstring arg, out wstring res, inout wstring io);
+  WStr do_WStr(in WStr arg, out WStr res, inout WStr io);
+  Seqwstring do_Seqwstring(in Seqwstring arg, out Seqwstring res, inout Seqwstring io);
+  SeqWStr do_SeqWStr(in SeqWStr arg, out SeqWStr res, inout SeqWStr io);
+  Arrwstring do_Arrwstring(in Arrwstring arg, out Arrwstring res, inout Arrwstring io);
+  ArrWStr do_ArrWStr(in ArrWStr arg, out ArrWStr res, inout ArrWStr io);
+  WStruct do_WStruct(in WStruct arg, out WStruct res, inout WStruct io);
+  WUnion do_WUnion(in WUnion arg, out WUnion res, inout WUnion io);
+};
+

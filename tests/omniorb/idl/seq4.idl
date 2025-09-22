@@ -1,0 +1,86 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __SEQ4_IDL__
+#define __SEQ4_IDL__
+
+typedef double arr_double[10];
+typedef arr_double arrarr_double[100];
+
+typedef sequence <arr_double> seq_arr_double;
+typedef sequence <sequence<arr_double> > seqseq_arr_double;
+typedef sequence <sequence<sequence<arr_double> > > seqseqseq_arr_double;
+
+typedef sequence <arr_double,10> seq_arr_double_10;
+typedef sequence <sequence<arr_double,10>,10> seq_arr_double_10_10;
+typedef sequence <sequence<sequence<arr_double,10>,10>,10> seq_arr_double_10_10_10;
+
+typedef sequence <arrarr_double> seq_arrarr_double;
+typedef sequence <sequence<arrarr_double> > seqseq_arrarr_double;
+typedef sequence <sequence<sequence<arrarr_double> > > seqseqseq_arrarr_double;
+
+typedef sequence <arrarr_double,10> seq_arrarr_double_10;
+typedef sequence <sequence<arrarr_double,10>,10> seq_arrarr_double_10_10;
+typedef sequence <sequence<sequence<arrarr_double,10>,10>,10> seq_arrarr_double_10_10_10;
+
+interface Exercise4 {
+  seq_arr_double dump_seq_arr_double(in seq_arr_double a1, 
+			 inout seq_arr_double a2, 
+			 out seq_arr_double a3);
+  seqseq_arr_double dump_seqseq_arr_double(in seqseq_arr_double a1, 
+			       inout seqseq_arr_double a2, 
+			       out seqseq_arr_double a3);
+  seqseqseq_arr_double dump_seqseqseq_arr_double(in seqseqseq_arr_double a1, 
+				     inout seqseqseq_arr_double a2, 
+				     out seqseqseq_arr_double a3);
+
+  seq_arr_double_10 dump_seq_arr_double_10(in seq_arr_double_10 a1, 
+			 inout seq_arr_double_10 a2, 
+			 out seq_arr_double_10 a3);
+  seq_arr_double_10_10 dump_seq_arr_double_10_10(in seq_arr_double_10_10 a1, 
+			       inout seq_arr_double_10_10 a2, 
+			       out seq_arr_double_10_10 a3);
+  seq_arr_double_10_10_10 dump_seq_arr_double_10_10_10(in seq_arr_double_10_10_10 a1, 
+				     inout seq_arr_double_10_10_10 a2, 
+				     out seq_arr_double_10_10_10 a3);
+
+  seq_arrarr_double dump_seq_arrarr_double(in seq_arrarr_double a1, 
+			 inout seq_arrarr_double a2, 
+			 out seq_arrarr_double a3);
+  seqseq_arrarr_double dump_seqseq_arrarr_double(in seqseq_arrarr_double a1, 
+			       inout seqseq_arrarr_double a2, 
+			       out seqseq_arrarr_double a3);
+  seqseqseq_arrarr_double dump_seqseqseq_arrarr_double(in seqseqseq_arrarr_double a1, 
+				     inout seqseqseq_arrarr_double a2, 
+				     out seqseqseq_arrarr_double a3);
+
+  seq_arrarr_double_10 dump_seq_arrarr_double_10(in seq_arrarr_double_10 a1, 
+			 inout seq_arrarr_double_10 a2, 
+			 out seq_arrarr_double_10 a3);
+  seq_arrarr_double_10_10 dump_seq_arrarr_double_10_10(in seq_arrarr_double_10_10 a1, 
+			       inout seq_arrarr_double_10_10 a2, 
+			       out seq_arrarr_double_10_10 a3);
+  seq_arrarr_double_10_10_10 dump_seq_arrarr_double_10_10_10(in seq_arrarr_double_10_10_10 a1, 
+				     inout seq_arrarr_double_10_10_10 a2, 
+				     out seq_arrarr_double_10_10_10 a3);
+};
+
+#endif

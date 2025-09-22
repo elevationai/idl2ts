@@ -1,0 +1,42 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+enum N { one, two, three, four };
+
+module M {
+  enum NM { one, two, three, four };
+  interface A {
+#ifndef TEST_MSVC
+    enum NMA { one, two, three, four };
+#endif
+    N op1(in N a1, inout N a2, out N a3);
+    M::NM op2(in M::NM a1, inout M::NM a2, out M::NM a3);
+#ifndef TEST_MSVC
+    NMA op3(in NMA a1, inout NMA a2, out NMA a3);
+#endif
+  };
+};
+
+typedef sequence<N> seq_N;
+typedef sequence<M::NM> seq_NM;
+#ifndef TEST_MSVC
+typedef sequence<M::A::NMA> seq_NMA;
+#endif

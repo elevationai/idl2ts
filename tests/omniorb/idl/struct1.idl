@@ -1,0 +1,58 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+enum E { one, two, three, four };
+
+struct sFix {
+  E 	a1;
+  enum ES { one, two, three, four } a2;
+  long	a3;
+  ES a4;
+};
+
+struct sVar1 {
+  string 	a1;
+  string<50> 	a2;
+  long		a3;
+};
+
+struct sVar2 {
+  sequence<octet>	a1;
+  sequence<octet,100>	a2;
+  char			a3;
+};
+
+
+interface I {
+  void op1();
+};
+
+struct sVar3 {
+  I	a1;
+};
+
+
+interface Ex {
+  sFix op1(in sFix arg1, inout sFix arg2, out sFix arg3);
+  sVar1 op2(in sVar1 arg1, inout sVar1 arg2, out sVar1 arg3);
+  sVar2 op3(in sVar2 arg1, inout sVar2 arg2, out sVar2 arg3);
+  sVar3 op4(in sVar3 arg1, inout sVar3 arg2, out sVar3 arg3);
+};

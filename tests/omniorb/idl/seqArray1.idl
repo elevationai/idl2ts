@@ -1,0 +1,71 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// seqArray1.idl
+//
+
+
+typedef float FloatArray1[3];
+typedef float FloatArray2[3];
+typedef sequence<FloatArray1> seqFloatArray1;
+typedef sequence<FloatArray2> seqFloatArray2;
+
+typedef FloatArray1 arrayFloatArray1[4];
+typedef FloatArray2 arrayFloatArray2[4];
+
+typedef sequence<arrayFloatArray1> seqArrayFloatArray1;
+typedef sequence<arrayFloatArray2> seqArrayFloatArray2;
+
+typedef float multiFloatArray[3][4];
+typedef sequence<multiFloatArray> seqMultiFloatArray;
+
+typedef float FloatArrayD[4];
+typedef sequence<FloatArrayD> seqFloatArrayD;
+typedef FloatArrayD arrayFloatArrayD[4];
+typedef sequence<arrayFloatArrayD> seqArrayFloatArrayD;
+
+
+
+typedef long multiArray1[23][46];
+typedef long multiArray2[23][46];
+typedef sequence<multiArray1> seqMultiArray1;
+typedef sequence<multiArray2> seqMultiArray2;
+
+typedef multiArray1 arrayMultiArray1[4];
+typedef multiArray2 arrayMultiArray2[4];
+
+typedef sequence<arrayMultiArray1> seqArrayMultiArray1;
+typedef sequence<arrayMultiArray2> seqArrayMultiArray2;
+
+typedef long multiArrayD[4];
+typedef sequence<multiArrayD> seqMultiArrayD;
+typedef multiArrayD arrayMultiArrayD[4];
+typedef sequence<arrayMultiArrayD> seqArrayMultiArrayD;
+
+typedef multiArray1 multiMultiArray1[100][9][10][2];
+typedef sequence<multiMultiArray1> seqMultiMultiArray1;
+
+
+typedef sequence<seqMultiMultiArray1> seqSeqMultiMultiArray1;
+
+struct strArray {
+seqSeqMultiMultiArray1 a;
+};

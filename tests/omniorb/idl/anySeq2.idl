@@ -1,0 +1,41 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// testAnySeq2.idl
+
+typedef sequence<boolean> seqBool;
+typedef sequence<octet> seqOctet;
+typedef sequence<char> seqChar;
+
+typedef sequence<boolean,3> seqBoundedBool;
+typedef sequence<octet,3> seqBoundedOctet;
+typedef sequence<char,3> seqBoundedChar;
+
+typedef sequence<sequence<boolean> > seqSeqDBool;
+typedef sequence<sequence<octet> > seqSeqDOctet;
+typedef sequence<seqBool> seqSeqBool;
+typedef sequence<seqOctet> seqSeqOctet;
+
+typedef sequence<seqBool, 3> seqBoundedSeqBool;
+typedef sequence<seqOctet, 3> seqBoundedSeqOctet;
+
+typedef sequence<sequence<char, 3>, 3> seqBoundedDSeqBoundedChar;
+typedef sequence<seqBoundedChar, 3> seqBoundedSeqBoundedChar;

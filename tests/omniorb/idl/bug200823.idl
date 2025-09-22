@@ -1,0 +1,48 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// Reported by: dme
+// Date: Wed Aug 23 10:49:02 BST 2000
+// Platforms affected: MSVC5 (+6?)
+// Description:
+//  A multidimensional array of basic types used as an operation return
+//  value causes the stubs to fail to compile.
+//
+// Eg in SK.cc:
+// ...
+// giop_s.InitialiseReply(GIOP::NO_EXCEPTION, (CORBA::ULong) msgsize);
+//      
+// giop_s.put_char_array(
+//     (const _CORBA_Char*) ((const CORBA::Long*) arg_outarg[0]), ...
+// ...                                                      ^^^
+// 
+// Fails with "error C2666: '[]' : 3 overloads have similar conversions"
+//
+// Changing this to "arg_outarg[(_CORBA_ULong)0]" causes the compiler to
+// locate the right operator. Tests existed using out types, but these use
+// a different template. (see templatedecls.h)
+//
+
+typedef long array[2][3];
+
+interface I{
+  array op();
+};

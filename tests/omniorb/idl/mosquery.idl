@@ -1,0 +1,676 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+module MosQuery {
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Forward declarations
+
+   interface ErrorReporter;
+   interface Interaction;
+   interface ProgressReporter;
+   interface FileFactory;
+   interface InputFile;
+   interface InputFileFactory;
+   interface ReopInputFileFactory;
+   interface InputFileReopener;
+   interface OutputFile;
+   interface OutputFileFactory;
+   interface DirHandler;
+   interface DirHandlerFactory;
+
+   interface EnumType;
+   interface ObjectType;
+
+   interface ConnectionFactory;
+   interface Connection;
+
+   interface Query;
+   interface WatchPoint;
+   interface InterestArea;
+   interface IntAreaIterator;
+
+   interface ObjectRef;
+   interface FoundObject;
+   interface WatchObject;
+
+   interface Expr;
+   interface WatchExpr;
+
+   typedef sequence<InputFile> InputFileSeq;
+   typedef sequence<ObjectType> ObjectTypeSeq;
+   typedef sequence<ObjectRef> ObjectRefSeq;
+   typedef sequence<FoundObject> FoundObjectSeq;
+   typedef sequence<Expr> ExprSeq;
+
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Exceptions
+
+   // File access:
+   exception AccessDenied {};
+   exception FileNotFound {};
+   exception FileIOError { long code; string why; };
+   exception CancelledByUser {};
+
+   // Other:
+   exception LoginFailure { long code; string why; };
+   exception ObjectNotFound {};
+   exception ElementInvalid {};
+   exception IteratorInvalid {};
+   exception PositionInvalid {};
+   exception FormatUnknown {};
+   exception ApplInfoNotFound {};
+   exception FieldInvalid {};
+   exception ValueInvalid {};
+   exception FieldUnknown { short index; };
+   exception FieldDuplicated { short index; };
+   exception FieldMissing { short index; };
+   exception FieldNotSortable { short index; };
+   exception FieldTypeMismatch { short index; };
+   exception IllegalComparison { short index; };
+   exception FieldAlreadyUpdated { short index; };
+   exception FieldNotUpdateable { short index; };
+   exception FieldNotCached { short index; };
+   exception FieldValueInvalid { short index; };
+   exception OperationUnknown {};
+   exception ParameterMismatch { short index; };
+   exception BadKindOfInvoke {};
+   exception OperationNotPermitted { short index; };
+   exception ObjectRefInvalid { short index; };
+   exception ObjectTypeMismatch { short index; };
+   exception OperationFailure { long code; string why; };
+   exception ValueMissing { short index; };
+   exception ValueTypeMismatch { short index; };
+   exception EvaluationError {};
+   exception ExprBadlyFormed {};
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Various stuff
+
+   // Query states, may be or'ed together
+   typedef long QueryState;
+   const QueryState QSTATE_NOCHANGE = 0;
+   const QueryState QSTATE_NEW      = 1;
+   const QueryState QSTATE_DELETED  = 2;
+   const QueryState QSTATE_CHANGED  = 4;
+
+   typedef sequence<string> StringSeq;
+   typedef sequence<boolean> BooleanSeq;
+   typedef sequence<octet> OctetSeq;
+   typedef sequence<long> LongSeq;
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Basic field types
+
+   struct Bitmap {
+      string cacheId;		// id to support local caching
+      long format, subFormat;	// longs rather than enums make extensions easy
+      OctetSeq data;		// Bitmap data in indicated format
+   };
+   typedef sequence<Bitmap> BitmapSeq;
+
+   typedef long Date; // A Modified Julian Date
+   typedef long Time; // 10ths of microseconds since midnight
+   struct DateTime {
+      Date dt;
+      Time tm;
+   };
+   struct DateRange {
+      Date first, last; // Both inclusive
+   };
+   struct DateTimeRange {
+      DateTime first, last; // Both inclusive
+   };
+   typedef long DateDuration; // A number of days, may be negative
+   struct DateTimeDuration {
+      long dt; // A number of days; may be negative
+      Time tm; // In 10ths of microseconds; range is:
+	       // if dt >=0: [0 .. 863 999 999]
+	       // if dt <=0: [-863 999 999 .. 0]
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Values
+
+   // Type codes for values of fields returned from a query, for 
+   // restrictions, and for parameters to operations:
+   enum ValueTypeKind { 
+      VTYPE_INT, VTYPE_REAL, VTYPE_STRING, 
+      VTYPE_DATE, VTYPE_DATETIME,
+      VTYPE_DATE_RANGE, VTYPE_DATETIME_RANGE, 
+      VTYPE_DATE_DURATION, VTYPE_DATETIME_DURATION,
+      VTYPE_ENUM, VTYPE_BITMAP, 
+      VTYPE_OBJECT_REF, VTYPE_OBJECT_REF_SEQ,
+      // Used mostly for values (and never for field types!):
+      VTYPE_NULL,
+      // A few "magic" ones used for parameters only:
+      VTYPE_INTERACTION, VTYPE_PROGRESS_REPORTER,
+      VTYPE_INPUTFILE,   VTYPE_INPUTFILE_FACTORY,  
+      VTYPE_REOPINPUTFILE_FACTORY, VTYPE_INPUTFILE_REOPENER,
+      VTYPE_OUTPUTFILE,  VTYPE_OUTPUTFILE_FACTORY,
+      VTYPE_DIRHANDLER,  VTYPE_DIRHANDLER_FACTORY,
+      // Used only in HASTYPE restrictions:
+      VTYPE_OBJECT_TYPE
+   }; 
+   union ValueTypeCore switch(ValueTypeKind) {
+      case VTYPE_STRING:     long maxLength;
+      case VTYPE_ENUM:       EnumType v_enumType;
+      case VTYPE_OBJECT_REF: ObjectType objType;
+      case VTYPE_OBJECT_REF_SEQ: ObjectType objSeqType;
+   };
+   struct ValueType {
+      boolean nullAllowed;
+      ValueTypeCore c;
+   };
+   typedef sequence<ValueType> ValueTypeSeq;
+
+   // Value of a field returned from a query, a restriction value,
+   // or a parameter to an operation:
+   union Value switch(ValueTypeKind) {
+      case VTYPE_INT           : long i;
+      case VTYPE_REAL          : double r;
+      case VTYPE_STRING        : string s;
+      case VTYPE_DATE          : Date d;
+      case VTYPE_DATETIME      : DateTime t;
+      case VTYPE_DATE_RANGE    : DateRange dr;
+      case VTYPE_DATETIME_RANGE: DateTimeRange tr;
+      case VTYPE_DATE_DURATION : DateDuration dd;
+      case VTYPE_DATETIME_DURATION : DateTimeDuration td;
+      case VTYPE_ENUM          : long e;
+      case VTYPE_BITMAP        : BitmapSeq b;
+      case VTYPE_OBJECT_REF    : ObjectRef o;		
+      case VTYPE_OBJECT_REF_SEQ: ObjectRefSeq os;		
+      case VTYPE_INTERACTION       : Interaction ia;
+      case VTYPE_PROGRESS_REPORTER : ProgressReporter pr;
+      case VTYPE_INPUTFILE         : InputFile ifile;
+      case VTYPE_INPUTFILE_FACTORY : InputFileFactory ifilef;
+      case VTYPE_REOPINPUTFILE_FACTORY : ReopInputFileFactory rifilef;
+      case VTYPE_INPUTFILE_REOPENER: InputFileReopener ifiler;
+      case VTYPE_OUTPUTFILE        : OutputFile ofile;
+      case VTYPE_OUTPUTFILE_FACTORY: OutputFileFactory ofilef;
+      case VTYPE_DIRHANDLER        : DirHandler dirh;
+      case VTYPE_DIRHANDLER_FACTORY: DirHandlerFactory dirhf;
+      case VTYPE_OBJECT_TYPE   	   : ObjectType tp;
+   };
+   typedef sequence<Value> ValueSeq;
+
+   // A context, i.e. a set of named values:
+   struct NamedValue {
+      string name;
+      Value v_value;
+   };
+   typedef sequence<NamedValue> Dict;
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Fields
+
+   // Description of a field, i.e. object attribute
+   struct FieldDescr {
+      string name;
+      string title;	// Language-dependent title 
+      ValueType type;
+      boolean updateable;
+      boolean necessary;
+   };
+   typedef sequence<FieldDescr> FieldDescrSeq;
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Sort and restriction descriptions
+
+   // Comparison operators used in restrictions:
+   enum RestrictOp {
+      RESTRICT_EQUAL, RESTRICT_NOT_EQUAL,
+      RESTRICT_LESS, RESTRICT_LESS_EQUAL,
+      RESTRICT_GREATER, RESTRICT_GREATER_EQUAL,
+      RESTRICT_BEGINS, RESTRICT_ENDS, RESTRICT_CONTAINS, // string fields only
+      RESTRICT_NOT_BEGINS, RESTRICT_NOT_ENDS, RESTRICT_NOT_CONTAINS, // same
+      RESTRICT_HASTYPE, RESTRICT_NOT_HASTYPE // objref fields only
+   };
+
+   // Combination values for multiple restrictions
+   enum CombineOp {
+      COMBINE_OR, COMBINE_AND
+   };
+   
+   // Which end of (especially) a range to use in restriction or sort
+   enum ValuePart {
+      VPART_WHOLE, VPART_START, VPART_END, VPART_LENGTH
+   };
+
+   // How to sort by one field:
+   struct SortDescr {
+      string fieldName; // Bitmap, ObjectRef, ObjectRefSeq not allowed
+      ValuePart part;
+      boolean asc;
+   };
+   typedef sequence<SortDescr> SortDescrSeq;
+
+   // How to restrict by one field:
+   struct RestrictDescr {
+      CombineOp combOp;
+      short combLevel; 
+      string fieldName; // Bitmap not allowed
+      ValuePart part;
+      RestrictOp op;
+      Value v_value;	// For ObjectRefSeq field, only an ObjectRef is given
+			// For HASTYPE, an ObjectType is given
+   };
+   typedef sequence<RestrictDescr> RestrictDescrSeq;
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Operations
+
+   // Different ways to invoke an operation
+   enum InvokeKind {
+      INVOKE_ONE,		// Can be invoked, but not with InvokeMultiple
+      INVOKE_MULTI,		// Can be invoked only if multiple objects
+      INVOKE_ONE_OR_MULTI,	// Can be invoked either way
+      INVOKE_CREATE		// Is a create operation; use InvokeToCreate
+   };
+
+   // Description of an operation on an object
+   struct OpDescr {
+      string name;
+      string title;	// Language-dependent title 
+      InvokeKind howInvoke;
+      ValueTypeSeq params;
+   };
+   typedef sequence<OpDescr> OpDescrSeq;
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Callback objects
+
+   interface ErrorReporter {
+      boolean Report(in Value obj, in long code, in string msg);
+   };
+
+   enum MessageKind {
+      MSG_INFO, MSG_WARNING, MSG_ERROR
+   };
+
+   enum CancelKind {
+      CANCEL_NO, CANCEL_THIS, CANCEL_NONE, CANCEL_ALL
+   };
+
+   interface Interaction {
+      void Tell(in Value obj,
+		in string message, in boolean longMessage,
+		in MessageKind kind, 
+		inout CancelKind cancel);
+      void Choose(in Value obj,
+		in string prompt,
+		in StringSeq alternatives, inout short val,
+		inout CancelKind cancel);
+      void Ask(in Value obj,
+		in string prompt, 
+		in ValueType type, inout Value val,
+		inout CancelKind cancel);
+   };
+
+   interface ProgressReporter {
+      void Start();
+      void Update(in short pct, in string msg)
+	 raises (CancelledByUser);
+      void Stop();
+   };
+
+   struct FileInfo {
+      string pathname;
+      long dataSize;
+      long resourceSize;   // Mac only
+      boolean writable;
+      DateTime modified;
+      string type;         // Mac only
+      string creator;      // Mac only
+   };
+   typedef sequence<FileInfo> FileInfoSeq;
+
+   enum Platform {
+      PLAT_UNIX, PLAT_WINDOWS, PLAT_MAC 
+   };
+
+   enum ServerCopyMode {
+      SRV_COPY_NEVER, SRV_COPY_IF_POSSIBLE, SRV_COPY_REQUIRED
+   };
+
+   interface FileFactory {
+      void GetPlatform(out string clientName, out Platform clientPlatform,
+		       out ServerCopyMode copyMode);
+   };
+
+   interface InputFile {
+      void WillBeCopied();
+      readonly attribute long BufferSize;
+      void Position(in boolean dataFork, in long pos)
+	 raises (FileIOError);
+      OctetSeq Read(in long length)
+	 raises (CancelledByUser, FileIOError);
+      FileInfo GetFileInfo()
+	 raises (FileIOError);
+      InputFile CreateInputFile(in string pathname)
+	 raises (AccessDenied, FileNotFound, FileIOError);
+      void remove();
+   };
+
+   interface InputFileFactory : FileFactory {
+      InputFileSeq CreateInputFile(in Value obj,
+	    in StringSeq fileTypes, in boolean onlyOne)
+	 raises (CancelledByUser, FileIOError);
+   };
+
+   interface ReopInputFileFactory : InputFileFactory {
+      // Adds nothing
+   };
+
+   interface InputFileReopener : FileFactory {
+      InputFile CreateInputFile(in Value obj, in string pathname)
+	 raises (FileNotFound, FileIOError);
+   };
+
+   interface OutputFile {
+      readonly attribute string Pathname;
+      readonly attribute long BufferSize;
+      void Position(in boolean dataFork, in long pos)
+	 raises (FileIOError);
+      void Write(in OctetSeq data)
+	 raises (CancelledByUser, FileIOError);
+      void SetAccess(in boolean writable)
+	 raises (FileIOError);
+      void SetModifTime(in DateTime when)
+	 raises (FileIOError);
+      void Delete()
+	 raises (FileIOError);
+      OutputFile CreateOutputFile(in string a_pathname, 
+	    in string type, in string creator)
+	 raises (FileIOError);
+      void remove();
+   };
+
+   interface OutputFileFactory : FileFactory {
+      OutputFile CreateOutputFile(in Value obj, 
+	    in string pathname, in boolean fixName,
+	    in string type, in string creator)
+	 raises (CancelledByUser, FileIOError);
+   };
+
+   interface DirHandler {
+      readonly attribute string Pathname;
+      void Create()
+	 raises (FileIOError);
+      FileInfoSeq ReadDir() // delivers filenames, not full pathnames
+	 raises (FileIOError);
+      FileInfo GetFileInfo(in string filename)
+	 raises (FileNotFound, FileIOError);
+      void Delete(in string filename)
+	 raises (FileNotFound, FileIOError);
+      void DeleteDir(in string rootPath)
+	 raises (FileNotFound, FileIOError);
+      InputFile CreateInputFile(in string filename)
+	 raises (FileNotFound, FileIOError);
+      OutputFile CreateOutputFile(in string filename,
+	    in string type, in string creator)
+	 raises (FileIOError);
+      void remove();
+   };
+
+   interface DirHandlerFactory : FileFactory {
+      DirHandler CreateDirHandler(in Value obj,
+	    in string pathname, in boolean create)
+	 raises (CancelledByUser, FileNotFound, FileIOError);
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Type descriptions
+
+   // Value-name pair for an enumerated type:
+   struct EnumValueName {
+      long value;
+      string name;
+   };
+   typedef sequence<EnumValueName> EnumValueNameSeq;
+
+   interface EnumType {
+      readonly attribute string Name; // An identifying name e.g. for debug info
+      readonly attribute EnumValueNameSeq Values;
+   };
+
+   interface ObjectType {
+      readonly attribute string Name; // An identifying name e.g. for debug info
+
+      readonly attribute string Title;
+      readonly attribute FieldDescrSeq Fields;
+      readonly attribute OpDescrSeq Ops;
+      readonly attribute boolean CanCreate;
+
+      Query CreateQuery();
+//    Expr CreateExprFromRestricts(in RestrictDescrSeq restrictions)
+//	 raises (FieldUnknown, IllegalComparison, ExprBadlyFormed);
+
+      ObjectRef CreateObject(in Dict values)
+	 raises (FieldUnknown, FieldMissing, FieldTypeMismatch,
+		 FieldNotUpdateable, FieldValueInvalid, OperationFailure);
+      ObjectRefSeq InvokeToCreate(in string opName, in ValueSeq params,
+	    in ErrorReporter reporter)
+	 raises (OperationUnknown, ParameterMismatch, OperationFailure);
+
+      ObjectRefSeq InvokeMultiple(in ObjectRefSeq objects,
+		  in string opName, in ValueSeq params,
+		  in ErrorReporter reporter)
+	 raises (OperationUnknown, ParameterMismatch, BadKindOfInvoke,
+		 OperationNotPermitted, ObjectRefInvalid, 
+		 ObjectTypeMismatch, OperationFailure);
+
+      ObjectRef ObjRef(in string objName)
+	 raises (ObjectNotFound);
+
+      string ApplInfo(in string format, in string a_name)
+	 raises (FormatUnknown, ApplInfoNotFound);
+      void SetApplInfo(in string format, in string a_name, in string info);
+
+      readonly attribute ObjectTypeSeq Parents;
+      readonly attribute ObjectTypeSeq Children;
+      readonly attribute ObjectTypeSeq ParentsClosure;
+      readonly attribute ObjectTypeSeq ChildrenClosure;
+      boolean SameAs(in ObjectType otherType);
+      boolean InheritsFrom(in ObjectType otherType);
+      ObjectTypeSeq CommonParents(in ObjectTypeSeq otherTypes);
+
+      ObjectRef ConvertToObjectRef();
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // ConnectionFactory and Connection
+
+   interface ConnectionFactory {
+      Connection CreateConnection(in string user, in string password, 
+	    in string language, 
+	    in string application,
+	    in string applVersion,
+	    in string setup)
+	 raises (LoginFailure);
+   };
+
+   interface Connection {
+      ObjectType GetObjectType();
+      ObjectType GetApplInfo();
+      ObjectRef GetMyself();
+      readonly attribute string MyName;
+      readonly attribute string MyPrimaryGroupName;
+      readonly attribute boolean IAmAdmin;
+
+      ObjectRef ObjRef(in string objName)
+	 raises (ObjectNotFound);
+
+      void remove();
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Query, WatchPoint, InterestArea, IntAreaIterator
+
+   interface Query {
+      void Sort(in SortDescrSeq sorts)
+	 raises (FieldUnknown, FieldNotSortable);
+      void Restrict(in RestrictDescrSeq restrictions)
+	 raises (FieldUnknown, IllegalComparison, ExprBadlyFormed);
+      InterestArea CreateInterestArea(in StringSeq fields)
+	 raises (FieldUnknown, FieldTypeMismatch);
+
+      readonly attribute long Cardinality; 
+
+      void remove();
+   };
+
+   interface WatchPoint {
+      readonly attribute QueryState HowCurrent;
+      QueryState ReQuery();
+   };
+
+   interface InterestArea : WatchPoint {
+      void SetInterestSize(in long size)
+	 raises (ValueInvalid);
+      IntAreaIterator CreateIterator();
+
+      void Slide(in long offset)
+	 raises (IteratorInvalid, PositionInvalid);
+      void Reset();
+      readonly attribute long Position;
+
+      readonly attribute long Cardinality;
+
+      void remove();
+   };
+
+   interface IntAreaIterator {
+      FoundObject Next()
+	 raises(IteratorInvalid, PositionInvalid);
+      FoundObjectSeq NextN(in long count)
+	 raises(IteratorInvalid, PositionInvalid);
+      void Reset();
+      boolean More();
+
+      void remove();
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // ObjectRef, WatchObject, FoundObject
+
+   interface ObjectRef {
+      readonly attribute ObjectType Type;
+
+      Value FieldValue(in string fieldName)
+	 raises (FieldUnknown, FieldTypeMismatch);
+      Value BitmapFieldValue(in string fieldName, in LongSeq formats,
+			     in long maxWidth, in long maxHeight)
+	 raises (FieldUnknown, FieldTypeMismatch);
+      string BitmapFieldId(in string fieldName, in LongSeq formats,
+			     in long maxWidth, in long maxHeight)
+	 raises (FieldUnknown, FieldTypeMismatch);
+
+      void UpdateField(in string fieldName, in Value a_value)
+	 raises (FieldUnknown, FieldTypeMismatch, FieldNotUpdateable,
+		 FieldNotCached, FieldAlreadyUpdated, FieldValueInvalid, 
+		 OperationFailure);
+      void UpdateFields(in Dict values)
+	 raises (FieldUnknown, FieldTypeMismatch, FieldNotUpdateable,
+		 FieldNotCached, FieldAlreadyUpdated, FieldValueInvalid, 
+		 OperationFailure);
+
+      readonly attribute BooleanSeq InvokePerms;
+      ObjectRefSeq Invoke(in string opName, in ValueSeq params)
+	 raises (OperationUnknown, ParameterMismatch, BadKindOfInvoke,
+		 OperationNotPermitted, OperationFailure);
+
+      Value FieldValueX(in short fieldIndex)
+	 raises (FieldUnknown, FieldTypeMismatch);
+      Value BitmapFieldValueX(in short fieldIndex, in LongSeq formats,
+			     in long maxWidth, in long maxHeight)
+	 raises (FieldUnknown, FieldTypeMismatch);
+      string BitmapFieldIdX(in short fieldIndex, in LongSeq formats,
+			     in long maxWidth, in long maxHeight)
+	 raises (FieldUnknown, FieldTypeMismatch);
+	 // These three methods are simply an optimization
+
+      WatchObject CreateWatchObject(in StringSeq fields)
+	 raises (FieldUnknown, FieldTypeMismatch);
+
+      boolean SameAs(in ObjectRef otherObj);
+      ObjectRef ObjRef();
+      Object CorbaRef();
+      readonly attribute string ObjName;
+
+      void remove();
+   };
+
+   interface FoundObject : ObjectRef {
+      readonly attribute QueryState AmountOfChange;
+   };
+
+   interface WatchObject : ObjectRef, WatchPoint {
+      // Adds nothing
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Expressions
+
+   enum ExprKind {
+      EXPR_CONSTANT, EXPR_IDENTITY, EXPR_STABLE, EXPR_VARIABLE
+   };
+
+   struct Decl {
+      string name;
+      ValueType type;
+   };
+   typedef sequence<Decl> DeclSeq;
+
+   struct NamedExpr {
+      string name;
+      Expr expression;
+   };
+   typedef sequence<NamedExpr> NamedExprSeq;
+
+   interface Expr {
+      readonly attribute ValueType Type;
+      readonly attribute ExprKind Kind;
+      readonly attribute DeclSeq Unknowns;
+      readonly attribute StringSeq FieldsOfCurrent;
+         // Tells which fields of "current" are used in the expr.
+
+      Value ExprValue(in Dict values)
+	 raises (ValueMissing, ValueTypeMismatch, EvaluationError);
+	 // Values must be supplied for all Unknowns.
+      WatchExpr CreateWatchExpr(in Dict values)
+	 raises (ValueMissing, ValueTypeMismatch);
+	 // Values must be supplied for all Unknowns.
+      RestrictDescrSeq ConvertToRestricts(in Dict values)
+	 raises (ValueMissing, ValueTypeMismatch, EvaluationError, 
+	 	 ExprBadlyFormed);
+	 // Values must be supplied for all Unknowns except "current".
+   };
+
+   interface WatchExpr : WatchPoint {
+      readonly attribute ValueType Type;
+      Value ExprValue()
+	 raises (EvaluationError);
+
+      void remove();
+   };
+};

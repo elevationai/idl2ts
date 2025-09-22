@@ -1,0 +1,19 @@
+module Forward {
+
+  struct S;
+  typedef sequence<S> Ss;
+
+  struct S {
+    long l;
+    Ss   r;
+  };
+
+  union U;
+  typedef sequence<U> Us;
+
+  union U switch (long) {
+  case 1: string s;
+  case 2: Us r;
+  };
+
+};

@@ -1,0 +1,83 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+//
+//                            Package   : omniORB2
+// omniLifeCycle.idl          Created on: 1997/09/20
+//                            Author    : Duncan Grisby (dpg1)
+//
+//    Copyright (C) 1997 Olivetti & Oracle Research Laboratory
+//
+//    This file is part of the omniORB library
+//
+//    The omniORB library is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  
+//    02111-1307, USA
+//
+//
+// Description:
+//	*** PROPRIETORY INTERFACE ***
+//      
+
+// This MUST NOT be compiled with omniidl -l
+
+/* $Log$
+/* Revision 1.2  2002/01/07 17:22:17  att
+/* HUGE update to test omniORB 4 / ORBacus.
+/*
+/* Revision 1.1.6.1  2001/04/30 13:41:41  sll
+/* Port COST contribution to this branch.
+/*
+/* Revision 1.1.1.1  2001/04/03 12:18:07  att
+/* Imported sources
+/*
+/* Revision 1.1  1999/09/23 10:59:39  sll
+/* *** empty log message ***
+/*
+/* Revision 1.1  1997/09/20 17:08:55  dpg1
+/* Initial revision
+/*
+ */
+
+
+#ifndef _omniLifeCycle_idl_
+#define _omniLifeCycle_idl_
+
+// omniLifeCycleInfo interface:
+
+interface omniLifeCycleInfo {
+  void reportMove(in Object obj);
+  void reportRemove();
+  readonly attribute Object homeObject;
+};
+
+#endif // _omniLifeCycle_idl_

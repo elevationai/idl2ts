@@ -1,0 +1,77 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+module RM {
+
+  enum RtClass {C_UNIFORM, C_VARYING, C_VERTEX};
+  enum RtType {T_COLOR, T_FLOAT, T_HPOINT, T_INTEGER, T_NORMAL, T_POINT,
+	       T_STRING, T_VECTOR};
+
+  typedef boolean RtBoolean;
+  typedef long RtErrorHandler;
+  typedef long RtFilterFunc;
+  typedef float RtFloat;
+  typedef long RtInt;
+  typedef long RtLightHandle;
+  typedef long RtObjectHandle;
+  typedef string RtString;
+  typedef string RtToken;
+
+  typedef RtFloat RtBasis[4][4];
+  typedef RtFloat RtBound[6];
+  typedef RtFloat RtColor[3];
+  typedef sequence<RtColor> RtColorSeq;
+  typedef sequence<RtFloat> RtFloatSeq;
+  typedef RtFloat RtHPoint[4];
+  typedef sequence<RtHPoint> RtHPointSeq;
+  typedef sequence<RtInt> RtIntSeq;
+  typedef RtFloat RtMatrix[4][4];
+  typedef RtFloat RtNormal[3];
+  typedef sequence<RtNormal> RtNormalSeq;
+  typedef RtFloat RtPoint[3];
+  typedef sequence<RtPoint> RtPointSeq;
+  typedef sequence<RtFloat> RtSColor;
+  typedef sequence<RtString> RtStringSeq;
+  typedef RtFloat RtVector[3];
+  typedef sequence<RtVector> RtVectorSeq;
+
+  typedef struct RtParam
+  {
+    RtInt pt;
+    union pdu switch (RtType)
+    {
+      case T_COLOR: RtColorSeq c;
+      case T_FLOAT: RtFloatSeq f;
+      case T_HPOINT: RtHPointSeq h;
+      case T_INTEGER: RtIntSeq i;
+      case T_NORMAL: RtNormalSeq n;
+      case T_POINT: RtPointSeq p;
+      case T_STRING: RtStringSeq s;
+      case T_VECTOR: RtVectorSeq v;
+    } pd;
+  } RtParameter;
+  
+  typedef sequence<RtParameter> RtParameterList;
+
+  interface Ri {
+    void Dummy(in RtColorSeq colors);
+  };
+};

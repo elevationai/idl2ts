@@ -1,0 +1,63 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __BUG990923_IDL__
+#define __BUG990923_IDL__
+
+
+// Test 1.
+
+interface i1;
+
+module foo {
+
+  interface i1;
+
+  interface i2 {
+    i1   op1(in i1 a1);
+    ::i1 op2(in ::i1 a1);
+    ::i1 op3(in i1 a1);
+    i1   op4(in ::i1 a1);
+
+    attribute i1   a1;
+    attribute ::i1 a2;
+  };
+
+};
+
+
+// Test 2.
+
+struct s1 { short a; };
+
+interface intf {
+
+  struct s1 { short b; };
+
+  s1   op1(in s1 a);
+  ::s1 op2(in ::s1 a);
+  ::s1 op3(in s1 a);
+  s1   op4(in ::s1 a);
+
+};
+
+
+#endif 

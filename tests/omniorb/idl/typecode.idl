@@ -1,0 +1,137 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// typecode.idl
+//
+#include <orb.idl>
+
+typedef CORBA::TypeCode aliasTC;
+
+typedef CORBA::TypeCode arrayTypeCode[10];
+typedef CORBA::TypeCode multiTypeCode[2][4][6];
+typedef aliasTC arrayAliasTC[10];
+
+typedef sequence<CORBA::TypeCode> seqTypeCode;
+typedef sequence<sequence<CORBA::TypeCode>, 3 > multiSeqTypeCode;
+typedef sequence<aliasTC> seqAliasTC;
+typedef sequence<CORBA::TypeCode> seqArrayTC[10][20];
+
+typedef sequence<long> seqArrayLong[10][20];
+typedef long arrayLong;
+typedef arrayLong arrayAliasLong[10];
+
+struct structTypeCode {
+  CORBA::TypeCode a;
+  aliasTC b;
+  CORBA::TypeCode c[10];
+  CORBA::TypeCode d[2][4][6];
+  arrayAliasTC d1[5];
+  sequence<CORBA::TypeCode> e;
+  sequence<aliasTC> f;
+
+  long l1;
+  long l2[10];
+  long l3[10][20];
+  sequence<long> l4;
+  arrayAliasLong l5[5];
+};
+
+typedef structTypeCode aliasStructTypeCode;
+
+exception exceptTypeCode {
+  CORBA::TypeCode a;
+  aliasTC b;
+
+  string s1;
+
+  long l1;
+
+  structTypeCode strTC1;
+  aliasStructTypeCode strTC2;
+};
+
+
+struct strct2
+{
+  structTypeCode strTC1;
+  aliasStructTypeCode strTC2;
+  sequence<structTypeCode> seqStrTC1;
+  sequence<structTypeCode> arraySeqStrTC1[10][20];
+};
+
+
+union unionTypeCode switch(long)
+{
+ case 1: CORBA::TypeCode a;
+ case 2: aliasTC b;
+ case 3: CORBA::TypeCode c[10];
+ case 4: CORBA::TypeCode d0[2][4][6];
+ case 5: arrayAliasTC d1[5];
+ case 6: sequence<CORBA::TypeCode> e;
+ case 7: sequence<aliasTC> f;
+ case 8: sequence<sequence<CORBA::TypeCode> > g;
+ case 9: structTypeCode h;
+ case 10: strct2 i;
+
+ default: CORBA::TypeCode the_def;
+};
+
+typedef unionTypeCode aliasUnionTypeCode;
+
+union uni2 switch(short)
+{
+ case 1: unionTypeCode a;
+ case 2: sequence<unionTypeCode> b;
+ case 3: unionTypeCode c[10];
+};
+
+interface intf1 {
+  attribute CORBA::TypeCode tcAttr;
+  attribute aliasTC aliasTCAttr;
+	
+  CORBA::TypeCode TCOp(in CORBA::TypeCode inTC, inout CORBA::TypeCode inoutTC,
+		       out CORBA::TypeCode outTC) raises (exceptTypeCode);
+
+  aliasTC aliasOp(in aliasTC inAlias, inout aliasTC inoutAlias, 
+		  out aliasTC outAlias);
+
+  arrayTypeCode arrayOp(in arrayTypeCode inArray, 
+			inout arrayTypeCode inoutArray,
+			out arrayTypeCode outArray);
+
+  multiTypeCode multiOp(
+			inout multiTypeCode inoutMulti,
+			out multiTypeCode outMulti);
+
+  seqTypeCode seqOp(in seqTypeCode inSeq, 
+		    inout seqTypeCode inoutSeq,
+		    out seqTypeCode outSeq);
+
+  multiSeqTypeCode multiSeqOp(in multiSeqTypeCode inMultiSeq, inout multiSeqTypeCode inoutMultiSeq,
+			      out multiSeqTypeCode outMultiSeq);
+
+  structTypeCode structOp(in structTypeCode inStructSeq, inout structTypeCode inoutStructSeq,
+			  out structTypeCode outStructSeq);
+
+  unionTypeCode unionOp(in unionTypeCode inUnionSeq, inout unionTypeCode inoutUnionSeq,
+			out unionTypeCode outUnionSeq);
+
+};

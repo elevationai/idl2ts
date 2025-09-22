@@ -1,0 +1,56 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+typedef boolean arrayBoolean[3];
+typedef octet arrayOctet[3];
+typedef char arrayChar[3];
+
+
+typedef sequence<arrayBoolean> seqArrayBoolean;
+typedef sequence<arrayOctet> seqArrayOctet;
+typedef sequence<arrayChar> seqArrayChar;
+
+typedef sequence<arrayBoolean,5> boundedSeqArrayBoolean;
+typedef sequence<arrayOctet,5> boundedSeqArrayOctet;
+typedef sequence<arrayChar,5> boundedSeqArrayChar;
+
+interface seqIntf {
+
+seqArrayBoolean seqBooleanOp(in seqArrayBoolean a, inout seqArrayBoolean b,
+				out seqArrayBoolean c);
+
+seqArrayOctet seqOctetOp(in seqArrayOctet a, inout seqArrayOctet b,
+				out seqArrayOctet c);
+
+seqArrayChar seqCharOp(in seqArrayChar a, inout seqArrayChar b,
+				out seqArrayChar c);
+
+
+boundedSeqArrayBoolean boundedSeqBooleanOp(in boundedSeqArrayBoolean a, inout boundedSeqArrayBoolean b,
+				out boundedSeqArrayBoolean c);
+
+boundedSeqArrayOctet boundedSeqOctetOp(in boundedSeqArrayOctet a, inout boundedSeqArrayOctet b,
+				out boundedSeqArrayOctet c);
+
+boundedSeqArrayChar boundedSeqCharOp(in boundedSeqArrayChar a, inout boundedSeqArrayChar b,
+				out boundedSeqArrayChar c);
+};
+

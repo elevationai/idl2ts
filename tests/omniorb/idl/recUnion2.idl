@@ -1,0 +1,52 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// recUnion2.idl
+//
+#include <orb.idl>
+#include "recUnion.idl"
+
+union recUnion2 switch(selectEnum) {
+ case A: recUnion a1;
+ case B: double d1;
+};
+
+union recUnion3 switch(short){
+ case 1: double d1;
+ case 2: recUnion2 a1;
+ default: char c1;
+};
+
+union recUnion3a switch(selectEnum){
+ case A: long l1;
+ default: sequence<recUnion3a> a1;
+};
+
+union normalUnion1 switch(selectEnum) {
+ case A: string a1;
+ case B: long b1;
+ case C: CORBA::TypeCode t1;
+};
+
+union recUnion4 switch(long) {
+ case 1: sequence<recUnion3a> a1;
+ case 2: double d1;
+};

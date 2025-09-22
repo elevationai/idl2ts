@@ -1,0 +1,15 @@
+// omniidl2 generates the wrong constant values for the following:
+const octet a=20;
+const octet b='A';
+
+// omniidl2 fails to recognise octet is a valid discriminant type.
+typedef octet d;
+union XU switch(d)
+{
+  case 1: long l;
+  case 2: short s;
+};
+
+// operators '<<' and '>>' are interpreted the wrong way.
+const unsigned short losBitNumber1 = 0x02 << 1;
+const unsigned short losBitNumber2 = 0x02 >> 1;

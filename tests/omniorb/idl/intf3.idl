@@ -1,0 +1,49 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+module Intf3 {
+  interface IntfA {
+    void op1();
+  };
+
+  enum EnA { E1, E2, E3 };
+
+  typedef sequence<EnA> seqEnA;
+
+  struct StA {
+    string x;
+    EnA y;
+    IntfA z;
+  };
+
+  union UnA switch (boolean) {
+  case TRUE: StA x;
+  case FALSE: seqEnA y;
+  };
+
+  interface IntfB {
+    EnA op1(in EnA a1, inout EnA a2, out EnA a3);
+    seqEnA op2(in seqEnA a1, inout seqEnA a2, out seqEnA a3);
+    StA op3(in StA a1, inout StA a2, out StA a3);
+    UnA op4(in UnA a1, inout UnA a2, out UnA a3);
+    IntfA op5(in IntfA a1, inout IntfA a2, out IntfA a3);
+  };
+};

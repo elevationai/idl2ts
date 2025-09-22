@@ -1,0 +1,60 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+interface ArrObj {
+  void op1();
+};
+
+typedef long Arr1[10];
+typedef long Arr2[10][100];
+typedef long Arr3[10][100][30];
+
+typedef string Arr4[10];
+typedef string Arr5[10][100];
+typedef string Arr6[10][100][30];
+
+typedef ArrObj Arr7[10];
+typedef ArrObj Arr8[10][100];
+typedef ArrObj Arr9[10][100][30];
+
+typedef sequence<string> Arr10[10];
+typedef sequence<string> Arr11[10][100];
+typedef sequence<string> Arr12[10][100][30];
+
+typedef Arr1 ArrArr1[100];
+typedef Arr2 ArrArr2[30];
+typedef Arr3 ArrArr3;
+
+typedef Arr4 ArrArr4[100];
+typedef Arr5 ArrArr5[30];
+typedef Arr6 ArrArr6;
+
+typedef Arr7 ArrArr7[100];
+typedef Arr8 ArrArr8[30];
+typedef Arr9 ArrArr9;
+
+typedef Arr10 ArrArr10[100];
+typedef Arr11 ArrArr11[30];
+typedef Arr12 ArrArr12;
+
+typedef ArrArr10 ArrArrArr10[50];
+typedef ArrArr11 ArrArrArr11[60];
+typedef ArrArr12 ArrArrArr12[70];

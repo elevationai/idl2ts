@@ -1,0 +1,137 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// anyTest.idl
+//
+
+
+typedef any aliasAny;
+
+typedef any arrayAny[10];
+typedef any multiAny[2][4][6];
+typedef aliasAny arrayAliasAny[10];
+
+typedef sequence<any> seqAny;
+typedef sequence<sequence<any>, 3 > multiSeqAny;
+typedef sequence<aliasAny> seqAliasAny;
+typedef sequence<any> seqArrayAny[10][20];
+
+typedef sequence<long> seqArrayLong[10][20];
+typedef long arrayLong;
+typedef arrayLong arrayAliasLong[10];
+
+struct structAny {
+any a;
+aliasAny b;
+any c[10];
+arrayAliasAny d1[5];
+sequence<any> e;
+sequence<aliasAny> f;
+
+long l1;
+long l2[10];
+long l3[10][20];
+sequence<long> l4;
+arrayAliasLong l5[5];
+};
+
+typedef structAny aliasStructAny;
+
+exception exceptAny {
+any a;
+aliasAny b;
+
+string s1;
+
+long l1;
+
+structAny strAny1;
+aliasStructAny strAny2;
+};
+
+
+struct strct2
+{
+structAny strAny1;
+aliasStructAny strAny2;
+sequence<structAny> seqStrAny1;
+sequence<structAny> arraySeqStrAny1[10][20];
+};
+
+
+union unionAny switch(long)
+{
+case 1: any a;
+case 2: aliasAny b;
+case 3: any c[10];
+case 4: any d0[2][4][6];
+case 5: arrayAliasAny d1[5];
+case 6: sequence<any> e;
+case 7: sequence<aliasAny> f;
+case 8: sequence<sequence<any> > g;
+case 9: structAny h;
+case 10: strct2 i;
+
+default: any the_def;
+};
+
+typedef unionAny aliasUnionAny;
+
+union uni2 switch(short)
+{
+case 1: unionAny a;
+case 2: sequence<unionAny> b;
+case 3: unionAny c[10];
+};
+
+interface intf1 {
+attribute any tcAttr;
+attribute aliasAny aliasAnyAttr;
+	
+ any AnyOp(in any inAny, inout any inoutAny,
+		out any outAny) raises (exceptAny);
+
+aliasAny aliasOp(in aliasAny inAlias, inout aliasAny inoutAlias, 
+		out aliasAny outAlias);
+
+arrayAny arrayOp(in arrayAny inArray, 
+	inout arrayAny inoutArray,
+	out arrayAny outArray);
+
+seqAny seqOp(in seqAny inSeq, 
+	inout seqAny inoutSeq,
+	out seqAny outSeq);
+
+multiSeqAny multiSeqOp(in multiSeqAny inMultiSeq, inout multiSeqAny inoutMultiSeq,
+	out multiSeqAny outMultiSeq);
+
+structAny structOp(in structAny inStructSeq, inout structAny inoutStructSeq,
+	out structAny outStructSeq);
+
+unionAny unionOp(in unionAny inUnionSeq, inout unionAny inoutUnionSeq,
+	out unionAny outUnionSeq);
+
+};
+
+
+
+
+

@@ -1,0 +1,71 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+module Tdef1 {
+
+  interface IntfA {
+    void op1();
+  };
+
+  enum EnA { E1, E2, E3 };
+  typedef EnA EnA_t;
+  typedef EnA_t EnA_t2;
+
+  typedef long long_t;
+  typedef long_t long_t2;
+
+  typedef string string_t;
+  typedef string_t string_t2;
+  
+  typedef IntfA IntfA_t;
+  typedef IntfA_t IntfA_t2;
+
+  typedef sequence<long_t> seqlong_t;
+  typedef seqlong_t seqlong_t2;
+
+  struct StA {
+    string_t2 x;
+    long_t2 y;
+    IntfA_t2 z;
+  };
+
+  typedef StA StA_t;
+  typedef StA_t StA_t2;
+
+  union UnA switch (boolean) {
+  case TRUE: StA_t2 x;
+  case FALSE: seqlong_t2 y;
+  };
+
+  typedef UnA UnA_t;
+  typedef UnA_t UnA_t2;
+
+  interface IntfB {
+    EnA_t2 op1(in EnA_t2 a1, inout EnA_t2 a2, out EnA_t2 a3);
+    long_t2 op2(in long_t2 a1, inout long_t2 a2, out long_t2 a3);
+    string_t2 op3(in string_t2 a1, inout string_t2 a2, out string_t2 a3);
+    IntfA_t2 op4(in IntfA_t2 a1, inout IntfA_t2 a2, out IntfA_t2 a3);
+    seqlong_t2 op5(in seqlong_t2 a1, inout seqlong_t2 a2, out seqlong_t2 a3);
+    StA_t2 op6(in StA_t2 a1, inout StA_t2 a2, out StA_t2 a3);
+    UnA_t2 op7(in UnA_t2 a1, inout UnA_t2 a2, out UnA_t2 a3);
+  };
+
+};

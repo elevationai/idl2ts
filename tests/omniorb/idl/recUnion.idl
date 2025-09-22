@@ -1,0 +1,51 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// recUnion.idl
+//
+
+enum selectEnum {
+  A,
+  B,
+  C
+};
+
+union recUnion switch(selectEnum) {
+ case A: float a1;
+ case B: sequence<recUnion> and;
+ case C: sequence<recUnion> or;
+};
+
+
+union recUnion1a switch(long){
+ case 1: float b1;
+ case 2: string s;
+ default: recUnion c1;
+};
+
+struct recStruct1b {
+  sequence<recUnion> a1;
+};
+
+union recUnion1c switch(long) {
+ case 1: short a1;
+ case 2: long b1[10][20];
+};

@@ -1,0 +1,47 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// Test forward declared interface which is not defined in
+// this IDL file, or any it includes.
+
+interface I1;
+typedef I1 TI1;
+
+
+struct S {
+  I1 a;
+};
+
+exception X {
+  I1 a;
+};
+
+union U switch(short) {
+ case 0:  I1  a;
+ default: TI1 b;
+};
+
+
+interface I2 {
+  I1 opI1(in I1 iI1, inout I1 ioI1, out I1 oI1);
+  TI1 opTI1(inout TI1 ioI1, out TI1 oI1, in TI1 iI1);
+  S opS(in S iS, inout S ioS, out S oS);
+};

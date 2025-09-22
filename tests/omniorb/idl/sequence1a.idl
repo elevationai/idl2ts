@@ -1,0 +1,108 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// sequence1a.idl
+//
+
+typedef sequence<long> uSeqLonga;
+typedef sequence<long> uSeqLongb;
+
+typedef uSeqLonga aliasUSeqLong;
+
+typedef sequence<string,10> bSeqString;
+
+typedef sequence<sequence<long> > multiLong;
+typedef sequence<sequence<string> > multiString;
+
+
+module outer1
+{
+typedef sequence<long> modLong;
+typedef sequence<sequence<long,3> , 5> multiModLong;
+};
+
+interface intf1 {
+void op();
+};
+
+typedef sequence<intf1> uSeqIntf1;
+typedef sequence<sequence<intf1> > multiIntf1a;
+typedef sequence<uSeqIntf1> multiIntf1b;
+
+struct blah
+{
+sequence<long> embeddedStructLong;
+sequence<string> embeddedStructString;
+};
+
+typedef sequence<blah> uSeqBlah;
+typedef sequence<sequence<blah> > multiBlah;
+
+typedef uSeqBlah aliasSeqBlah;
+typedef sequence<uSeqBlah, 40> bMultiUSeqBlah;
+
+enum discrimEnum
+{
+A,B,C
+};
+
+typedef sequence<discrimEnum> uSeqEnum;
+
+
+union unionDouble1 switch(long)
+{
+case 1: double d;
+default: long l;
+};
+
+typedef sequence<unionDouble1> uSeqUnionDouble1;
+
+module outer
+{
+union unionVariable switch(discrimEnum)
+{
+case A: string str;
+case B: double d;
+};
+
+typedef sequence<sequence<blah> > uMultiOuterSeqBlah;
+};
+
+
+typedef sequence<outer::unionVariable> uSeqOuterUnionVariable;
+
+typedef unionDouble1 arrayUnionDouble1[10];
+typedef arrayUnionDouble1 aliasArrayUnionDouble1;
+typedef unionDouble1 multiUnionDouble1[2][4][6];
+
+typedef sequence<arrayUnionDouble1> seqArrayUnionDouble1;
+typedef sequence<aliasArrayUnionDouble1> seqAliasArrayUnionDouble1;
+typedef sequence<multiUnionDouble1> seqMultiUnionDouble1;
+
+typedef sequence<long> arraySeqLong[10];
+typedef sequence<long> multiArraySeqLong[10][20];
+typedef sequence<sequence<unionDouble1, 33> > multiArrayUMultiSeqBSeqUnionDouble1[2][4];
+
+interface intf2
+{
+void anop();
+};
+

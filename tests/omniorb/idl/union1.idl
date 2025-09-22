@@ -1,0 +1,61 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+typedef octet Bytes[64];
+struct ST { long len; };
+interface A {
+  void op1();
+};
+
+union U1 switch (long) {
+case 1: long x;
+case 2: Bytes y;
+case 3: string z;
+case 5: ST w;
+default:
+  A obj;
+};
+
+union U2 switch (long) {
+default:
+  long array[20][20];
+};
+
+union U3 switch (char) {
+case '\0':   sequence<U2> u;
+case 'b':    sequence<U1> v;
+case 'c':    sequence<ST> w;
+case 'd':    sequence<A>  x;
+};
+
+union U4 switch (boolean) {
+case TRUE:  char x;
+case FALSE: ST y[10];
+};
+
+
+interface UIF {
+  U1 op1(in U1 arg1, inout U1 arg2, out U1 arg3);
+  U2 op2(in U2 arg1, inout U2 arg2, out U2 arg3);
+  U3 op3(in U3 arg1, inout U3 arg2, out U3 arg3);
+  U4 op4(in U4 arg1, inout U4 arg2, out U4 arg3);
+};
+

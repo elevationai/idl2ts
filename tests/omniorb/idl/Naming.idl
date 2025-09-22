@@ -1,0 +1,129 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+//
+//                            Package   : omniORB2
+// Naming.idl		     
+//                            
+//
+//
+// Description:
+//	IDL interfaces for COSS Naming Service
+//	
+
+#pragma prefix "omg.org"
+
+
+module CosNaming {
+
+	typedef string Istring;
+
+	struct NameComponent {
+	   Istring id;
+	   Istring kind;
+	};
+
+	typedef sequence<NameComponent> Name;
+
+	enum BindingType {nobject, ncontext};
+
+	struct Binding {
+	   //NameComponent binding_name;
+	   Name		 binding_name;
+	   BindingType   binding_type;
+	};
+
+	typedef sequence <Binding> BindingList;
+
+
+	interface BindingIterator;
+	interface NamingContext;
+
+	interface NamingContext {
+
+	    enum NotFoundReason {missing_node, not_context, not_object};
+
+	    exception NotFound {
+	         NotFoundReason   why;
+	         Name             rest_of_name;
+            };
+
+
+	    exception CannotProceed {
+	         NamingContext  cxt;
+	         Name           rest_of_name;
+	    };
+
+	    exception InvalidName {};
+	    exception AlreadyBound {};
+	    exception NotEmpty {};
+
+
+
+            void bind (in Name n, in Object obj)
+	              raises (NotFound, CannotProceed, 
+   	                            InvalidName, AlreadyBound);
+
+            void rebind (in Name n, in Object obj)
+	              raises (NotFound, CannotProceed, 
+	                            InvalidName);
+
+	    void bind_context (in Name n, in NamingContext nc)
+	              raises (NotFound, CannotProceed, 
+	                            InvalidName, AlreadyBound);
+
+	    void rebind_context (in Name n, in NamingContext nc)
+	              raises (NotFound, CannotProceed, 
+	                            InvalidName);
+
+	    Object resolve (in Name n)
+	              raises (NotFound, CannotProceed, 
+	                            InvalidName);
+
+	    void unbind (in Name n)
+	              raises (NotFound, CannotProceed, 
+	                            InvalidName);
+
+	    NamingContext new_context ();
+
+	    NamingContext bind_new_context (in Name n)
+	              raises (NotFound, CannotProceed, 
+	                            InvalidName, AlreadyBound);
+
+	    void destroy () raises (NotEmpty);
+
+	    void list (in unsigned long how_many,
+	                 out BindingList bl, out BindingIterator bi);
+
+  	};
+
+	
+	interface BindingIterator {
+	   
+	    boolean next_one (out Binding b);
+
+            boolean next_n (in unsigned long how_many,
+	                     out BindingList bl);
+
+	    void destroy ();
+	};
+
+};

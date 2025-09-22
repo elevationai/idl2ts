@@ -1,0 +1,87 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __SEQ5_IDL__
+#define __SEQ5_IDL__
+
+typedef string arr_string[4];
+typedef string arrarr_string[4][8];
+
+typedef sequence <arr_string> seq_arr_string;
+typedef sequence <sequence<arr_string> > seqseq_arr_string;
+typedef sequence <sequence<sequence<arr_string> > > seqseqseq_arr_string;
+
+typedef sequence <arr_string,10> seq_arr_string_10;
+typedef sequence <sequence<arr_string,10>,10> seq_arr_string_10_10;
+typedef sequence <sequence<sequence<arr_string,10>,10>,10> seq_arr_string_10_10_10;
+
+typedef sequence <arrarr_string> seq_arrarr_string;
+typedef sequence <sequence<arrarr_string> > seqseq_arrarr_string;
+typedef sequence <sequence<sequence<arrarr_string> > > seqseqseq_arrarr_string;
+
+typedef sequence <arrarr_string,10> seq_arrarr_string_10;
+typedef sequence <sequence<arrarr_string,10>,10> seq_arrarr_string_10_10;
+typedef sequence <sequence<sequence<arrarr_string,10>,10>,10> seq_arrarr_string_10_10_10;
+
+interface Exercise5 {
+  seq_arr_string dump_seq_arr_string(in seq_arr_string a1, 
+			 inout seq_arr_string a2, 
+			 out seq_arr_string a3);
+  seqseq_arr_string dump_seqseq_arr_string(in seqseq_arr_string a1, 
+			       inout seqseq_arr_string a2, 
+			       out seqseq_arr_string a3);
+  seqseqseq_arr_string dump_seqseqseq_arr_string(in seqseqseq_arr_string a1, 
+				     inout seqseqseq_arr_string a2, 
+				     out seqseqseq_arr_string a3);
+
+  seq_arr_string_10 dump_seq_arr_string_10(in seq_arr_string_10 a1, 
+			 inout seq_arr_string_10 a2, 
+			 out seq_arr_string_10 a3);
+  seq_arr_string_10_10 dump_seq_arr_string_10_10(in seq_arr_string_10_10 a1, 
+			       inout seq_arr_string_10_10 a2, 
+			       out seq_arr_string_10_10 a3);
+  seq_arr_string_10_10_10 dump_seq_arr_string_10_10_10(in seq_arr_string_10_10_10 a1, 
+				     inout seq_arr_string_10_10_10 a2, 
+				     out seq_arr_string_10_10_10 a3);
+
+  seq_arrarr_string dump_seq_arrarr_string(in seq_arrarr_string a1, 
+			 inout seq_arrarr_string a2, 
+			 out seq_arrarr_string a3);
+  seqseq_arrarr_string dump_seqseq_arrarr_string(in seqseq_arrarr_string a1, 
+			       inout seqseq_arrarr_string a2, 
+			       out seqseq_arrarr_string a3);
+  seqseqseq_arrarr_string dump_seqseqseq_arrarr_string(in seqseqseq_arrarr_string a1, 
+				     inout seqseqseq_arrarr_string a2, 
+				     out seqseqseq_arrarr_string a3);
+
+  seq_arrarr_string_10 dump_seq_arrarr_string_10(in seq_arrarr_string_10 a1, 
+			 inout seq_arrarr_string_10 a2, 
+			 out seq_arrarr_string_10 a3);
+  seq_arrarr_string_10_10 dump_seq_arrarr_string_10_10(in seq_arrarr_string_10_10 a1, 
+			       inout seq_arrarr_string_10_10 a2, 
+			       out seq_arrarr_string_10_10 a3);
+  seq_arrarr_string_10_10_10 dump_seq_arrarr_string_10_10_10(in seq_arrarr_string_10_10_10 a1, 
+				     inout seq_arrarr_string_10_10_10 a2, 
+				     out seq_arrarr_string_10_10_10 a3);
+
+};
+
+#endif 

@@ -1,0 +1,92 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// Reported by Chris Newbold <chris.newbold@laurelnetworks.com>
+//
+// http://www.uk.research.att.com/omniORB/archives/2000-09/0054.html
+//
+// union _d discriminant setting function fails to allow discriminant
+// to be changed between the default values when an implicit default
+// member is active (with _default)
+
+
+
+enum States { one, two, three };
+
+union ImplicitDefault1 switch(States) {
+  
+ case one:
+   string a;
+   // implicit (two, three)
+};
+
+union NoDefault switch(States) {
+ case one:
+   string a;
+ case two:
+   string b;
+ case three:
+   string c;
+};
+
+union ExplicitDefault1 switch(States){
+ case one:
+   string a;
+ default:
+   string b;
+};
+
+union ExplicitDefault2 switch(States){
+ case one:
+   string a;
+ case two:
+   string b;
+ default:
+   string c;
+};
+
+
+union LotsOfCases switch (long){
+ case 0:
+ case 1:
+ case 2:
+   string a;
+ case 3:
+ case 4:
+ case 5:
+   string b;
+};
+
+union LotsOfCasesDefault switch(long){
+ case 0:
+ case 1:
+   string a;
+ default:
+   string b;
+};
+
+// The bug was:
+//
+//   ImplicitDefault1 info;
+//   info._default();
+//   info._d(two);    // throws BAD::PARAM
+//
+//

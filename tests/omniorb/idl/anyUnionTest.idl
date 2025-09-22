@@ -1,0 +1,102 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// anyUnionTest.idl
+
+enum discrimEnum
+{
+A,B,C
+};
+
+union unionLong switch(long)
+{
+case 1: long l;
+case 2: short s;
+};
+
+union unionDouble1 switch(long)
+{
+case 1: double d;
+default: long l;
+};
+
+
+union unionVariable switch(discrimEnum)
+{
+case A: string str;
+case B: double d;
+};
+
+
+typedef sequence<unionVariable> seqUnion;
+
+
+typedef unionVariable arrayUnion[2];
+
+union unionSequence switch(long)
+{
+case 1: seqUnion s;
+case 2: double d;
+};
+
+union unionArray switch(char)
+{
+case 'a': arrayUnion ar;
+case 'b': double d;
+};
+
+union unionUnion switch(short)
+{
+case 1: double d;
+case 2: unionSequence st;
+};
+
+struct testStruct
+{
+long l;
+double d;
+};
+
+union unionStruct switch(long)
+{
+case 1: double d;
+case 2: testStruct tS;
+};
+
+struct structUnion
+{
+double d;
+unionVariable u;
+};
+
+
+interface anyUnionTest
+{
+any testOp(in any a, inout any b, out any d);
+};
+
+
+union unionDouble2 switch(discrimEnum)
+{
+case A: anyUnionTest tAU;
+case C: double d;
+default: unsigned long ul;
+};

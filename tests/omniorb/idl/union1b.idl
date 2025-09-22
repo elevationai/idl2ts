@@ -1,0 +1,56 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// union1b.idl
+//
+
+#include "union1a.idl"
+
+struct struct2
+{
+long a;
+enum rgb_enum { RED, GREEN, BLUE } b;
+string<5> g;
+};
+
+
+module another_outer {
+
+union unionMix switch(long)
+{
+case 1: any a;
+case 2: unionStruct uS;
+case 3: testAnyUnion tAu;
+default: string<5> str5;
+case 4: discrimEnum dEnm;
+case 5: intf2 i;
+case 25: struct2 st2;
+case 372: boolean abool;
+};
+
+};
+
+/*
+interface intf2
+{
+void anop();
+};
+*/

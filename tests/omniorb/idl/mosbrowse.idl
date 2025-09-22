@@ -1,0 +1,127 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#include "mosquery.idl"
+
+module MosBrowse {
+
+   interface ConnectionFactory;
+   interface Connection;
+   interface Table;
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Connection
+
+   interface ConnectionFactory {
+      Connection CreateConnection(in string user, in string password, 
+	    in string language, 
+	    in string application,
+	    in string applVersion,
+	    in string setup)
+	 raises (MosQuery::LoginFailure);
+   };
+
+   interface Connection : MosQuery::Connection {
+      Table GetTable();
+   };
+
+   ////////////////////////////////////////////////////////////////////////////
+   // Table and types it uses
+
+   // How to construct the restrictions for a Query from the parameters:
+   struct RestrictProtoDescr {
+      MosQuery::CombineOp combOp;
+      short combLevel; 
+      string fieldName; // Bitmap not allowed
+      MosQuery::ValuePart part;
+      MosQuery::RestrictOp op;
+      MosQuery::Expr matchExpr;
+   };
+   typedef sequence<RestrictProtoDescr> RestrictProtoDescrSeq;
+
+   // Requirements for further restrictions:
+   enum RestrictReq {
+      RESTRICT_NO_REQ,		// further restrictions not required
+      RESTRICT_RECOMMENDED,	// further restrictions recommended
+      RESTRICT_NECESSARY	// further restrictions necessary
+   };
+
+   // Three different ways to navigate among Tables:
+   enum NavigateOpKind {
+      NAVOP_GO_DOWN,	// go down via an object returned from the query
+      NAVOP_GO_UP,	// go up; object not needed
+      NAVOP_JUMP_OBJECT,// jump via an object returned from the query
+      NAVOP_JUMP	// jump; object not needed
+   };
+
+   // A navigational operation:
+   struct NavigateOpDescr {
+      NavigateOpKind kind;
+      string title;
+      MosQuery::Expr guard;		// guard.Type is Boolean
+      Table destTable;			// nil means selected object
+      MosQuery::NamedExprSeq actualParams;// match in type w/destTable's params
+      MosQuery::ExprSeq selections;	// selection[xx].Type = destTable.Type
+					// or at least inherits from it
+   };
+   typedef sequence<NavigateOpDescr> NavigateOpDescrSeq;
+
+   // How to construct a title
+   struct TitleDescr {
+      MosQuery::Expr guard;		// guard.Type is Boolean
+      MosQuery::StringSeq strings;
+      MosQuery::ExprSeq expressions;
+	 // This language-dependent title is built from a number of
+	 // text strings interleaved with expression values. It starts
+	 // and ends with a string value (so there is one more string
+	 // than expressions).
+	 // The title thus may contain information that shows the 
+	 // Query's context, e.g. "All sub-baskets of '/abc/def' ".
+   };
+   typedef sequence<TitleDescr> TitleDescrSeq;
+
+   // A description of to construct a Query
+   interface Table {
+      readonly attribute string Name; // An identifying name e.g. for debug info
+
+      readonly attribute MosQuery::DeclSeq Params;
+      readonly attribute MosQuery::Dict DefaultParams;
+
+      readonly attribute MosQuery::ObjectType Type;
+      readonly attribute RestrictProtoDescrSeq RestrictProtos;
+      readonly attribute RestrictReq RestrictRequirements;
+      readonly attribute MosQuery::SortDescrSeq Sorts;
+
+      readonly attribute MosQuery::ExprSeq Operands;
+      readonly attribute NavigateOpDescrSeq NavigateOps;
+      
+      readonly attribute TitleDescrSeq Titles; // The first valid one is used
+      readonly attribute TitleDescrSeq ShortTitles; // First valid one is used
+
+      string ApplInfo(in string format, in string a_name)
+	 raises (MosQuery::FormatUnknown, MosQuery::ApplInfoNotFound);
+      void SetApplInfo(in string format, in string a_name, in string info);
+
+      readonly attribute Table Parent;
+
+      MosQuery::ObjectRef ConvertToObjectRef();
+   };
+};

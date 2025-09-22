@@ -1,0 +1,97 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __SEQ8_IDL__
+#define __SEQ8_IDL__
+
+struct sVariable {
+  string s1;
+};
+
+
+typedef sequence<sVariable > seq_sVariable;
+typedef sequence<sequence<sVariable > > seqseq_sVariable;
+typedef sequence<sequence<sequence<sVariable > > > seqseqseq_sVariable;
+
+typedef sVariable arr_sVariable[4];
+typedef sVariable arrarr_sVariable[4][8];
+
+typedef sequence <arr_sVariable> seq_arr_sVariable;
+typedef sequence <sequence<arr_sVariable> > seqseq_arr_sVariable;
+typedef sequence <sequence<sequence<arr_sVariable> > > seqseqseq_arr_sVariable;
+
+typedef sequence <arr_sVariable,10> seq_arr_sVariable_10;
+typedef sequence <sequence<arr_sVariable,10>,10> seq_arr_sVariable_10_10;
+typedef sequence <sequence<sequence<arr_sVariable,10>,10>,10> seq_arr_sVariable_10_10_10;
+
+typedef sequence <arrarr_sVariable> seq_arrarr_sVariable;
+typedef sequence <sequence<arrarr_sVariable> > seqseq_arrarr_sVariable;
+typedef sequence <sequence<sequence<arrarr_sVariable> > > seqseqseq_arrarr_sVariable;
+
+typedef sequence <arrarr_sVariable,10> seq_arrarr_sVariable_10;
+typedef sequence <sequence<arrarr_sVariable,10>,10> seq_arrarr_sVariable_10_10;
+typedef sequence <sequence<sequence<arrarr_sVariable,10>,10>,10> seq_arrarr_sVariable_10_10_10;
+
+
+interface Exercise8 {
+  seq_arr_sVariable dump_seq_arr_sVariable(in seq_arr_sVariable a1, 
+			 inout seq_arr_sVariable a2, 
+			 out seq_arr_sVariable a3);
+  seqseq_arr_sVariable dump_seqseq_arr_sVariable(in seqseq_arr_sVariable a1, 
+			       inout seqseq_arr_sVariable a2, 
+			       out seqseq_arr_sVariable a3);
+  seqseqseq_arr_sVariable dump_seqseqseq_arr_sVariable(in seqseqseq_arr_sVariable a1, 
+				     inout seqseqseq_arr_sVariable a2, 
+				     out seqseqseq_arr_sVariable a3);
+
+  seq_arr_sVariable_10 dump_seq_arr_sVariable_10(in seq_arr_sVariable_10 a1, 
+			 inout seq_arr_sVariable_10 a2, 
+			 out seq_arr_sVariable_10 a3);
+  seq_arr_sVariable_10_10 dump_seq_arr_sVariable_10_10(in seq_arr_sVariable_10_10 a1, 
+			       inout seq_arr_sVariable_10_10 a2, 
+			       out seq_arr_sVariable_10_10 a3);
+  seq_arr_sVariable_10_10_10 dump_seq_arr_sVariable_10_10_10(in seq_arr_sVariable_10_10_10 a1, 
+				     inout seq_arr_sVariable_10_10_10 a2, 
+				     out seq_arr_sVariable_10_10_10 a3);
+
+  seq_arrarr_sVariable dump_seq_arrarr_sVariable(in seq_arrarr_sVariable a1, 
+			 inout seq_arrarr_sVariable a2, 
+			 out seq_arrarr_sVariable a3);
+  seqseq_arrarr_sVariable dump_seqseq_arrarr_sVariable(in seqseq_arrarr_sVariable a1, 
+			       inout seqseq_arrarr_sVariable a2, 
+			       out seqseq_arrarr_sVariable a3);
+  seqseqseq_arrarr_sVariable dump_seqseqseq_arrarr_sVariable(in seqseqseq_arrarr_sVariable a1, 
+				     inout seqseqseq_arrarr_sVariable a2, 
+				     out seqseqseq_arrarr_sVariable a3);
+
+  seq_arrarr_sVariable_10 dump_seq_arrarr_sVariable_10(in seq_arrarr_sVariable_10 a1, 
+			 inout seq_arrarr_sVariable_10 a2, 
+			 out seq_arrarr_sVariable_10 a3);
+  seq_arrarr_sVariable_10_10 dump_seq_arrarr_sVariable_10_10(in seq_arrarr_sVariable_10_10 a1, 
+			       inout seq_arrarr_sVariable_10_10 a2, 
+			       out seq_arrarr_sVariable_10_10 a3);
+  seq_arrarr_sVariable_10_10_10 dump_seq_arrarr_sVariable_10_10_10(in seq_arrarr_sVariable_10_10_10 a1, 
+				     inout seq_arrarr_sVariable_10_10_10 a2, 
+				     out seq_arrarr_sVariable_10_10_10 a3);
+
+};
+
+#endif

@@ -1,0 +1,92 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __SEQ9_IDL__
+#define __SEQ9_IDL__
+
+union uFixed switch (long) {
+default:
+  long array[20][20];
+};
+
+typedef uFixed arr_uFixed[4];
+typedef uFixed arrarr_uFixed[4][8];
+
+typedef sequence <arr_uFixed> seq_arr_uFixed;
+typedef sequence <sequence<arr_uFixed> > seqseq_arr_uFixed;
+typedef sequence <sequence<sequence<arr_uFixed> > > seqseqseq_arr_uFixed;
+
+typedef sequence <arr_uFixed,10> seq_arr_uFixed_10;
+typedef sequence <sequence<arr_uFixed,10>,10> seq_arr_uFixed_10_10;
+typedef sequence <sequence<sequence<arr_uFixed,10>,10>,10> seq_arr_uFixed_10_10_10;
+
+typedef sequence <arrarr_uFixed> seq_arrarr_uFixed;
+typedef sequence <sequence<arrarr_uFixed> > seqseq_arrarr_uFixed;
+typedef sequence <sequence<sequence<arrarr_uFixed> > > seqseqseq_arrarr_uFixed;
+
+typedef sequence <arrarr_uFixed,10> seq_arrarr_uFixed_10;
+typedef sequence <sequence<arrarr_uFixed,10>,10> seq_arrarr_uFixed_10_10;
+typedef sequence <sequence<sequence<arrarr_uFixed,10>,10>,10> seq_arrarr_uFixed_10_10_10;
+
+
+interface Exercise9 {
+  seq_arr_uFixed dump_seq_arr_uFixed(in seq_arr_uFixed a1, 
+			 inout seq_arr_uFixed a2, 
+			 out seq_arr_uFixed a3);
+  seqseq_arr_uFixed dump_seqseq_arr_uFixed(in seqseq_arr_uFixed a1, 
+			       inout seqseq_arr_uFixed a2, 
+			       out seqseq_arr_uFixed a3);
+  seqseqseq_arr_uFixed dump_seqseqseq_arr_uFixed(in seqseqseq_arr_uFixed a1, 
+				     inout seqseqseq_arr_uFixed a2, 
+				     out seqseqseq_arr_uFixed a3);
+
+  seq_arr_uFixed_10 dump_seq_arr_uFixed_10(in seq_arr_uFixed_10 a1, 
+			 inout seq_arr_uFixed_10 a2, 
+			 out seq_arr_uFixed_10 a3);
+  seq_arr_uFixed_10_10 dump_seq_arr_uFixed_10_10(in seq_arr_uFixed_10_10 a1, 
+			       inout seq_arr_uFixed_10_10 a2, 
+			       out seq_arr_uFixed_10_10 a3);
+  seq_arr_uFixed_10_10_10 dump_seq_arr_uFixed_10_10_10(in seq_arr_uFixed_10_10_10 a1, 
+				     inout seq_arr_uFixed_10_10_10 a2, 
+				     out seq_arr_uFixed_10_10_10 a3);
+
+  seq_arrarr_uFixed dump_seq_arrarr_uFixed(in seq_arrarr_uFixed a1, 
+			 inout seq_arrarr_uFixed a2, 
+			 out seq_arrarr_uFixed a3);
+  seqseq_arrarr_uFixed dump_seqseq_arrarr_uFixed(in seqseq_arrarr_uFixed a1, 
+			       inout seqseq_arrarr_uFixed a2, 
+			       out seqseq_arrarr_uFixed a3);
+  seqseqseq_arrarr_uFixed dump_seqseqseq_arrarr_uFixed(in seqseqseq_arrarr_uFixed a1, 
+				     inout seqseqseq_arrarr_uFixed a2, 
+				     out seqseqseq_arrarr_uFixed a3);
+
+  seq_arrarr_uFixed_10 dump_seq_arrarr_uFixed_10(in seq_arrarr_uFixed_10 a1, 
+			 inout seq_arrarr_uFixed_10 a2, 
+			 out seq_arrarr_uFixed_10 a3);
+  seq_arrarr_uFixed_10_10 dump_seq_arrarr_uFixed_10_10(in seq_arrarr_uFixed_10_10 a1, 
+			       inout seq_arrarr_uFixed_10_10 a2, 
+			       out seq_arrarr_uFixed_10_10 a3);
+  seq_arrarr_uFixed_10_10_10 dump_seq_arrarr_uFixed_10_10_10(in seq_arrarr_uFixed_10_10_10 a1, 
+				     inout seq_arrarr_uFixed_10_10_10 a2, 
+				     out seq_arrarr_uFixed_10_10_10 a3);
+};
+
+#endif

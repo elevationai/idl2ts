@@ -1,0 +1,98 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __SEQ1_IDL__
+#define __SEQ1_IDL__
+
+#include "testecho.idl"
+#include "seq2.idl"
+#include "seq3.idl"
+#include "seq4.idl"
+#include "seq5.idl"
+#include "seq6.idl"
+#include "seq7.idl"
+#include "seq8.idl"
+#include "seq9.idl"
+#include "seq10.idl"
+
+typedef sequence <long> seq_long;
+typedef sequence<sequence<long> > seqseq_long;
+typedef sequence<sequence<sequence<long> > > seqseqseq_long;
+
+typedef sequence <long,10> seq_long_10;
+typedef sequence <sequence<long,10>,10> seqseq_long_10_10;
+typedef sequence <sequence <sequence<long,10>,10>,10> seqseq_long_10_10_10;
+
+module seqtest {
+
+typedef sequence <long> seq_long;
+typedef sequence<sequence<long> > seqseq_long;
+typedef sequence<sequence<sequence<long> > > seqseqseq_long;
+
+typedef sequence <string> seq_string;
+typedef sequence<sequence<string> > seqseq_string;
+typedef sequence<sequence<sequence<string> > > seqseqseq_string;
+
+typedef sequence <Echo> seq_echo;
+typedef sequence <sequence<Echo> > seqseq_echo;
+typedef sequence <sequence<sequence<Echo> > > seqseqseq_echo;
+};
+
+interface Exercise1 {
+  seq_long dump_seq_long(in seq_long a1, 
+			 inout seq_long a2, 
+			 out seq_long a3);
+  seqseq_long dump_seqseq_long(in seqseq_long a1, 
+			       inout seqseq_long a2, 
+			       out seqseq_long a3);
+  seqseqseq_long dump_seqseqseq_long(in seqseqseq_long a1, 
+				     inout seqseqseq_long a2, 
+				     out seqseqseq_long a3);
+
+  seq_long_10 dump_seq_long_10(in seq_long_10 a1, 
+			 inout seq_long_10 a2, 
+			 out seq_long_10 a3);
+  seqseq_long_10_10 dump_seqseq_long_10(in seqseq_long_10_10 a1, 
+			       inout seqseq_long_10_10 a2, 
+			       out seqseq_long_10_10 a3);
+  seqseq_long_10_10_10 dump_seqseqseq_long_10(in seqseq_long_10_10_10 a1, 
+				     inout seqseq_long_10_10_10 a2, 
+				     out seqseq_long_10_10_10 a3);
+};
+
+
+interface Exercise {
+  readonly attribute Exercise1 ex1;
+  readonly attribute Exercise2 ex2;
+  readonly attribute Exercise3 ex3;
+  readonly attribute Exercise4 ex4;
+  readonly attribute Exercise5 ex5;
+  readonly attribute Exercise6 ex6;
+  readonly attribute Exercise7 ex7;
+  readonly attribute Exercise8 ex8;
+  readonly attribute Exercise9 ex9;
+  readonly attribute Exercise10 ex10;
+};
+
+
+
+
+#endif

@@ -1,0 +1,62 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+typedef string st1;
+typedef st1 st2;
+typedef st2 starr[10];
+typedef starr starr2;
+typedef starr2 starr3;
+typedef starr3 starrarr[100];
+typedef starrarr starrarr2;
+typedef starrarr2 starrarr3;
+
+typedef sequence<starrarr3> stseqarr;
+
+
+struct sFixed {
+  long a;
+};
+
+typedef sFixed sFixed1;
+typedef sFixed1 sFixed2;
+typedef sFixed2 sFixedarr[10];
+typedef sFixedarr sFixedarr2;
+typedef sFixedarr2 sFixedarr3;
+typedef sFixedarr3 sFixedarrarr[100];
+typedef sFixedarrarr sFixedarrarr2;
+typedef sFixedarrarr2 sFixedarrarr3;
+
+typedef sequence<sFixedarrarr3> sFixedseqarr;
+
+interface A {
+  void op();
+};
+
+typedef A A1;
+typedef A1 A2;
+typedef A2 Aarr[10];
+typedef Aarr Aarr2;
+typedef Aarr2 Aarr3;
+typedef Aarr3 Aarrarr[100];
+typedef Aarrarr Aarrarr2;
+typedef Aarrarr2 Aarrarr3;
+
+typedef sequence<Aarrarr3> Aseqarr;

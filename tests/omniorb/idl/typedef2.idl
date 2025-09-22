@@ -1,0 +1,87 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+module Tdef2 {
+
+  interface IntfA {
+    void op1();
+  };
+
+  enum EnA { E1, E2, E3 };
+  typedef EnA EnA_t;
+
+  typedef long long_t;
+
+  typedef string string_t;
+
+  
+  typedef IntfA IntfA_t;
+
+
+  typedef sequence<long_t> seqlong_t;
+
+   struct StA {
+    string_t x;
+    long_t y;
+    IntfA_t z;
+  };
+
+  typedef StA StA_t;
+
+  union UnA switch (boolean) {
+  case TRUE: StA_t x;
+  case FALSE: seqlong_t y;
+  };
+
+  typedef UnA UnA_t;
+
+  typedef EnA_t arrEnA[100];
+  typedef arrEnA arrEnA_t;
+
+  typedef long_t arrlong[100];
+  typedef arrlong arrlong_t;
+
+  typedef string_t arrstring[100];
+  typedef arrstring arrstring_t;
+
+  typedef IntfA_t arrIntfA[100];
+  typedef arrIntfA arrIntfA_t;
+
+  typedef seqlong_t arrseqlong[100];
+  typedef arrseqlong arrseqlong_t;
+
+  typedef StA_t arrStA[100];
+  typedef arrStA arrStA_t;
+
+  typedef UnA_t arrUnA[100];
+  typedef arrUnA arrUnA_t;
+
+  interface IntfB {
+    arrEnA_t op1(in arrEnA_t a1, inout arrEnA_t a2, out arrEnA_t a3);
+    arrlong_t op2(in arrlong_t a1, inout arrlong_t a2, out arrlong_t a3);
+    arrstring_t op3(in arrstring_t a1, inout arrstring_t a2, out arrstring_t a3);
+    arrIntfA_t op4(in arrIntfA_t a1,inout arrIntfA_t a2,out arrIntfA_t a3);
+    arrseqlong_t op5(in arrseqlong_t a1, inout arrseqlong_t a2, out arrseqlong_t a3);
+    arrStA_t op6(in arrStA_t a1, inout arrStA_t a2, out arrStA_t a3);
+    arrUnA_t op7(in arrUnA_t a1, inout arrUnA_t a2, out arrUnA_t a3);
+  };
+
+};

@@ -1,0 +1,45 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// tie templates are broken because the operation A::Processor::Process
+// doesn't qualify Caller (it should be A::Caller from inside the POA
+// module)
+
+// Probable location of error:
+//
+//   file: src/tools/omniidl2/omniORB2_be/o2be_interface.cc
+//   function: internal_produce_tie_call_wrappers
+
+// Reported by:
+//   Alex Shabarshoff <shura@uc.ru>
+//     Fri, 14 Jan 2000 13:01:48 +0300
+
+
+module A {
+  interface Caller;
+  interface Processor {
+    void Process( in Caller arg );
+  };
+  interface Caller {
+    void DoSome( in Processor arg );
+  };
+};
+

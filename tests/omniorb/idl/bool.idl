@@ -1,0 +1,36 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+typedef boolean bool_t;
+
+typedef sequence<boolean> seqbool_t;
+
+typedef boolean arraybool_t[3];
+
+typedef sequence<arraybool_t> seqarrbool_t;
+
+interface boolIntf {
+  bool_t op1(in bool_t a1, inout bool_t a2, out bool_t a3);
+  seqbool_t op2(in seqbool_t a1, inout seqbool_t a2, out seqbool_t a3);
+  arraybool_t op3(in arraybool_t a1, inout arraybool_t a2, out arraybool_t a3);
+  seqarrbool_t op4(in seqarrbool_t a1, inout seqarrbool_t a2, out seqarrbool_t a3);
+};
+

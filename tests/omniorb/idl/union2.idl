@@ -1,0 +1,48 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// nested union
+
+enum NE1 { E1, E2, E3 };
+
+union NU1 switch (long) {
+case 1:
+  long x;
+case 2:
+  union NU2 switch (boolean) {
+  case TRUE: char v1;
+  case FALSE: long v2;
+  } y;
+case 5:
+  NU2 z;
+};
+
+union NU3 switch (NE1) {
+case E1:
+  enum NE2 { zE1, zE2, zE3 } x;
+case E2:
+  NE2 y;
+};
+
+interface NUIF {
+  NU1 op1(in NU1 arg1, inout NU1 arg2, out NU1 arg3);
+  NU3 op2(in NU3 arg1, inout NU3 arg2, out NU3 arg3);
+};

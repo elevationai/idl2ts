@@ -1,0 +1,57 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+module Intf4 {
+  interface IntfA {
+    void op1();
+  };
+
+  enum EnA { E1, E2, E3 };
+
+  typedef sequence<EnA> seqEnA;
+
+  struct StA {
+    string x;
+    EnA y;
+    IntfA z;
+  };
+
+  union UnA switch (boolean) {
+  case TRUE: StA x;
+  case FALSE: seqEnA y;
+  };
+
+  typedef EnA arrEnA[10];
+  typedef seqEnA arrseqEnA[10];
+  typedef StA arrStA[10];
+  typedef UnA arrUnA[10];
+  typedef IntfA arrIntfA[10];
+  typedef string arrString[10];
+
+  interface IntfB {
+    arrEnA op1(in arrEnA a1, inout arrEnA a2, out arrEnA a3);
+    arrseqEnA op2(in arrseqEnA a1, inout arrseqEnA a2, out arrseqEnA a3);
+    arrStA op3(in arrStA a1, inout arrStA a2, out arrStA a3);
+    arrUnA op4(in arrUnA a1, inout arrUnA a2, out arrUnA a3);
+    arrIntfA op5(in arrIntfA a1, inout arrIntfA a2, out arrIntfA a3);
+    arrString op6(in arrString a1, inout arrString a2, out arrString a3);
+  };
+};

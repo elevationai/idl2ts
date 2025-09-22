@@ -1,0 +1,57 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+const boolean 		glob_bool = TRUE;
+const char 		glob_char = 'r';
+const short 		glob_shrt = -12;
+const long 		glob_long = 2334;
+const unsigned short 	glob_ushrt = 12;
+const unsigned long 	glob_ulong = 1287;
+const float 		glob_float = -67.9;
+const double 		glob_double = 1.9e5;
+const string 		glob_str = "this is a global string";
+const unsigned long     glob_umax = 0xffffffff;
+const unsigned short    glob_usmax = 0xffff;
+
+
+module constM {
+    const boolean 		mod_bool = FALSE;
+    const char 			mod_char = 'a';
+    const short 		mod_shrt = -23;
+    const long 			mod_long = 983;
+    const unsigned short 	mod_ushrt = 43;
+    const unsigned long 	mod_ulong = 1234;
+    const float 		mod_float = -56.9;
+    const double 		mod_double = -3183.9;
+    const string 		mod_str = "this is a module string";
+};
+
+interface constA {
+    const boolean 		inter_bool = TRUE;
+    const char 			inter_char = 'q';
+    const short 		inter_shrt = -18;
+    const long 			inter_long = 1364;
+    const unsigned short 	inter_ushrt = 10;
+    const unsigned long 	inter_ulong = 134;
+    const float 		inter_float = -7.9;
+    const double 		inter_double = 1456.78;
+    const string 		inter_str = "this is an interface string";
+};

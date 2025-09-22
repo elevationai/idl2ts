@@ -1,0 +1,204 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+// This idl file contain tests on the handling of scopes
+// By default, omniidl2 try not to use fully qualified names if possible.
+// However, it is not possible when a name is overridden by another one
+// in the inner scope.
+//
+// Various compilers fails to in different constructs.
+// The cases where they fail are ifdef out using the following macros:
+//         TEST_MSVC    - Microsoft VC++ 5.0
+//         TEST_DECCXX  - DEC C++
+//         TEST_GCC272  - GNU gcc 2.7.2
+//
+
+interface A1 {
+  enum B1 { B_1, B_2 };
+  struct C1 {
+    A1 x;
+    B1 y;
+  };
+  void op1();
+};
+
+
+module A2 {
+  interface B2 {
+    void op1();
+  };
+  enum C2 { C_1, C_2 };
+  module D2 {
+    struct E2 {
+      B2 x;
+      C2 y;
+    };
+  };
+};
+
+
+#ifndef TEST_MSVC
+module A3 {
+
+  struct B3 {
+    long x;
+  };
+
+  enum C3 { C_1, C_2 };
+
+  module D3 {
+
+    struct B3 {
+      long x;
+    };
+#if !defined(TEST_DECCXX) || CXX_MAJOR >= 6
+    enum C3 { C_1, C_2 };
+#endif
+    // The stub for struct E3 would fail to compile on MSVC 4.2/5.0
+    struct E3 {
+      B3 x;
+      A3::B3 y;
+      C3 z;
+      A3::C3 zz;
+    };
+    interface F3 {
+      C3 op1();
+      A3::C3 op2();
+    };
+  };
+};
+#endif
+
+module A4 {
+  module B4 {
+    interface C4 {
+      struct D4 {
+	long z;
+      };
+      enum E4 { E_1, E_2 };
+      void op1();
+    };
+  };
+
+  module F4 {
+    struct G4 {
+      B4::C4 x;
+      B4::C4::D4 y;
+      B4::C4::E4 z;
+    };
+    interface H4 {
+      B4::C4::E4 op1();
+    };
+  };
+};
+
+#if !defined(TEST_MSVC) && !defined(TEST_GCC272)
+module A5 {
+  module B5 {
+    struct C5 {
+      long x;
+    };
+    enum D5 { D_1, D_2 };
+  };
+  module E5 {
+    module B5 {
+      struct C5 {
+	long y;
+      };
+#if !defined(TEST_DECCXX) || CXX_MAJOR >= 6
+      enum D5 { DD_1, DD_2};
+#endif
+    };
+    // The stub for struct F5 would fail to compile on MSVC 4.2/5.0
+    struct F5 {
+      B5::C5 x;
+      A5::B5::C5 y; 
+#if !defined(TEST_DECCXX) || CXX_MAJOR >= 6
+      B5::D5 z;
+#endif
+      A5::B5::D5 zz;
+    };
+    // The stub for struct G5 would fail to compile on MSVC 4.2/5.0
+    interface G5 {
+#if !defined(TEST_DECCXX) || CXX_MAJOR >= 6
+      B5::D5 op1();
+#endif
+      A5::B5::D5 op2();
+    };
+  };
+};
+#endif
+
+
+module A6 {
+  module B6 {
+    struct C6 {
+      long x;
+    };
+    enum D6 { D_1, D_2 };
+    interface E6 {
+      typedef C6 F6[100];
+      void op1 (in C6 arg1,out C6 arg2, inout C6 arg3);
+      D6 op2();
+    };
+  };
+
+  typedef B6::D6 F6[39];
+  typedef B6::E6::F6 G6;
+  interface H6 {
+    void op1 (in F6 arg1, in G6 arg2);
+  };
+};
+
+
+struct B7 {
+  long z;
+};
+
+struct E7 {
+  long x;
+};
+
+#if !defined(TEST_DECCXX) || CXX_MAJOR >= 6
+enum F7 { F_1, F_2 };
+#endif
+
+module A7 {
+  struct B7 {
+    long x;
+  };
+  enum F7 { F_1, F_2 };
+  interface C7 {
+    // Make sure that the generated stub uses the unambiguous name ::B7 for
+    // arg2
+    void op1(in B7 arg1, in ::B7 arg2);
+    // The generated stub does not have to prefix E7 with ::
+    void op2(in E7 arg1);
+    // Make sure that the generated stub uses the unambiguous name ::F7 for
+    // return value
+#if !defined(TEST_GCC272) && ( !defined(TEST_DECCXX) || CXX_MAJOR >= 6)
+    ::F7 op3();
+#endif
+    // The generated stub does not have to prefix F7 with ::
+    F7 op4();
+    
+  };
+};

@@ -1,0 +1,55 @@
+//
+//    Copyright (C) 2001 AT&T Laboratories Cambridge Ltd.
+//
+//    This file is part of the OMNI Testsuite.
+//
+//    The testsuite is free software; you can redistribute it and/or
+//    modify it under the terms of the GNU Library General Public
+//    License as published by the Free Software Foundation; either
+//    version 2 of the License, or (at your option) any later version.
+//
+//    This library is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+//    Library General Public License for more details.
+//
+//    You should have received a copy of the GNU Library General Public
+//    License along with this library; if not, write to the Free
+//    Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA
+//    02111-1307, USA
+//
+//
+#ifndef __SEQ2_IDL__
+#define __SEQ2_IDL__
+
+typedef sequence <string> seq_string;
+typedef sequence<sequence<string> > seqseq_string;
+typedef sequence<sequence<sequence<string> > > seqseqseq_string;
+
+typedef sequence <string,10> seq_string_10;
+typedef sequence <sequence<string,10>,10> seqseq_string_10_10;
+typedef sequence <sequence <sequence<string,10>,10>,10> seqseq_string_10_10_10;
+
+interface Exercise2 {
+  seq_string dump_seq_string(in seq_string a1, 
+			 inout seq_string a2, 
+			 out seq_string a3);
+  seqseq_string dump_seqseq_string(in seqseq_string a1, 
+			       inout seqseq_string a2, 
+			       out seqseq_string a3);
+  seqseqseq_string dump_seqseqseq_string(in seqseqseq_string a1, 
+				     inout seqseqseq_string a2, 
+				     out seqseqseq_string a3);
+
+  seq_string_10 dump_seq_string_10(in seq_string_10 a1, 
+			 inout seq_string_10 a2, 
+			 out seq_string_10 a3);
+  seqseq_string_10_10 dump_seqseq_string_10(in seqseq_string_10_10 a1, 
+			       inout seqseq_string_10_10 a2, 
+			       out seqseq_string_10_10 a3);
+  seqseq_string_10_10_10 dump_seqseqseq_string_10(in seqseq_string_10_10_10 a1, 
+				     inout seqseq_string_10_10_10 a2, 
+				     out seqseq_string_10_10_10 a3);
+};
+
+#endif
