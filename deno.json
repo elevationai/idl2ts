@@ -8,7 +8,7 @@
   },
   "tasks": {
     "test": "deno test --allow-read --allow-write test/",
-    "test-omniorb": "deno test --allow-read --allow-write --no-check tests/omniorb/"
+    "coverage": "deno test --allow-read --allow-write --coverage=coverage test/ && deno coverage --html --exclude=\"test/\" coverage"
   },
   "fmt": {
     "lineWidth": 140,

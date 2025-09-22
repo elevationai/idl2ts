@@ -1,5 +1,5 @@
 import { OmniORBTestHarness } from "./test-harness.ts";
-import { resolve, join } from "@std/path";
+import { resolve } from "@std/path";
 import { walk } from "@std/fs";
 
 const testDir = resolve(import.meta.dirname!, "idl");
@@ -83,27 +83,4 @@ Deno.test("OmniORB IDL Compilation Tests", async (t) => {
       }
     });
   }
-
-  // Print summary
-  await t.step("Summary", async () => {
-    harness.printSummary();
-
-    // Save detailed results
-    const failures = harness.getFailures();
-    if (failures.length > 0) {
-      const failureReport = failures.map(f => ({
-        file: f.idlFile,
-        category: f.category,
-        error: f.error
-      }));
-
-      await Deno.writeTextFile(
-        join(import.meta.dirname!, "compilation-failures.json"),
-        JSON.stringify(failureReport, null, 2)
-      );
-
-      console.log(`\nDetailed failure report saved to compilation-failures.json`);
-      console.log(`Total failures: ${failures.length}`);
-    }
-  });
 });
