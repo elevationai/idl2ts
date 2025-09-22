@@ -15,7 +15,7 @@ export class IDLCompiler {
   constructor(options: CompilerOptions = {}) {
     this.options = {
       includeStubs: true,
-      includeSkeletons: false,
+      includeSkeletons: true,
       emitHelpers: true,
       verbose: false,
       ...options,

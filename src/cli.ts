@@ -18,7 +18,7 @@ program
   .option("-o, --output <path>", "Output directory or file")
   .option("-I, --include <paths...>", "Include paths for IDL files")
   .option("--no-stubs", "Do not generate client stubs")
-  .option("--skeletons", "Generate server skeletons")
+  .option("--no-skeletons", "Do not generate server skeletons")
   .option("--no-helpers", "Do not emit helper functions")
   .option(
     "--corba-import <path>",
@@ -36,7 +36,7 @@ program
   }) => {
     const compilerOptions: CompilerOptions = {
       includeStubs: options.stubs !== false,
-      includeSkeletons: options.skeletons ?? false,
+      includeSkeletons: options.skeletons !== false,
       emitHelpers: options.helpers !== false,
       corbaImportPath: options.corbaImport,
       verbose: options.verbose ?? false,
@@ -115,7 +115,7 @@ program
   .description("Watch IDL files and recompile on changes")
   .option("-o, --output <path>", "Output directory")
   .option("--no-stubs", "Do not generate client stubs")
-  .option("--skeletons", "Generate server skeletons")
+  .option("--no-skeletons", "Do not generate server skeletons")
   .option("--no-helpers", "Do not emit helper functions")
   .option("-v, --verbose", "Verbose output")
   .action((_input: string, _options: Record<string, unknown>) => {

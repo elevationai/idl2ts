@@ -39,7 +39,7 @@ export class TypeScriptGenerator {
   constructor(options: GeneratorOptions = {}) {
     this.options = {
       includeStubs: true,
-      includeSkeletons: false,
+      includeSkeletons: true,
       emitHelpers: true,
       corbaImportPath: "corba", // Default CORBA import (use import map for Deno)
       ...options,
