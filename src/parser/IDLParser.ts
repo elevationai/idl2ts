@@ -617,11 +617,19 @@ export class IDLParser {
     while (this.peek() === "case" || this.peek() === "default") {
       if (this.peek() === "case") {
         this.consume("case");
-        let value = this.consume();
-        // Handle negative numbers
-        if (value === "-") {
-          value = "-" + this.consume();
+
+        // Handle qualified names (e.g., struct2::RED) and negative numbers
+        let value: string;
+        if (this.peek(1) === "::") {
+          // It's a qualified name, parse the full name
+          value = this.parseQualifiedName();
+        } else if (this.peek() === "-") {
+          // Handle negative numbers
+          value = this.consume() + this.consume();
+        } else {
+          value = this.consume();
         }
+
         labels.push(this.parseValue(value));
         this.consume(":");
       }
