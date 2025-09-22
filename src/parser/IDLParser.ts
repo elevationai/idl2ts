@@ -167,12 +167,13 @@ export class IDLParser {
 
   /**
    * Parses a struct member, handling both regular types and inline definitions.
-   * @returns The parsed member node or null if not a valid member
+   * Also handles comma-separated declarators like 'Date first, last;'
+   * @returns The parsed member nodes or null if not a valid member
    */
-  private parseStructMember(): AST.MemberNode | null {
+  private parseStructMember(): AST.MemberNode[] | null {
     const token = this.peek();
     let type: AST.TypeNode;
-    let memberName: string;
+    const memberNames: string[] = [];
 
     // Handle inline type definitions (enum, struct, union)
     if (token === "enum") {
@@ -183,10 +184,10 @@ export class IDLParser {
       }
       if (this.peek() === "{") {
         this.parseAnonymousEnum(); // Parse inline enum definition
-        memberName = this.consume();
-        type = { kind: "namedType", name: enumName || memberName };
+        memberNames.push(this.consume());
+        type = { kind: "namedType", name: enumName || memberNames[0] };
       } else {
-        memberName = this.consume();
+        memberNames.push(this.consume());
         type = { kind: "namedType", name: enumName! };
       }
     }
@@ -198,10 +199,10 @@ export class IDLParser {
       }
       if (this.peek() === "{") {
         this.parseAnonymousStruct(); // Parse inline struct definition
-        memberName = this.consume();
-        type = { kind: "namedType", name: structName || memberName };
+        memberNames.push(this.consume());
+        type = { kind: "namedType", name: structName || memberNames[0] };
       } else {
-        memberName = this.consume();
+        memberNames.push(this.consume());
         type = { kind: "namedType", name: structName! };
       }
     }
@@ -213,30 +214,41 @@ export class IDLParser {
       }
       if (this.peek() === "switch") {
         this.parseAnonymousUnion(); // Parse inline union definition
-        memberName = this.consume();
-        type = { kind: "namedType", name: unionName || memberName };
+        memberNames.push(this.consume());
+        type = { kind: "namedType", name: unionName || memberNames[0] };
       } else {
-        memberName = this.consume();
+        memberNames.push(this.consume());
         type = { kind: "namedType", name: unionName! };
       }
     }
     // Handle regular types
     else if (this.peek() === "::" || this.isType(this.peek())) {
       type = this.parseType();
-      memberName = this.consume();
+      memberNames.push(this.consume());
+
+      // Handle comma-separated declarators (e.g., Date first, last;)
+      while (this.peek() === ",") {
+        this.consume(",");
+        memberNames.push(this.consume());
+      }
     } else {
       return null;
     }
 
-    // Check for array dimensions
-    type = this.parseArrayDimensions(type);
-    this.consume(";");
+    // Create members array
+    const members: AST.MemberNode[] = [];
+    for (const memberName of memberNames) {
+      // Check for array dimensions for each member
+      const memberType = this.parseArrayDimensions(type);
+      members.push({
+        kind: "member",
+        name: memberName,
+        type: memberType,
+      });
+    }
 
-    return {
-      kind: "member",
-      name: memberName,
-      type,
-    };
+    this.consume(";");
+    return members;
   }
 
   /**
@@ -551,9 +563,9 @@ export class IDLParser {
     const members: AST.MemberNode[] = [];
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
-      const member = this.parseStructMember();
-      if (member) {
-        members.push(member);
+      const parsedMembers = this.parseStructMember();
+      if (parsedMembers) {
+        members.push(...parsedMembers);
       } else {
         break;
       }
@@ -826,15 +838,27 @@ export class IDLParser {
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
       if (this.isType(this.peek())) {
-        let type = this.parseType();
-        const memberName = this.consume();
-        type = this.parseArrayDimensions(type);
+        const type = this.parseType();
+        const memberNames: string[] = [];
 
-        members.push({
-          kind: "member",
-          name: memberName,
-          type,
-        });
+        // Parse first member name
+        memberNames.push(this.consume());
+
+        // Handle comma-separated declarators (e.g., string first, last;)
+        while (this.peek() === ",") {
+          this.consume(",");
+          memberNames.push(this.consume());
+        }
+
+        // Create member for each name
+        for (const memberName of memberNames) {
+          const memberType = this.parseArrayDimensions(type);
+          members.push({
+            kind: "member",
+            name: memberName,
+            type: memberType,
+          });
+        }
 
         this.consume(";");
       }
