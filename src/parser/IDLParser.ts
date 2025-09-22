@@ -99,7 +99,19 @@ export class IDLParser {
     const members: AST.MemberNode[] = [];
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
-      if (this.peek() === "::" || this.isType(this.peek())) {
+      const token = this.peek();
+
+      // Handle inline type definitions (enum, struct, union)
+      if (token === "enum" || token === "struct" || token === "union") {
+        const parsedMembers = this.parseStructMember();
+        if (parsedMembers) {
+          members.push(...parsedMembers);
+        } else {
+          break;
+        }
+      }
+      // Handle regular types
+      else if (this.peek() === "::" || this.isType(this.peek())) {
         let type = this.parseType();
         const memberName = this.consume();
         type = this.parseArrayDimensions(type);
@@ -122,7 +134,7 @@ export class IDLParser {
   }
 
   /**
-   * Parses anonymous union body (just the cases, not creating a definition)
+   * Parses anonymous union body (just the cases, including the closing brace)
    */
   private parseAnonymousUnion(): AST.UnionCaseNode[] {
     this.consume("switch");
@@ -179,14 +191,21 @@ export class IDLParser {
     if (token === "enum") {
       this.consume("enum");
       let enumName: string | undefined;
+
+      // Check if we have a name before '{'
       if (this.peek() !== "{") {
         enumName = this.consume();
       }
+
+      // Now check if this is an inline enum definition
       if (this.peek() === "{") {
         this.parseAnonymousEnum(); // Parse inline enum definition
+        // Always get the member name after the definition
         memberNames.push(this.consume());
+        // Use the enum name if provided, otherwise use the member name
         type = { kind: "namedType", name: enumName || memberNames[0] };
       } else {
+        // This is a regular enum type reference, get the member name
         memberNames.push(this.consume());
         type = { kind: "namedType", name: enumName! };
       }
@@ -194,14 +213,21 @@ export class IDLParser {
     else if (token === "struct") {
       this.consume("struct");
       let structName: string | undefined;
+
+      // Check if we have a name before '{'
       if (this.peek() !== "{") {
         structName = this.consume();
       }
+
+      // Now check if this is an inline struct definition
       if (this.peek() === "{") {
         this.parseAnonymousStruct(); // Parse inline struct definition
+        // Always get the member name after the definition
         memberNames.push(this.consume());
+        // Use the struct name if provided, otherwise use the member name
         type = { kind: "namedType", name: structName || memberNames[0] };
       } else {
+        // This is a regular struct type reference, get the member name
         memberNames.push(this.consume());
         type = { kind: "namedType", name: structName! };
       }
@@ -209,14 +235,23 @@ export class IDLParser {
     else if (token === "union") {
       this.consume("union");
       let unionName: string | undefined;
+
+      // Check if we have a name before 'switch'
       if (this.peek() !== "switch") {
         unionName = this.consume();
       }
+
+      // Now check if this is an inline union definition
       if (this.peek() === "switch") {
         this.parseAnonymousUnion(); // Parse inline union definition
-        memberNames.push(this.consume());
-        type = { kind: "namedType", name: unionName || memberNames[0] };
+        // Get the member name after the closing brace
+        const memberName = this.consume();
+        memberNames.push(memberName);
+        // If we had a name before switch, it's the type name
+        // If not, use the member name as the type name
+        type = { kind: "namedType", name: unionName || memberName };
       } else {
+        // This is a regular union type reference, get the member name
         memberNames.push(this.consume());
         type = { kind: "namedType", name: unionName! };
       }
@@ -657,7 +692,17 @@ export class IDLParser {
     }
 
     let member: AST.MemberNode | undefined;
-    if (this.isType(this.peek())) {
+    const token = this.peek();
+
+    // Handle inline type definitions (enum, struct, union) in union cases
+    if (token === "enum" || token === "struct" || token === "union") {
+      const parsedMembers = this.parseStructMember();
+      if (parsedMembers && parsedMembers.length > 0) {
+        member = parsedMembers[0]; // Union cases only support single member
+      }
+    }
+    // Handle regular types
+    else if (this.isType(token)) {
       let type = this.parseType();
       const name = this.consume();
       type = this.parseArrayDimensions(type);
@@ -837,7 +882,19 @@ export class IDLParser {
     const members: AST.MemberNode[] = [];
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
-      if (this.isType(this.peek())) {
+      const token = this.peek();
+
+      // Handle inline struct/union/enum definitions in exceptions
+      if (token === "struct" || token === "union" || token === "enum") {
+        const parsedMembers = this.parseStructMember();
+        if (parsedMembers) {
+          members.push(...parsedMembers);
+        } else {
+          break;
+        }
+      }
+      // Handle regular type declarations
+      else if (this.isType(token)) {
         const type = this.parseType();
         const memberNames: string[] = [];
 
