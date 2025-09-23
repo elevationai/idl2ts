@@ -141,7 +141,9 @@ describe("IDLCompiler Integration", () => {
       }
 
       const mainContent = Deno.readTextFileSync(mainOutput);
+      // With skeletons enabled by default, we now get a regular import, not type-only
       assert(
+        mainContent.includes('import * as Common from "./Common.ts"') ||
         mainContent.includes('import type * as Common from "./Common.ts"'),
       );
       assert(mainContent.includes("getTime(): Promise<Common.Timestamp>"));
@@ -212,10 +214,10 @@ describe("IDLCompiler Integration", () => {
         `${tempDir}/Test.ts`,
       );
 
-      // Now we import everything together since we generate interface TypeCodes
+      // Now we import everything together since we generate interface TypeCodes and skeletons
       assert(
         output.includes(
-          'import { CorbaStub, create_request, TypeCode, CORBA } from "@myorg/corba"',
+          'import { CorbaStub, create_request, TypeCode, Servant, CDRInputStream, CDROutputStream, CORBA } from "@myorg/corba"',
         ),
       );
     });

@@ -35,6 +35,8 @@ export class TypeScriptGenerator {
   private currentModuleOutput: ModuleOutput | null = null; // Current module being generated
   private pragmas: Map<string, string> = new Map(); // Store global pragmas
   private scopedPragmas: Map<string, Map<string, string>> = new Map(); // Store scoped pragmas (version, ID)
+  private typeRegistry: Map<string, { kind: string; node?: AST.DefinitionNode }> = new Map(); // Track type definitions for CDR marshaling
+  private structMarshalCode: Map<string, { unmarshal: string; marshal: string }> = new Map(); // Cache struct marshal code
 
   constructor(options: GeneratorOptions = {}) {
     this.options = {
@@ -100,6 +102,8 @@ export class TypeScriptGenerator {
     this.indentLevel = 0;
     this.modules.clear();
     this.currentModule = "";
+    // Don't clear typeRegistry - let it accumulate across all modules
+    // this.typeRegistry.clear();
 
     // Store pragmas from the AST
     if (ast.pragmas) {
@@ -297,6 +301,11 @@ export class TypeScriptGenerator {
   }
 
   private generateInterface(node: AST.InterfaceNode): void {
+    // Register type for CDR marshaling with both qualified and unqualified names
+    const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
+    this.typeRegistry.set(fullName, { kind: 'interface', node });
+    // Also register with just the name for local lookups
+    this.typeRegistry.set(node.name, { kind: 'interface', node });
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
       return;
@@ -316,6 +325,10 @@ export class TypeScriptGenerator {
           const prefixedName = `${node.name}_${originalName}`;
           // Track this as a nested type
           this.nestedTypes.set(originalName, prefixedName);
+          // Register the nested type in the global registry with prefixed name
+          const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${prefixedName}` : prefixedName;
+          this.typeRegistry.set(fullName, { kind: nestedDef.kind, node: nestedDef });
+          this.typeRegistry.set(prefixedName, { kind: nestedDef.kind, node: nestedDef });
           // Temporarily rename for generation
           (nestedDef as { name: string }).name = prefixedName;
           this.generateDefinition(nestedDef);
@@ -424,6 +437,12 @@ export class TypeScriptGenerator {
   }
 
   private generateStruct(node: AST.StructNode): void {
+    // Register type for CDR marshaling with both qualified and unqualified names
+    const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
+    this.typeRegistry.set(fullName, { kind: 'struct', node });
+    // Also register with just the name for local lookups
+    this.typeRegistry.set(node.name, { kind: 'struct', node });
+
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
       return;
@@ -705,10 +724,11 @@ export class TypeScriptGenerator {
         return `TypeCode.create_sequence_tc(${type.bound || 0}, ${elemTc})`;
       }
       case "arrayType": {
-        return "TC_any"; // TODO: implement array TypeCode
+        const elementTC = this.getTypeCodeForType(type.elementType);
+        return `TypeCode.create_array_tc(${type.dimensions[0]}, ${elementTC})`;
       }
       case "fixedType": {
-        return "TC_any"; // TODO: implement fixed TypeCode
+        return `TypeCode.create_fixed_tc(${type.totalDigits}, ${type.fractionalDigits})`;
       }
       default:
         return "TC_any";
@@ -716,6 +736,12 @@ export class TypeScriptGenerator {
   }
 
   private generateUnion(node: AST.UnionNode): void {
+    // Register type for CDR marshaling with both qualified and unqualified names
+    const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
+    this.typeRegistry.set(fullName, { kind: 'union', node });
+    // Also register with just the name for local lookups
+    this.typeRegistry.set(node.name, { kind: 'union', node });
+
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
       return;
@@ -808,6 +834,12 @@ export class TypeScriptGenerator {
   }
 
   private generateEnum(node: AST.EnumNode): void {
+    // Register type for CDR marshaling with both qualified and unqualified names
+    const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
+    this.typeRegistry.set(fullName, { kind: 'enum', node });
+    // Also register with just the name for local lookups
+    this.typeRegistry.set(node.name, { kind: 'enum', node });
+
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
       return;
@@ -841,6 +873,12 @@ export class TypeScriptGenerator {
   }
 
   private generateTypedef(node: AST.TypedefNode): void {
+    // Register typedef for CDR marshaling with both qualified and unqualified names
+    const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
+    this.typeRegistry.set(fullName, { kind: 'typedef', node });
+    // Also register with just the name for local lookups
+    this.typeRegistry.set(node.name, { kind: 'typedef', node });
+
     const name = this.getPrefixedName(node.name);
     const tsType = this.mapType(node.type);
     this.emit(`export type ${name} = ${tsType};`);
@@ -943,7 +981,7 @@ export class TypeScriptGenerator {
     this.emit(`export const ${tcName} = TypeCode.create_interface_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
-    this.emit(`"${node.name}"`);
+    this.emit(`"${node.name}",`);
     this.dedent();
     this.emit(`);`);
     this.emit("");
@@ -1265,10 +1303,12 @@ export class TypeScriptGenerator {
 
   private generateServerSkeleton(node: AST.InterfaceNode): void {
     const name = this.getPrefixedName(node.name);
+    // POA classes extend Servant but don't implement the interface
+    // because the interface extends CORBA.ObjectRef which is for client-side
     this.emit(
-      `export abstract class ${name}_POA extends CORBA.PortableServer.Servant implements ${name} {`,
+      `export abstract class ${name}_POA extends Servant {`,
     );
-    this.markCorbaImportUsed("CORBA"); // POA uses CORBA as value
+    this.markCorbaImportUsed("Servant"); // POA uses Servant
     this.indent();
 
     // Only process operations and attributes for skeleton
@@ -1339,9 +1379,379 @@ export class TypeScriptGenerator {
       }
     }
 
+    this.emit("");
+    // Generate standard CORBA _invoke method for static skeleton
+    // Check if interface has any operations or attributes early to determine if responseHandler will be used
+    const hasOperationsOrAttributes = node.members.some(member =>
+      member.kind === "operation" || member.kind === "attribute"
+    );
+
+    // Prefix responseHandler with underscore if it won't be used
+    const responseHandlerParam = hasOperationsOrAttributes ? "responseHandler" : "_responseHandler";
+
+    this.emit(`async _invoke(operation: string, _inputStream: CDRInputStream, ${responseHandlerParam}: ResponseHandler): Promise<CDROutputStream> {`);
+    this.markCorbaImportUsed("CDRInputStream");
+    this.markCorbaImportUsed("CDROutputStream");
+    this.markCorbaImportUsed("ResponseHandler");
+    this.indent();
+
+    if (!hasOperationsOrAttributes) {
+      // Add await to satisfy linter for empty interfaces
+      this.emit(`await Promise.resolve(); // Required for async with no operations`);
+      this.emit("");
+      // For empty interfaces, throw directly without unreachable return
+      this.emit(`throw new Error(\`Unknown operation: \${operation}\`);`);
+    } else {
+      this.emit(`const outputStream = responseHandler.createReply();`);
+      this.emit("");
+      this.emit(`switch (operation) {`);
+      this.indent();
+
+      // Generate cases for each operation
+      for (const member of node.members) {
+      if (member.kind === "operation") {
+        this.emit(`case "${member.name}": {`);
+        this.indent();
+
+        // Unmarshal input parameters
+        const inParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === "in" || p.direction === "inout");
+        if (inParams.length > 0) {
+          this.emit("// Unmarshal input parameters");
+          for (const param of inParams) {
+            const unmarshalCall = this.getUnmarshalCall(param.type);
+            this.emit(`const ${param.name} = ${unmarshalCall};`);
+          }
+        }
+
+        // Call the abstract method
+        const outParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === "out" || p.direction === "inout");
+        const hasReturn = member.returnType.kind !== "primitiveType" || member.returnType.type !== "void";
+
+        if (member.isOneway) {
+          // Oneway operations don't wait for result
+          this.emit(`this.${member.name}(${member.parameters.filter((p: AST.ParameterNode) => p.direction === "in" || p.direction === "inout").map((p: AST.ParameterNode) => p.name).join(", ")}); // oneway - no wait`);
+        } else if (outParams.length === 0 && hasReturn) {
+          // Only return value
+          this.emit(`const result = await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
+          this.emit("");
+          this.emit("// Marshal return value and out parameters");
+          const marshalCall = this.getMarshalCall(member.returnType, "result", node.name);
+          this.emit(`${marshalCall};`);
+        } else if (outParams.length > 0) {
+          // Has out parameters
+          const resultVar = hasReturn || outParams.length > 0 ? "const result = " : "";
+          this.emit(`${resultVar}await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
+          this.emit("");
+          this.emit("// Marshal return value and out parameters");
+
+          if (hasReturn) {
+            const marshalCall = this.getMarshalCall(member.returnType, "result.returnValue", node.name);
+            this.emit(`${marshalCall};`);
+          }
+
+          for (const param of outParams) {
+            const marshalCall = this.getMarshalCall(param.type, `result.${param.name}`, node.name);
+            this.emit(`${marshalCall};`);
+          }
+        } else {
+          // void return, no out params
+          this.emit(`await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
+        }
+
+        this.emit("break;");
+        this.dedent();
+        this.emit("}");
+      } else if (member.kind === "attribute") {
+        // Generate getter case
+        this.emit(`case "get_${member.name}": {`);
+        this.indent();
+        this.emit(`const result = await this.get_${member.name}();`);
+        const marshalCall = this.getMarshalCall(member.type, "result", node.name);
+        this.emit(`${marshalCall};`);
+        this.emit("break;");
+        this.dedent();
+        this.emit("}");
+
+        // Generate setter case if not readonly
+        if (!member.isReadonly) {
+          this.emit(`case "set_${member.name}": {`);
+          this.indent();
+          const unmarshalCall = this.getUnmarshalCall(member.type);
+          this.emit(`const value = ${unmarshalCall};`);
+          this.emit(`await this.set_${member.name}(value);`);
+          this.emit("break;");
+          this.dedent();
+          this.emit("}");
+        }
+      }
+    }
+
+      this.emit("default: {");
+      this.indent();
+      this.emit(`throw new Error(\`Unknown operation: \${operation}\`);`);
+      this.dedent();
+      this.emit("}");
+
+      this.dedent();
+      this.emit("}");
+      this.emit("");
+
+      this.emit("return outputStream;");
+    }
+    this.dedent();
+    this.emit("}");
+
     this.dedent();
     this.emit("}");
     this.emit("");
+  }
+
+  private getUnmarshalCall(type: AST.TypeNode): string {
+    if (type.kind === "primitiveType") {
+      switch (type.type) {
+        case "boolean":
+          return "_inputStream.readBoolean()";
+        case "char":
+        case "wchar":
+          return "_inputStream.readChar()";
+        case "octet":
+          return "_inputStream.readOctet()";
+        case "short":
+          return "_inputStream.readShort()";
+        case "unsigned short":
+          return "_inputStream.readUShort()";
+        case "long":
+          return "_inputStream.readLong()";
+        case "unsigned long":
+          return "_inputStream.readULong()";
+        case "long long":
+          return "_inputStream.readLongLong()";
+        case "unsigned long long":
+          return "_inputStream.readULongLong()";
+        case "float":
+          return "_inputStream.readFloat()";
+        case "double":
+          return "_inputStream.readDouble()";
+        case "any":
+          // Use decodeAny for proper Any type marshaling
+          this.markCorbaImportUsed("decodeAny");
+          return "decodeAny(_inputStream)";
+        default:
+          // Unknown primitive type - try string as safe fallback
+          return "_inputStream.readString()";
+      }
+    } else if (type.kind === "stringType") {
+      return type.type === "wstring" ? "_inputStream.readWString()" : "_inputStream.readString()";
+    } else if (type.kind === "namedType") {
+      // Convert :: to . for cross-module references in TypeScript
+      let lookupName = type.name;
+      if (type.name.includes("::")) {
+        // For cross-module types like types::timeout, we need to look them up properly
+        const parts = type.name.split("::");
+        if (parts.length >= 2) {
+          // Just use the last part for lookup since it's a typedef in another module
+          lookupName = parts[parts.length - 1];
+        }
+      }
+
+      // Look up the type in the registry to determine how to unmarshal it
+      const typeInfo = this.findTypeInRegistry(lookupName);
+      if (typeInfo) {
+        switch (typeInfo.kind) {
+          case 'enum':
+            // Enums are marshaled as longs in CORBA
+            return "_inputStream.readLong()";
+          case 'interface': {
+            // Interfaces are object references - read IOR string
+            // Cast through unknown to the specific interface type to avoid type errors
+            const interfaceType = this.resolveTypeName(type.name, true);
+            return `({ _ior: _inputStream.readString() } as unknown as ${interfaceType})`;
+          }
+          case 'typedef': {
+            // Follow the typedef to the underlying type
+            const typedefNode = typeInfo.node as AST.TypedefNode;
+            if (typedefNode) {
+              return this.getUnmarshalCall(typedefNode.type);
+            }
+            return `_inputStream.readString()`;
+          }
+          case 'struct':
+            // Generate inline struct unmarshaling
+            return this.generateStructUnmarshal(typeInfo.node as AST.StructNode, type.name);
+          case 'union':
+            // Generate inline union unmarshaling
+            return this.generateUnionUnmarshal(typeInfo.node as AST.UnionNode, type.name);
+          default:
+            return `_inputStream.readString()`;
+        }
+      }
+      // If type not found, assume it's a long (common for numeric typedefs)
+      return `_inputStream.readLong()`;
+    } else if (type.kind === "sequenceType") {
+      const elementUnmarshal = this.getUnmarshalCall(type.elementType);
+      return `(() => { const length = _inputStream.readULong(); const result = []; for (let i = 0; i < length; i++) { result.push(${elementUnmarshal}); } return result; })()`;
+    } else if (type.kind === "arrayType") {
+      const elementUnmarshal = this.getUnmarshalCall(type.elementType);
+      const totalSize = type.dimensions.reduce((a, b) => a * b, 1);
+      return `(() => { const result = []; for (let i = 0; i < ${totalSize}; i++) { result.push(${elementUnmarshal}); } return result; })()`;
+    } else {
+      // Unknown type - try string as fallback
+      return "_inputStream.readString()";
+    }
+  }
+
+  private getElementUnmarshalCall(type: AST.TypeNode): string {
+    if (type.kind === "primitiveType") {
+      switch (type.type) {
+        case "boolean": return "(s) => s.readBoolean()";
+        case "char":
+        case "wchar": return "(s) => s.readChar()";
+        case "octet": return "(s) => s.readOctet()";
+        case "short": return "(s) => s.readShort()";
+        case "unsigned short": return "(s) => s.readUShort()";
+        case "long": return "(s) => s.readLong()";
+        case "unsigned long": return "(s) => s.readULong()";
+        case "long long": return "(s) => s.readLongLong()";
+        case "unsigned long long": return "(s) => s.readULongLong()";
+        case "float": return "(s) => s.readFloat()";
+        case "double": return "(s) => s.readDouble()";
+        default:
+          this.markCorbaImportUsed("decodeAny");
+          return "(s) => decodeAny(s)"; // For any/unknown types
+      }
+    } else if (type.kind === "stringType") {
+      return type.type === "wstring" ? "(s) => s.readWString()" : "(s) => s.readString()";
+    } else if (type.kind === "namedType") {
+      // For named types in sequences/arrays, check the type
+      const typeInfo = this.findTypeInRegistry(type.name);
+      if (typeInfo && typeInfo.kind === 'enum') {
+        return "(s) => s.readLong()";
+      } else if (typeInfo && typeInfo.kind === 'interface') {
+        return "(s) => { const iorStr = s.readString(); return { _ior: iorStr }; }";
+      } else if (typeInfo && typeInfo.kind === 'typedef') {
+        // Follow the typedef to the underlying type
+        const typedefNode = typeInfo.node as AST.TypedefNode;
+        if (typedefNode) {
+          return this.getElementUnmarshalCall(typedefNode.type);
+        }
+      }
+      // For structs/unions, would need custom logic
+      return "(s) => s.readString()";
+    } else {
+      return "(s) => s.readString()";
+    }
+  }
+
+  private getMarshalCall(type: AST.TypeNode, value: string, interfaceContext?: string): string {
+    if (type.kind === "primitiveType") {
+      switch (type.type) {
+        case "boolean":
+          return `outputStream.writeBoolean(${value})`;
+        case "char":
+        case "wchar":
+          return `outputStream.writeChar(${value})`;
+        case "octet":
+          return `outputStream.writeOctet(${value})`;
+        case "short":
+          return `outputStream.writeShort(${value})`;
+        case "unsigned short":
+          return `outputStream.writeUShort(${value})`;
+        case "long":
+          return `outputStream.writeLong(${value})`;
+        case "unsigned long":
+          return `outputStream.writeULong(${value})`;
+        case "long long":
+          return `outputStream.writeLongLong(${value})`;
+        case "unsigned long long":
+          return `outputStream.writeULongLong(${value})`;
+        case "float":
+          return `outputStream.writeFloat(${value})`;
+        case "double":
+          return `outputStream.writeDouble(${value})`;
+        case "any":
+          // Use encodeAny for proper Any type marshaling
+          this.markCorbaImportUsed("encodeAny");
+          this.markCorbaImportUsed("Any");
+          return `encodeAny(outputStream, Any.fromValue(${value}))`;
+        case "void":
+          return "// void return";
+        default:
+          // Unknown primitive type - fall back to Any marshaling
+          this.markCorbaImportUsed("encodeAny");
+          this.markCorbaImportUsed("Any");
+          return `encodeAny(outputStream, Any.fromValue(${value}))`;
+      }
+    } else if (type.kind === "stringType") {
+      return type.type === "wstring" ? `outputStream.writeWString(${value})` : `outputStream.writeString(${value})`;
+    } else if (type.kind === "namedType") {
+      // Look up the type in the registry to determine how to marshal it
+      // Handle cross-module references (C++ :: to TypeScript .)
+      let lookupName = type.name;
+      if (type.name.includes("::")) {
+        // Extract just the type name from module::type format
+        const parts = type.name.split("::");
+        if (parts.length >= 2) {
+          lookupName = parts[parts.length - 1];
+        }
+      }
+
+      // If we have an interface context, try to look up as nested type first
+      let typeInfo = null;
+      if (interfaceContext && !type.name.includes("::")) {
+        // Try flattened name first (InterfaceName_TypeName)
+        const flattenedName = `${interfaceContext}_${lookupName}`;
+        typeInfo = this.findTypeInRegistry(flattenedName);
+      }
+
+      // If not found as nested type, try regular lookup
+      if (!typeInfo) {
+        typeInfo = this.findTypeInRegistry(lookupName);
+      }
+      if (typeInfo) {
+        switch (typeInfo.kind) {
+          case 'enum':
+            // Enums are marshaled as longs in CORBA
+            return `outputStream.writeLong(${value})`;
+          case 'interface':
+            // Interfaces are object references - write IOR string
+            return `outputStream.writeString((${value} as { _ior?: string })?._ior || "")`;
+          case 'typedef': {
+            // Follow the typedef to the underlying type
+            const typedefNode = typeInfo.node as AST.TypedefNode;
+            if (typedefNode) {
+              return this.getMarshalCall(typedefNode.type, value, interfaceContext);
+            }
+            this.markCorbaImportUsed("encodeAny");
+            this.markCorbaImportUsed("Any");
+            return `encodeAny(outputStream, Any.fromValue(${value}))`;  // fallback to Any marshaling
+          }
+          case 'struct':
+            // Generate inline struct marshaling
+            return this.generateStructMarshal(typeInfo.node as AST.StructNode, value, interfaceContext);
+          case 'union':
+            // Generate inline union marshaling
+            return this.generateUnionMarshal(typeInfo.node as AST.UnionNode, value, interfaceContext);
+          default:
+            return `encodeAny(outputStream, Any.fromValue(${value}))`;  // fallback to Any marshaling
+        }
+      }
+      // If type not found, use Any marshaling as fallback
+      this.markCorbaImportUsed("encodeAny");
+      this.markCorbaImportUsed("Any");
+      return `encodeAny(outputStream, Any.fromValue(${value}))`;
+    } else if (type.kind === "sequenceType") {
+      // Use proper sequence marshaling with length prefix
+      const elementType = type.elementType;
+      const marshalElement = this.getMarshalCall(elementType, 'element', interfaceContext);
+      return `outputStream.writeULong(${value}.length); ${value}.forEach((element) => { ${marshalElement}; })`;
+    } else if (type.kind === "arrayType") {
+      // Arrays don't have length prefix, just marshal each element
+      const elementType = type.elementType;
+      const marshalElement = this.getMarshalCall(elementType, 'element', interfaceContext);
+      return `${value}.forEach((element) => { ${marshalElement}; })`;
+    } else {
+      return `outputStream.writeAny(${value})`;
+    }
   }
 
   private mapType(
@@ -1752,5 +2162,162 @@ export class TypeScriptGenerator {
     }
 
     return null;
+  }
+
+  private generateStructUnmarshal(structNode: AST.StructNode | undefined, _typeName: string): string {
+    if (!structNode) {
+      return `({} as unknown)`;
+    }
+
+    // Generate inline object literal with each field unmarshaled
+    const fields: string[] = [];
+    for (const member of structNode.members) {
+      const unmarshalCall = this.getUnmarshalCall(member.type);
+      fields.push(`${member.name}: ${unmarshalCall}`);
+    }
+
+    return `({ ${fields.join(", ")} })`;
+  }
+
+  private generateStructMarshal(structNode: AST.StructNode | undefined, value: string, interfaceContext?: string): string {
+    if (!structNode) {
+      return `/* Cannot marshal ${value} - struct definition not found */`;
+    }
+
+    // Generate code to marshal each field
+    const statements: string[] = [];
+    for (const member of structNode.members) {
+      const marshalCall = this.getMarshalCall(member.type, `${value}.${member.name}`, interfaceContext);
+      statements.push(marshalCall);
+    }
+
+    // Join statements with semicolons
+    return statements.join("; ");
+  }
+
+  private generateUnionUnmarshal(unionNode: AST.UnionNode | undefined, _typeName: string): string {
+    if (!unionNode) {
+      return `({} as unknown)`;
+    }
+
+    // Generate proper union unmarshaling with IIFE
+    const lines: string[] = [];
+    lines.push(`(() => {`);
+
+    // Read discriminator
+    const discriminatorUnmarshal = this.getUnmarshalCall(unionNode.discriminatorType);
+    lines.push(`  const _discriminator = ${discriminatorUnmarshal};`);
+    lines.push(`  switch (_discriminator) {`);
+
+    // Generate cases for each union case
+    for (const caseNode of unionNode.cases) {
+      if (caseNode.member) {
+        for (const label of caseNode.labels) {
+          // For enum discriminators, labels are enum member names
+          // We need to convert them to the actual enum values
+          if (unionNode.discriminatorType.kind === "namedType") {
+            // It's an enum type - use the qualified enum member name
+            // For cross-module types, we need to qualify them properly
+            let enumType = unionNode.discriminatorType.name;
+            if (enumType.includes("::")) {
+              const parts = enumType.split("::");
+              enumType = `${parts[0]}.${parts[parts.length - 1]}`;
+            } else {
+              // Try to resolve it
+              const resolved = this.findTypeInRegistry(enumType);
+              if (resolved) {
+                // If it's in a different module, we need to qualify it
+                if (this.currentModule !== "types" && enumType === "evtFilterType") {
+                  enumType = "types." + enumType;
+                }
+              }
+            }
+            lines.push(`    case ${enumType}.${label}:`);
+          } else {
+            // Primitive type - use the value directly
+            const labelValue = typeof label === "string" ? `"${label}"` : label;
+            lines.push(`    case ${labelValue}:`);
+          }
+        }
+
+        // Unmarshal the member for this case
+        const memberUnmarshal = this.getUnmarshalCall(caseNode.member.type);
+        const memberName = caseNode.member.name;
+
+        // Create the union object with discriminator and the appropriate field
+        // Use the label as a string literal for the discriminator field
+        const discriminatorValue = caseNode.labels[0];
+        const discriminatorStr = typeof discriminatorValue === "string" ? `"${discriminatorValue}"` : `${discriminatorValue}`;
+        lines.push(`      return { discriminator: ${discriminatorStr} as const, ${memberName}: ${memberUnmarshal} };`);
+      }
+    }
+
+    // Default case
+    lines.push(`    default:`);
+    lines.push(`      throw new Error(\`Unknown union discriminator: \${_discriminator}\`);`);
+    lines.push(`  }`);
+    lines.push(`})()`);
+
+    return lines.join("\n");
+  }
+
+  private generateUnionMarshal(unionNode: AST.UnionNode | undefined, value: string, _interfaceContext?: string): string {
+    if (!unionNode) {
+      return `/* Cannot marshal ${value} - union definition not found */`;
+    }
+
+    // For a complete implementation, we'd need to check the discriminator
+    // and marshal the appropriate field based on the discriminator value
+    // This is complex because TypeScript unions use string literal discriminators
+    // while CORBA uses enum values. For now, use simplified handling.
+    return `/* TODO: Implement proper union marshaling for ${value} */`;
+  }
+
+  private findTypeInRegistry(typeName: string): { kind: string; node?: AST.DefinitionNode } | undefined {
+    // 1. Try direct lookup (for local types and fully qualified names)
+    let typeInfo = this.typeRegistry.get(typeName);
+    if (typeInfo) return typeInfo;
+
+    // 1b. If the typeName contains ::, it's already qualified - also try without current module prefix
+    // (in case we're looking up types::timeout from within types module)
+    if (typeName.includes("::")) {
+      const parts = typeName.split("::");
+      if (parts.length >= 2) {
+        const simpleName = parts[parts.length - 1];
+        typeInfo = this.typeRegistry.get(simpleName);
+        if (typeInfo) return typeInfo;
+      }
+    }
+
+    // 2. Try nested type lookup (for interface-nested types)
+    if (this.nestedTypes.has(typeName)) {
+      const prefixedName = this.nestedTypes.get(typeName)!;
+      typeInfo = this.typeRegistry.get(prefixedName);
+      if (typeInfo) return typeInfo;
+    }
+
+    // 3. Try cross-module lookup (types.timeout -> types::timeout)
+    if (typeName.includes('.')) {
+      const qualifiedName = typeName.replace(/\./g, '::');
+      typeInfo = this.typeRegistry.get(qualifiedName);
+      if (typeInfo) return typeInfo;
+    }
+
+    // 4. Try with current module prefix
+    if (this.currentModulePrefix) {
+      const fullyQualified = `${this.currentModulePrefix}::${typeName}`;
+      typeInfo = this.typeRegistry.get(fullyQualified);
+      if (typeInfo) return typeInfo;
+    }
+
+    // 5. Search through all registered types for a match
+    for (const [key, value] of this.typeRegistry.entries()) {
+      // Check if the key ends with our type name (handles various prefixes)
+      if (key.endsWith(`::${typeName}`) || key.endsWith(`_${typeName}`)) {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 }
