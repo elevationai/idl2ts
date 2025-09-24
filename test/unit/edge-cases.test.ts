@@ -549,7 +549,7 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("export interface MediaType"));
       assert(output.includes("export enum MediaOutput_MediaType"));
 
-      // MediaOutput should use the nested enum
+      // MediaOutput should use the nested enum per CORBA scoping rules
       assert(output.includes("get_type(): Promise<MediaOutput_MediaType>"));
     });
 

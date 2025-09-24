@@ -29,6 +29,7 @@ export class TypeScriptGenerator {
   private output: string[] = [];
   private currentModulePrefix: string = "";
   private currentModule: string = ""; // Track current module for multi-file
+  private currentModuleDefinitions: AST.DefinitionNode[] | null = null; // Track current module definitions
   private modules: Map<string, ModuleOutput> = new Map();
   private rootModule: ModuleOutput | null = null;
   private nestedTypes: Map<string, string> = new Map(); // Maps nested type to parent_type
@@ -37,6 +38,7 @@ export class TypeScriptGenerator {
   private scopedPragmas: Map<string, Map<string, string>> = new Map(); // Store scoped pragmas (version, ID)
   private typeRegistry: Map<string, { kind: string; node?: AST.DefinitionNode }> = new Map(); // Track type definitions for CDR marshaling
   private structMarshalCode: Map<string, { unmarshal: string; marshal: string }> = new Map(); // Cache struct marshal code
+  private currentInterface: string | null = null; // Track the current interface context for nested type resolution
 
   constructor(options: GeneratorOptions = {}) {
     this.options = {
@@ -266,9 +268,11 @@ export class TypeScriptGenerator {
     const savedModule = this.currentModule;
     const savedPrefix = this.currentModulePrefix;
     const savedNestedTypes = new Map(this.nestedTypes);
+    const savedModuleDefinitions = this.currentModuleDefinitions;
 
     // Get or create module (handle module reopening)
     this.currentModule = node.name;
+    this.currentModuleDefinitions = node.definitions;
     let moduleOutput = this.modules.get(node.name);
     if (!moduleOutput) {
       moduleOutput = {
@@ -300,10 +304,15 @@ export class TypeScriptGenerator {
     this.currentModule = savedModule;
     this.currentModulePrefix = savedPrefix;
     this.nestedTypes = savedNestedTypes;
+    this.currentModuleDefinitions = savedModuleDefinitions;
     this.currentModuleOutput = savedModule ? this.modules.get(savedModule) || this.rootModule : this.rootModule;
   }
 
   private generateInterface(node: AST.InterfaceNode): void {
+    // Set the current interface context
+    const prevInterface = this.currentInterface;
+    this.currentInterface = node.name;
+
     // Register type for CDR marshaling with both qualified and unqualified names
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
     this.typeRegistry.set(fullName, { kind: 'interface', node });
@@ -311,6 +320,7 @@ export class TypeScriptGenerator {
     this.typeRegistry.set(node.name, { kind: 'interface', node });
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
+      this.currentInterface = prevInterface;
       return;
     }
 
@@ -326,7 +336,7 @@ export class TypeScriptGenerator {
         const originalName = (nestedDef as { name: string }).name;
         if (originalName) {
           const prefixedName = `${node.name}_${originalName}`;
-          // Track this as a nested type
+          // Always track nested types, but we'll be smart about when to use them
           this.nestedTypes.set(originalName, prefixedName);
           // Register the nested type in the global registry with prefixed name
           const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${prefixedName}` : prefixedName;
@@ -364,10 +374,10 @@ export class TypeScriptGenerator {
     // Only generate operations and attributes in the interface body
     for (const member of node.members) {
       if (member.kind === "operation") {
-        this.generateOperation(member);
+        this.generateOperation(member, node.name);
       }
       else if (member.kind === "attribute") {
-        this.generateAttribute(member);
+        this.generateAttribute(member, node.name);
       }
     }
 
@@ -383,13 +393,16 @@ export class TypeScriptGenerator {
     if (this.options.includeSkeletons) {
       this.generateServerSkeleton(node);
     }
+
+    // Restore previous interface context
+    this.currentInterface = prevInterface;
   }
 
-  private generateOperation(node: AST.OperationNode): void {
+  private generateOperation(node: AST.OperationNode, interfaceName?: string): void {
     const params = node.parameters.map((p: AST.ParameterNode) => {
       const paramName = p.direction === "out" || p.direction === "inout"
-        ? `${p.name}?: ${this.mapType(p.type, true)}`
-        : `${p.name}: ${this.mapType(p.type, true)}`;
+        ? `${p.name}?: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`
+        : `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`;
       return paramName;
     }).join(", ");
 
@@ -404,19 +417,19 @@ export class TypeScriptGenerator {
     }
     else if (outParams.length === 0) {
       // No out parameters - return just the return value
-      returnType = `Promise<${this.mapType(node.returnType, true)}>`;
+      returnType = `Promise<${this.mapType(node.returnType, true, this.currentModule, interfaceName)}>`;
     }
     else if (!hasReturn) {
       // Out parameters but void return - return object with just out params
-      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true)}`).join(
+      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`).join(
         "; ",
       );
       returnType = `Promise<{ ${outParamTypes} }>`;
     }
     else {
       // Both return value and out parameters - return object with both
-      const returnValueType = this.mapType(node.returnType, true);
-      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true)}`).join(
+      const returnValueType = this.mapType(node.returnType, true, this.currentModule, interfaceName);
+      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`).join(
         "; ",
       );
       returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
@@ -425,8 +438,8 @@ export class TypeScriptGenerator {
     this.emit(`${node.name}(${params}): ${returnType};`);
   }
 
-  private generateAttribute(node: AST.AttributeNode): void {
-    const tsType = this.mapType(node.type, true);
+  private generateAttribute(node: AST.AttributeNode, interfaceName?: string): void {
+    const tsType = this.mapType(node.type, true, this.currentModule, interfaceName);
 
     if (node.isReadonly) {
       this.emit(`readonly ${node.name}: ${tsType};`);
@@ -455,7 +468,18 @@ export class TypeScriptGenerator {
     this.indent();
 
     for (const member of node.members) {
-      const tsType = this.mapType(member.type);
+      // Determine the parent interface for nested structs
+      // If the struct name contains underscore, it's a nested type
+      let parentInterface: string | undefined;
+      if (node.name.includes('_') && this.currentInterface) {
+        // Extract the parent interface name from the prefixed struct name
+        const parts = node.name.split('_');
+        if (parts[0] === this.currentInterface) {
+          parentInterface = this.currentInterface;
+        }
+      }
+
+      const tsType = this.mapType(member.type, false, this.currentModule, parentInterface || this.currentInterface || undefined);
       this.emit(`${member.name}: ${tsType};`);
     }
 
@@ -1093,7 +1117,7 @@ export class TypeScriptGenerator {
         this.generateStubOperation(member, i < allMembers.length - 1);
       }
       else if (member.kind === "attribute") {
-        this.generateStubAttribute(member, i < allMembers.length - 1);
+        this.generateStubAttribute(member, node.name, i < allMembers.length - 1);
       }
     }
 
@@ -1252,11 +1276,15 @@ export class TypeScriptGenerator {
 
   private generateStubAttribute(
     node: AST.AttributeNode,
+    interfaceName: string,
     addBlankLine: boolean = true,
   ): void {
     const sourceModule = (node as AST.AttributeNode & ExtendedNode).__sourceModule;
     const sourceInterface = (node as AST.AttributeNode & ExtendedNode).__sourceInterface;
-    const tsType = this.mapType(node.type, true, sourceModule, sourceInterface);
+    // For attributes from inherited interfaces, we need to preserve their source context
+    // to properly resolve nested types like Location_ImageType
+    // For direct attributes, use the current interface context
+    const tsType = this.mapType(node.type, true, sourceModule || this.currentModule, sourceInterface || interfaceName);
 
     this.emit(`async get_${node.name}(): Promise<${tsType}> {`);
     this.indent();
@@ -1482,7 +1510,9 @@ export class TypeScriptGenerator {
         this.emit(`case "get_${member.name}": {`);
         this.indent();
         this.emit(`const result = await this.get_${member.name}();`);
-        const marshalCall = this.getMarshalCall(member.type, "result", node.name);
+        // Don't pass interface context for attributes - they should resolve to their declared type
+        // not to nested types within the interface
+        const marshalCall = this.getMarshalCall(member.type, "result");
         this.emit(`${marshalCall};`);
         this.emit("break;");
         this.dedent();
@@ -1818,14 +1848,31 @@ export class TypeScriptGenerator {
         }
         // Check if this is a nested type that was extracted
         if (this.nestedTypes.has(node.name)) {
-          return this.nestedTypes.get(node.name)!;
+          // However, we should only use the nested type if:
+          // 1. We have interface context (sourceInterface is set), OR
+          // 2. There's no top-level type with the same name
+          if (sourceInterface) {
+            // In interface context, prefer nested type
+            return this.nestedTypes.get(node.name)!;
+          } else {
+            // At module level, check if there's a top-level type first
+            const hasTopLevel = this.currentModuleDefinitions?.some(def =>
+              (def.kind === "interface" || def.kind === "struct" || def.kind === "enum" ||
+               def.kind === "typedef" || def.kind === "exception" || def.kind === "union") &&
+              (def as { name?: string }).name === node.name
+            );
+            // Only use nested type if there's no top-level type
+            if (!hasTopLevel) {
+              return this.nestedTypes.get(node.name)!;
+            }
+          }
         }
 
         // If we have a source module context, check there first
         if (sourceModule && sourceModule !== this.currentModule) {
           const sourceModuleOutput = this.modules.get(sourceModule);
           if (sourceModuleOutput) {
-            // If we have interface context, prioritize nested types first
+            // If we have interface context, try nested types first (CORBA scoping rules)
             if (sourceInterface) {
               const flattenedTypeName = this.findFlattenedType(
                 node.name,
@@ -1859,27 +1906,26 @@ export class TypeScriptGenerator {
         }
 
         // For unqualified names in the current module, first check if it's a nested type
-        const currentModuleOutput = this.modules.get(this.currentModule);
-        if (currentModuleOutput) {
-          // If we have interface context, check nested types first
-          if (sourceInterface) {
-            const flattenedTypeName = this.findFlattenedType(
-              node.name,
-              currentModuleOutput,
-              sourceInterface,
-            );
-            if (flattenedTypeName) {
-              return flattenedTypeName;
+        // Use currentModuleDefinitions which is available during generation
+        if (this.currentModuleDefinitions && sourceInterface) {
+          // Look for the nested type in the current interface
+          for (const def of this.currentModuleDefinitions) {
+            if (def.kind === "interface" && (def as AST.InterfaceNode).name === sourceInterface) {
+              const interfaceDef = def as AST.InterfaceNode;
+              for (const member of interfaceDef.members) {
+                if (member.name === node.name && (
+                  member.kind === "enum" ||
+                  member.kind === "struct" ||
+                  member.kind === "union" ||
+                  member.kind === "typedef" ||
+                  member.kind === "exception"
+                )) {
+                  // Found nested type - return flattened name
+                  return `${sourceInterface}_${node.name}`;
+                }
+              }
+              break;
             }
-          }
-
-          // Check if it's a flattened type without interface preference
-          const flattenedTypeName = this.findFlattenedType(
-            node.name,
-            currentModuleOutput,
-          );
-          if (flattenedTypeName) {
-            return flattenedTypeName;
           }
         }
 
@@ -2161,6 +2207,8 @@ export class TypeScriptGenerator {
     preferredInterface?: string,
   ): string | null {
     // Look for flattened nested types like InterfaceName_TypeName where TypeName matches our target
+    // NOTE: This should only be used when we're in an interface context
+    // Without interface context, we should not look for nested types at all
 
     // If we have a preferred interface (source context), check there first
     if (preferredInterface) {
@@ -2187,13 +2235,19 @@ export class TypeScriptGenerator {
       }
     }
 
+    // Only look for other matches if we have some interface context
+    // Without any interface context, we should not be looking for nested types at all
+    if (!preferredInterface) {
+      return null;
+    }
+
     // If not found in preferred interface, collect all possible matches
     const allMatches: string[] = [];
     for (const def of module.definitions) {
       if (def.kind === "interface") {
         const interfaceDef = def as AST.InterfaceNode;
         // Skip the preferred interface since we already checked it
-        if (preferredInterface && interfaceDef.name === preferredInterface) {
+        if (interfaceDef.name === preferredInterface) {
           continue;
         }
         for (const member of interfaceDef.members) {
@@ -2238,16 +2292,17 @@ export class TypeScriptGenerator {
       }
 
       // Apply heuristics:
-      // 1. Prefer enum types over other types for discriminator-like usage
-      const enumMatches = matchesWithInfo.filter(m => m.type === "enum");
-      if (enumMatches.length > 0) {
-        // If we have a preferred interface and it has an enum, use it
-        if (preferredInterface) {
+      // 1. Prefer enum types over other types for discriminator-like usage, but ONLY if we have interface context
+      // Without interface context, we should not prefer nested types
+      if (preferredInterface) {
+        const enumMatches = matchesWithInfo.filter(m => m.type === "enum");
+        if (enumMatches.length > 0) {
+          // If we have a preferred interface and it has an enum, use it
           const preferredEnum = enumMatches.find(m => m.interfaceName === preferredInterface);
           if (preferredEnum) return preferredEnum.name;
+          // Otherwise return the first enum match
+          return enumMatches[0].name;
         }
-        // Otherwise return the first enum match
-        return enumMatches[0].name;
       }
 
       // 2. Prefer struct types over interface types for data structures
@@ -2386,15 +2441,6 @@ export class TypeScriptGenerator {
 
     // Determine how to write the discriminator based on its type
     const discriminatorType = unionNode.discriminatorType;
-    let discriminatorMarshal = "";
-
-    if (discriminatorType.kind === "primitiveType") {
-      // For primitive discriminators, write the discriminator value directly
-      discriminatorMarshal = this.getMarshalCall(discriminatorType, "_discriminatorValue");
-    } else if (discriminatorType.kind === "namedType") {
-      // For enum discriminators, we need to convert string literals back to enum values
-      discriminatorMarshal = this.getMarshalCall(discriminatorType, "_discriminatorValue");
-    }
 
     // Generate switch statement to handle each case
     lines.push(`  switch (_union.discriminator) {`);
@@ -2403,16 +2449,25 @@ export class TypeScriptGenerator {
     for (const caseNode of unionNode.cases) {
       if (caseNode.member) {
         if (caseNode.isDefault) {
-          lines.push(`    case "default":`);
+          lines.push(`    case "default": {`);
         } else {
-          for (const label of caseNode.labels) {
+          // Generate case labels
+          for (let i = 0; i < caseNode.labels.length; i++) {
+            const label = caseNode.labels[i];
             // Use the label as a string literal for matching
             const labelValue = typeof label === "string" ? `"${label}"` : label;
-            lines.push(`    case ${labelValue}:`);
+            if (i === caseNode.labels.length - 1) {
+              // Last label gets the opening brace
+              lines.push(`    case ${labelValue}: {`);
+            } else {
+              // Other labels just fall through
+              lines.push(`    case ${labelValue}:`);
+            }
           }
         }
 
         // Write the discriminator value
+        let discriminatorValue: string;
         if (caseNode.isDefault) {
           // For default case, we need a value that doesn't match any other case
           // This is tricky - in CORBA, the default case handles any discriminator
@@ -2424,16 +2479,16 @@ export class TypeScriptGenerator {
               case "short":
               case "unsigned long":
               case "unsigned short":
-                lines.push(`      const _discriminatorValue = -1; // Default case`);
+                discriminatorValue = "-1; // Default case";
                 break;
               case "boolean":
-                lines.push(`      const _discriminatorValue = false; // Default case`);
+                discriminatorValue = "false; // Default case";
                 break;
               default:
-                lines.push(`      const _discriminatorValue = 0; // Default case`);
+                discriminatorValue = "0; // Default case";
             }
           } else {
-            lines.push(`      const _discriminatorValue = -1; // Default case`);
+            discriminatorValue = "-1; // Default case";
           }
         } else {
           // For regular cases, get the actual discriminator value
@@ -2454,14 +2509,16 @@ export class TypeScriptGenerator {
                 }
               }
             }
-            lines.push(`      const _discriminatorValue = ${enumType}.${label};`);
+            discriminatorValue = `${enumType}.${label}`;
           } else {
             // Primitive type - use the value directly
-            lines.push(`      const _discriminatorValue = ${label};`);
+            discriminatorValue = `${label}`;
           }
         }
 
         // Marshal the discriminator
+        lines.push(`      const _discriminatorValue = ${discriminatorValue};`);
+        const discriminatorMarshal = this.getMarshalCall(discriminatorType, "_discriminatorValue");
         lines.push(`      ${discriminatorMarshal};`);
 
         // Marshal the member value
@@ -2469,12 +2526,13 @@ export class TypeScriptGenerator {
         const memberMarshal = this.getMarshalCall(caseNode.member.type, `_union.${memberName}`);
         lines.push(`      ${memberMarshal};`);
         lines.push(`      break;`);
+        lines.push(`    }`);
       }
     }
 
     // Default error case
     lines.push(`    default:`);
-    lines.push(`      throw new Error(\`Unknown union discriminator: \${(_union as any).discriminator}\`);`);
+    lines.push(`      throw new Error(\`Unknown union discriminator: \${(_union as { discriminator: unknown }).discriminator}\`);`);
     lines.push(`  }`);
     lines.push(`})()`);
 
