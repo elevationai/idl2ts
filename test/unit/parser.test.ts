@@ -635,6 +635,44 @@ describe("IDLParser", () => {
     });
   });
 
+  describe("Context Expressions", () => {
+    it("should parse operations with context clauses", () => {
+      const idl = `
+        module Test {
+          interface ContextService {
+            void simple() context ("user_id");
+            void multiple() context ("user_id", "session_id", "trace_id");
+            long withReturn() context ("auth_token");
+            void withParams(in string data) context ("request_id");
+            void withRaises() raises (Error) context ("error_context");
+            void withBoth(in long id) raises (NotFound) context ("operation_id", "timestamp");
+          };
+        };
+      `;
+
+      const ast = parseIDL(idl);
+      const module = findDefinition(ast, "Test") as AST.ModuleNode;
+      const iface = findMember(module, "ContextService") as AST.InterfaceNode;
+
+      // Verify all operations parsed successfully
+      assertEquals(iface.members.length, 6);
+
+      // Check that operations have correct signatures (context should be ignored)
+      const simple = iface.members[0] as AST.OperationNode;
+      assertEquals(simple.name, "simple");
+      assertEquals(simple.returnType.kind, "primitiveType");
+
+      const withReturn = iface.members[2] as AST.OperationNode;
+      assertEquals(withReturn.name, "withReturn");
+      assertEquals((withReturn.returnType as AST.PrimitiveTypeNode).type, "long");
+
+      const withBoth = iface.members[5] as AST.OperationNode;
+      assertEquals(withBoth.name, "withBoth");
+      assertEquals(withBoth.parameters.length, 1);
+      assertEquals(withBoth.raises?.length, 1);
+    });
+  });
+
   describe("Complex Scenarios", () => {
     it("should parse cross-module references", () => {
       const idl = `

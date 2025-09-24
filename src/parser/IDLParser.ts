@@ -526,6 +526,15 @@ export class IDLParser {
       this.consume(")");
     }
 
+    // Parse context clause if present (we ignore it for TypeScript generation)
+    if (this.peek() === "context") {
+      this.consume("context");
+      this.consume("(");
+      // Parse context strings but don't store them
+      this.parseContextList();
+      this.consume(")");
+    }
+
     this.consumeSemicolon();
 
     return {
@@ -536,6 +545,18 @@ export class IDLParser {
       raises,
       isOneway,
     };
+  }
+
+  private parseContextList(): void {
+    // Parse context list - just consume the tokens since we don't use them
+    // Context items are string literals
+    if (this.peek().startsWith('"')) {
+      this.consume(); // Consume the first string
+      while (this.peek() === ",") {
+        this.consume(",");
+        this.consume(); // Consume the next string
+      }
+    }
   }
 
   private parseParameters(): AST.ParameterNode[] {

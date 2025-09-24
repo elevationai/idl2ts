@@ -621,7 +621,7 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("getBalance(): Promise<Money>"));
     });
 
-    it.ignore("should handle context expressions", () => {
+    it("should handle context expressions", () => {
       const idl = `
         module Test {
           interface Service {
