@@ -24,6 +24,34 @@ interface ModuleOutput {
 }
 
 export class TypeScriptGenerator {
+  // TypeScript/JavaScript reserved words that need escaping
+  private static readonly RESERVED_WORDS = new Set([
+    // JavaScript reserved words
+    'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default',
+    'delete', 'do', 'else', 'export', 'extends', 'finally', 'for', 'function',
+    'if', 'import', 'in', 'instanceof', 'new', 'return', 'super', 'switch',
+    'this', 'throw', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield',
+
+    // TypeScript reserved words
+    'abstract', 'any', 'boolean', 'constructor', 'declare', 'get', 'implements',
+    'interface', 'let', 'module', 'namespace', 'never', 'number', 'object',
+    'package', 'private', 'protected', 'public', 'readonly', 'require', 'set',
+    'static', 'string', 'symbol', 'type', 'undefined', 'unique', 'unknown',
+
+    // IDL-specific keywords that could conflict with TypeScript
+    'struct', 'union', 'exception',
+
+    // Future reserved words
+    'enum', 'await', 'async',
+
+    // Global identifiers that could cause conflicts
+    'Array', 'Object', 'String', 'Number', 'Boolean', 'Date', 'RegExp', 'Error',
+    'Promise', 'Map', 'Set', 'JSON', 'Math', 'console', 'window', 'document',
+
+    // CORBA-specific identifiers we want to avoid conflicts with
+    'CORBA', 'TypeCode', 'ObjectRef', 'CorbaStub'
+  ]);
+
   private options: GeneratorOptions;
   private indentLevel: number = 0;
   private output: string[] = [];
@@ -48,6 +76,16 @@ export class TypeScriptGenerator {
       corbaImportPath: "corba", // Default CORBA import (use import map for Deno)
       ...options,
     };
+  }
+
+  /**
+   * Escapes TypeScript/JavaScript reserved words by appending underscore
+   */
+  private escapeReservedWord(identifier: string): string {
+    if (TypeScriptGenerator.RESERVED_WORDS.has(identifier)) {
+      return `${identifier}_`;
+    }
+    return identifier;
   }
 
   private addImport(moduleName: string, isTypeOnly: boolean = false): void {
@@ -435,18 +473,18 @@ export class TypeScriptGenerator {
       returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
     }
 
-    this.emit(`${node.name}(${params}): ${returnType};`);
+    this.emit(`${this.escapeReservedWord(node.name)}(${params}): ${returnType};`);
   }
 
   private generateAttribute(node: AST.AttributeNode, interfaceName?: string): void {
     const tsType = this.mapType(node.type, true, this.currentModule, interfaceName);
 
     if (node.isReadonly) {
-      this.emit(`readonly ${node.name}: ${tsType};`);
+      this.emit(`readonly ${this.escapeReservedWord(node.name)}: ${tsType};`);
       this.emit(`get_${node.name}(): Promise<${tsType}>;`);
     }
     else {
-      this.emit(`${node.name}: ${tsType};`);
+      this.emit(`${this.escapeReservedWord(node.name)}: ${tsType};`);
       this.emit(`get_${node.name}(): Promise<${tsType}>;`);
       this.emit(`set_${node.name}(value: ${tsType}): Promise<void>;`);
     }
@@ -480,7 +518,7 @@ export class TypeScriptGenerator {
       }
 
       const tsType = this.mapType(member.type, false, this.currentModule, parentInterface || this.currentInterface || undefined);
-      this.emit(`${member.name}: ${tsType};`);
+      this.emit(`${this.escapeReservedWord(member.name)}: ${tsType};`);
     }
 
     this.dedent();
@@ -785,7 +823,7 @@ export class TypeScriptGenerator {
           : caseNode.labels.map((l: string | number | boolean) => JSON.stringify(l)).join(" | ");
 
         variants.push(
-          `{ discriminator: ${discriminatorValue}; ${caseNode.member.name}: ${this.mapType(caseNode.member.type)} }`,
+          `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(caseNode.member.name)}: ${this.mapType(caseNode.member.type)} }`,
         );
       }
     }
@@ -878,7 +916,7 @@ export class TypeScriptGenerator {
     for (let i = 0; i < node.members.length; i++) {
       const member = node.members[i];
       const value = member.value !== undefined ? member.value : i;
-      this.emit(`${member.name} = ${value},`);
+      this.emit(`${this.escapeReservedWord(member.name)} = ${value},`);
     }
 
     this.dedent();
@@ -1176,7 +1214,7 @@ export class TypeScriptGenerator {
       returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
     }
 
-    this.emit(`async ${node.name}(${params}): ${returnType} {`);
+    this.emit(`async ${this.escapeReservedWord(node.name)}(${params}): ${returnType} {`);
     this.indent();
 
     this.emit(`const request = create_request(this._ref, "${node.name}");`);
@@ -1321,7 +1359,7 @@ export class TypeScriptGenerator {
       this.emit("");
     }
 
-    this.emit(`get ${node.name}(): ${tsType} {`);
+    this.emit(`get ${this.escapeReservedWord(node.name)}(): ${tsType} {`);
     this.indent();
     this.emit(
       `throw new Error("Direct property access not supported. Use get_${node.name}() instead.");`,
@@ -1331,7 +1369,7 @@ export class TypeScriptGenerator {
 
     if (!node.isReadonly) {
       this.emit("");
-      this.emit(`set ${node.name}(value: ${tsType}) {`);
+      this.emit(`set ${this.escapeReservedWord(node.name)}(value: ${tsType}) {`);
       this.indent();
       this.emit(
         `throw new Error("Direct property access not supported. Use set_${node.name}() instead.");`,
@@ -1393,7 +1431,7 @@ export class TypeScriptGenerator {
           returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
         }
 
-        this.emit(`abstract ${member.name}(${params}): ${returnType};`);
+        this.emit(`abstract ${this.escapeReservedWord(member.name)}(${params}): ${returnType};`);
       }
       else if (member.kind === "attribute") {
         const tsType = this.mapType(member.type);
@@ -1405,14 +1443,14 @@ export class TypeScriptGenerator {
           );
         }
 
-        this.emit(`get ${member.name}(): ${tsType} {`);
+        this.emit(`get ${this.escapeReservedWord(member.name)}(): ${tsType} {`);
         this.indent();
         this.emit(`throw new Error("Direct property access not supported.");`);
         this.dedent();
         this.emit("}");
 
         if (!member.isReadonly) {
-          this.emit(`set ${member.name}(value: ${tsType}) {`);
+          this.emit(`set ${this.escapeReservedWord(member.name)}(value: ${tsType}) {`);
           this.indent();
           this.emit(
             `throw new Error("Direct property access not supported.");`,
@@ -2338,8 +2376,9 @@ export class TypeScriptGenerator {
     // Generate inline object literal with each field unmarshaled
     const fields: string[] = [];
     for (const member of structNode.members) {
+      const escapedName = this.escapeReservedWord(member.name);
       const unmarshalCall = this.getUnmarshalCall(member.type);
-      fields.push(`${member.name}: ${unmarshalCall}`);
+      fields.push(`${escapedName}: ${unmarshalCall}`);
     }
 
     return `({ ${fields.join(", ")} })`;
@@ -2353,7 +2392,8 @@ export class TypeScriptGenerator {
     // Generate code to marshal each field
     const statements: string[] = [];
     for (const member of structNode.members) {
-      const marshalCall = this.getMarshalCall(member.type, `${value}.${member.name}`, interfaceContext);
+      const escapedName = this.escapeReservedWord(member.name);
+      const marshalCall = this.getMarshalCall(member.type, `${value}.${escapedName}`, interfaceContext);
       statements.push(marshalCall);
     }
 
@@ -2408,7 +2448,7 @@ export class TypeScriptGenerator {
 
         // Unmarshal the member for this case
         const memberUnmarshal = this.getUnmarshalCall(caseNode.member.type);
-        const memberName = caseNode.member.name;
+        const memberName = this.escapeReservedWord(caseNode.member.name);
 
         // Create the union object with discriminator and the appropriate field
         // Use the label as a string literal for the discriminator field
@@ -2522,7 +2562,7 @@ export class TypeScriptGenerator {
         lines.push(`      ${discriminatorMarshal};`);
 
         // Marshal the member value
-        const memberName = caseNode.member.name;
+        const memberName = this.escapeReservedWord(caseNode.member.name);
         const memberMarshal = this.getMarshalCall(caseNode.member.type, `_union.${memberName}`);
         lines.push(`      ${memberMarshal};`);
         lines.push(`      break;`);

@@ -123,8 +123,8 @@ describe("Type Resolution Fixes", () => {
     assert(testFile.includes("async get_type(): Promise<MediaOutput_MediaType>"),
       "Stub should implement get_type() returning MediaOutput_MediaType");
 
-    // The stub property getter should also return MediaOutput_MediaType
-    assert(testFile.includes("get type(): MediaOutput_MediaType"),
+    // The stub property getter should also return MediaOutput_MediaType (with escaped name)
+    assert(testFile.includes("get type_(): MediaOutput_MediaType"),
       "Stub property getter should return MediaOutput_MediaType");
   });
 });

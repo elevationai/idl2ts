@@ -134,25 +134,72 @@ describe("Edge Cases and Error Handling", () => {
             string interface;
             long module;
             boolean struct;
+            string class;
+            long function;
+          };
+
+          interface Service {
+            void break();
+            string return();
+            readonly attribute boolean const;
+            attribute string var;
+          };
+
+          enum Status {
+            new,
+            delete,
+            import,
+            export
           };
         };
       `;
 
-      // This might fail depending on parser implementation
-      // Some IDL parsers allow reserved words as member names
-      // We'll just check it doesn't throw for now
-      // Full implementation needed:
-      // - Verify that reserved words are properly escaped in output
-      // - Check that generated TypeScript is valid
-      // - Ensure proper mapping between IDL and TypeScript naming
       try {
-        parseIDL(idl);
-        // If we get here, the parser handled it
-        assert(true);
-      }
-      catch (_) {
-        // If it throws, that's also acceptable behavior
-        assert(true);
+        parseIDL(idl); // Verify parsing doesn't throw
+        const output = generateTypeScript(idl, {
+          includeStubs: true,
+          includeSkeletons: true
+        });
+
+        const testFile = output.get("Test.ts");
+        assert(testFile, "Generated TypeScript file should exist");
+
+        // Verify struct members are escaped
+        assert(testFile.includes("interface_: string"), "struct interface field should be escaped");
+        assert(testFile.includes("module_: number"), "struct module field should be escaped");
+        assert(testFile.includes("struct_: boolean"), "struct struct field should be escaped");
+        assert(testFile.includes("class_: string"), "struct class field should be escaped");
+        assert(testFile.includes("function_: number"), "struct function field should be escaped");
+
+        // Verify interface methods are escaped
+        assert(testFile.includes("break_(): Promise<void>"), "interface break method should be escaped");
+        assert(testFile.includes("return_(): Promise<string>"), "interface return method should be escaped");
+
+        // Verify interface attributes are escaped
+        assert(testFile.includes("readonly const_: boolean"), "interface const attribute should be escaped");
+        assert(testFile.includes("var_: string"), "interface var attribute should be escaped");
+
+        // Verify enum members are escaped
+        assert(testFile.includes("new_ = 0"), "enum new member should be escaped");
+        assert(testFile.includes("delete_ = 1"), "enum delete member should be escaped");
+        assert(testFile.includes("import_ = 2"), "enum import member should be escaped");
+        assert(testFile.includes("export_ = 3"), "enum export member should be escaped");
+
+        // Verify stub methods are escaped
+        assert(testFile.includes("async break_(): Promise<void>"), "stub break method should be escaped");
+        assert(testFile.includes("async return_(): Promise<string>"), "stub return method should be escaped");
+
+        // Verify stub property getters are escaped
+        assert(testFile.includes("get const_(): boolean"), "stub const property getter should be escaped");
+        assert(testFile.includes("get var_(): string"), "stub var property getter should be escaped");
+
+        // Verify the generated TypeScript is syntactically valid by checking it doesn't have unescaped keywords
+        assert(!testFile.includes("interface interface:"), "Should not have unescaped interface keyword");
+        assert(!testFile.includes("module module:"), "Should not have unescaped module keyword");
+        assert(!testFile.includes("struct struct:"), "Should not have unescaped struct keyword");
+
+      } catch (error) {
+        throw new Error(`Failed to handle reserved words: ${error}`);
       }
     });
 
@@ -315,11 +362,11 @@ describe("Edge Cases and Error Handling", () => {
       const results = generateTypeScript(idl);
       const output = results.get("Test.ts") || "";
 
-      // Methods should be generated even with keyword names
-      assert(output.includes("delete(): Promise<void>"));
-      assert(output.includes("function(): Promise<void>"));
-      assert(output.includes("class(): Promise<void>"));
-      assert(output.includes("extends(): Promise<void>"));
+      // Methods should be escaped to avoid TypeScript keyword conflicts
+      assert(output.includes("delete_(): Promise<void>"));
+      assert(output.includes("function_(): Promise<void>"));
+      assert(output.includes("class_(): Promise<void>"));
+      assert(output.includes("extends_(): Promise<void>"));
     });
 
     it("should handle circular type references", () => {
