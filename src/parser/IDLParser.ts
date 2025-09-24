@@ -1076,6 +1076,20 @@ export class IDLParser {
       };
     }
 
+    if (token === "fixed") {
+      this.consume("fixed");
+      this.consume("<");
+      const totalDigits = parseInt(this.consume());
+      this.consume(",");
+      const fractionalDigits = parseInt(this.consume());
+      this.consume(">");
+      return {
+        kind: "fixedType",
+        totalDigits,
+        fractionalDigits,
+      };
+    }
+
     const primitiveTypes = [
       "void",
       "boolean",

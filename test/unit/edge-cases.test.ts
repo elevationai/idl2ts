@@ -600,8 +600,7 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("setValue(value: unknown): Promise<void>"));
     });
 
-    // Skip tests that require features not yet implemented
-    it.ignore("should handle fixed-point types as numbers", () => {
+    it("should handle fixed-point types as numbers", () => {
       const idl = `
         module Test {
           typedef fixed<10,2> Money;
