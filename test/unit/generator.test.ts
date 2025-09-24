@@ -621,6 +621,10 @@ describe("TypeScriptGenerator", () => {
 
       // This depends on what helpers are implemented
       // For now, just check that the option is respected
+      // Full implementation needed:
+      // - Verify specific helper functions are included/excluded
+      // - Check helper function correctness
+      // - Validate that generated code uses helpers appropriately
       assertExists(outputWithHelpers.get("Test.ts"));
       assertExists(outputWithoutHelpers.get("Test.ts"));
     });

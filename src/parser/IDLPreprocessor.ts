@@ -162,6 +162,12 @@ export class IDLPreprocessor {
       // Handle #if, #elif, #else
       if (line.startsWith("#if ") || line.startsWith("#elif")) {
         // For now, skip complex conditionals
+        // Full implementation needed:
+        // - Parse and evaluate conditional expressions
+        // - Track defined macros and their values
+        // - Implement proper conditional block inclusion/exclusion
+        // - Support nested conditionals
+        // - Handle #ifdef, #ifndef, #if defined() variants
         skipContent = true;
         continue;
       }

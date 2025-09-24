@@ -1106,6 +1106,13 @@ export class IDLParser {
     }
 
     // Handle expressions (keep as string for now)
+    // Full implementation needed:
+    // - Implement a complete expression evaluator supporting:
+    //   - All arithmetic operators (+, -, *, /, %)
+    //   - Bitwise operators (<<, >>, &, |, ^)
+    //   - Parentheses and operator precedence
+    //   - Constant references and macro substitutions
+    //   - Type casting and overflow handling
     if (
       token.includes("(") || token.includes("+") || token.includes("-") ||
       token.includes("*") || token.includes("/") || token.includes("<<") ||

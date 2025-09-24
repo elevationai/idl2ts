@@ -140,6 +140,10 @@ describe("Edge Cases and Error Handling", () => {
       // This might fail depending on parser implementation
       // Some IDL parsers allow reserved words as member names
       // We'll just check it doesn't throw for now
+      // Full implementation needed:
+      // - Verify that reserved words are properly escaped in output
+      // - Check that generated TypeScript is valid
+      // - Ensure proper mapping between IDL and TypeScript naming
       try {
         parseIDL(idl);
         // If we get here, the parser handled it
