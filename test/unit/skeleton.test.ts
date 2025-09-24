@@ -39,9 +39,9 @@ Deno.test("POA skeleton generation - parameter marshaling", () => {
   const generatedCode = result.get("index.ts") || "";
 
   // Check unmarshaling of parameters
-  assertEquals(generatedCode.includes("inputStream.readString()"), true);
-  assertEquals(generatedCode.includes("inputStream.readLong()"), true);
-  assertEquals(generatedCode.includes("decodeAny(inputStream)"), true); // 'any' type uses decodeAny
+  assertEquals(generatedCode.includes("_inputStream.readString()"), true);
+  assertEquals(generatedCode.includes("_inputStream.readLong()"), true);
+  assertEquals(generatedCode.includes("decodeAny(_inputStream)"), true); // 'any' type uses decodeAny
 
   // Check marshaling of return values
   assertEquals(generatedCode.includes("outputStream.writeString(result)"), true);
@@ -65,8 +65,8 @@ Deno.test("POA skeleton generation - out and inout parameters", () => {
 
   // Check that inout parameters are read
   assertEquals(generatedCode.includes('case "swap":'), true);
-  assertEquals(generatedCode.includes("const a = inputStream.readLong()"), true);
-  assertEquals(generatedCode.includes("const b = inputStream.readLong()"), true);
+  assertEquals(generatedCode.includes("const a = _inputStream.readLong()"), true);
+  assertEquals(generatedCode.includes("const b = _inputStream.readLong()"), true);
 
   // Check that out parameters are written
   assertEquals(generatedCode.includes("outputStream.writeLong(result.a)"), true);
@@ -167,8 +167,8 @@ Deno.test("POA skeleton generation - complex types", () => {
   const generatedCode = result.get("index.ts") || "";
 
   // Check struct marshaling - should generate field-by-field marshaling
-  assertEquals(generatedCode.includes("x: inputStream.readLong()"), true); // Unmarshal struct field x
-  assertEquals(generatedCode.includes("y: inputStream.readLong()"), true); // Unmarshal struct field y
+  assertEquals(generatedCode.includes("x: _inputStream.readLong()"), true); // Unmarshal struct field x
+  assertEquals(generatedCode.includes("y: _inputStream.readLong()"), true); // Unmarshal struct field y
   assertEquals(generatedCode.includes("outputStream.writeLong(result.x)"), true); // Marshal struct field x
   assertEquals(generatedCode.includes("outputStream.writeLong(result.y)"), true); // Marshal struct field y
 });

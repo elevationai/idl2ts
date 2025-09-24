@@ -111,10 +111,16 @@ export interface UnionCaseNode extends BaseNode {
   isDefault?: boolean;
 }
 
+export interface EnumMemberNode extends BaseNode {
+  kind: "enumMember";
+  name: string;
+  value?: number;
+}
+
 export interface EnumNode extends BaseNode {
   kind: "enum";
   name: string;
-  members: string[];
+  members: EnumMemberNode[];
 }
 
 export interface TypedefNode extends BaseNode {

@@ -1,5 +1,6 @@
 import * as AST from "../ast/nodes.ts";
 import { IDLPreprocessor } from "./IDLPreprocessor.ts";
+import { ExpressionEvaluator } from "./ExpressionEvaluator.ts";
 
 export interface ParserOptions {
   includePaths?: string[];
@@ -12,10 +13,13 @@ export class IDLParser {
   private currentToken: number = 0;
   private preprocessor: IDLPreprocessor;
   private globalInhibit: boolean = false;
+  private expressionEvaluator: ExpressionEvaluator;
+  private definedConstants: Map<string, number> = new Map();
 
   constructor(options: ParserOptions = {}) {
     this.input = "";
     this.preprocessor = new IDLPreprocessor(options.includePaths || []);
+    this.expressionEvaluator = new ExpressionEvaluator(this.definedConstants);
   }
 
   parse(input: string, filePath?: string): AST.SpecificationNode {
@@ -295,8 +299,20 @@ export class IDLParser {
 
     while (this.peek() === "[") {
       this.consume("[");
-      const dim = this.consume();
-      dimensions.push(parseInt(dim));
+      // Collect tokens until we find the closing bracket
+      let dimExpr = "";
+      while (this.peek() !== "]" && this.currentToken < this.tokens.length) {
+        dimExpr += this.consume();
+      }
+
+      // Parse the dimension expression
+      const dimValue = this.parseValue(dimExpr);
+      if (typeof dimValue === 'number') {
+        dimensions.push(dimValue);
+      } else {
+        // If it's not a number, try to parse as integer
+        dimensions.push(parseInt(String(dimValue)));
+      }
       this.consume("]");
     }
 
@@ -732,10 +748,42 @@ export class IDLParser {
     const name = this.consume();
     this.consume("{");
 
-    const members: string[] = [];
+    const members: AST.EnumMemberNode[] = [];
+    let nextValue = 0;  // Enum values start at 0 by default
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
-      members.push(this.consume());
+      const memberName = this.consume();
+      let memberValue: number;
+
+      if (this.peek() === "=") {
+        // Explicit value provided
+        this.consume("=");
+
+        // Collect tokens until comma or closing brace
+        let valueExpr = "";
+        while (this.peek() !== "," && this.peek() !== "}" && this.currentToken < this.tokens.length) {
+          valueExpr += this.consume();
+        }
+
+        // Evaluate the expression
+        const evaluatedValue = this.parseValue(valueExpr);
+        if (typeof evaluatedValue === 'number') {
+          memberValue = evaluatedValue;
+        } else {
+          throw new Error(`Enum member value must be a constant integer expression: ${valueExpr}`);
+        }
+        nextValue = memberValue + 1;
+      } else {
+        // Use auto-incremented value
+        memberValue = nextValue++;
+      }
+
+      members.push({
+        kind: "enumMember",
+        name: memberName,
+        value: memberValue
+      });
+
       if (this.peek() === ",") {
         this.consume(",");
       }
@@ -869,6 +917,12 @@ export class IDLParser {
 
     const value = this.parseValue(valueStr);
     this.consume(";");
+
+    // Store constant value if it's numeric
+    if (typeof value === 'number') {
+      this.definedConstants.set(name, value);
+      this.expressionEvaluator.setConstant(name, value);
+    }
 
     return {
       kind: "constant",
@@ -1105,38 +1159,28 @@ export class IDLParser {
       return parseFloat(token);
     }
 
-    // Handle expressions (keep as string for now)
-    // Full implementation needed:
-    // - Implement a complete expression evaluator supporting:
-    //   - All arithmetic operators (+, -, *, /, %)
-    //   - Bitwise operators (<<, >>, &, |, ^)
-    //   - Parentheses and operator precedence
-    //   - Constant references and macro substitutions
-    //   - Type casting and overflow handling
+    // Check if it's a defined constant first
+    if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(token)) {
+      const constantValue = this.definedConstants.get(token);
+      if (constantValue !== undefined) {
+        return constantValue;
+      }
+    }
+
+    // Handle expressions using the complete expression evaluator
     if (
       token.includes("(") || token.includes("+") || token.includes("-") ||
       token.includes("*") || token.includes("/") || token.includes("<<") ||
-      token.includes(">>")
+      token.includes(">>") || token.includes("&") || token.includes("|") ||
+      token.includes("^") || token.includes("~") || token.includes("%")
     ) {
-      // Try to evaluate simple expressions
       try {
-        // Remove spaces and evaluate
-        const cleanExpr = token.replace(/\s+/g, "");
-        // Only evaluate if it's a simple numeric expression
-        if (/^[\d\-+*\/()<<>>]+$/.test(cleanExpr)) {
-          // Use Function constructor to safely evaluate
-          const result = Function(
-            '"use strict"; return (' +
-              cleanExpr.replace(/<</, "*Math.pow(2,").replace(
-                />>/,
-                ")/Math.pow(2,",
-              ) + ")",
-          )();
-          return result;
-        }
+        // Use the expression evaluator for complex expressions
+        return this.expressionEvaluator.evaluate(token);
       }
-      catch (_e) {
-        // If evaluation fails, return as string
+      catch (e) {
+        // According to CORBA spec, constant expressions must be evaluable at compile time
+        throw new Error(`Failed to evaluate constant expression '${token}': ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 

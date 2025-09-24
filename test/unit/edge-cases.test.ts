@@ -75,7 +75,8 @@ describe("Edge Cases and Error Handling", () => {
       const module = ast.definitions[0] as AST.ModuleNode;
       const enum_ = module.definitions[0] as AST.EnumNode;
       assertEquals(enum_.kind, "enum");
-      assertEquals(enum_.members, ["ONLY_ONE"]);
+      assertEquals(enum_.members.length, 1);
+      assertEquals(enum_.members[0].name, "ONLY_ONE");
     });
 
     it("should handle deeply nested modules", () => {

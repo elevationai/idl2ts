@@ -1,6 +1,6 @@
 import { describe, it } from "@std/testing/bdd";
 import { assert } from "@std/assert";
-import { compileToString, generateTypeScript } from "../helpers/test-utils.ts";
+import { generateTypeScript } from "../helpers/test-utils.ts";
 
 describe("Union Marshaling", () => {
   describe("Marshaling with enum discriminator", () => {

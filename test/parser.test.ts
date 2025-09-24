@@ -153,9 +153,9 @@ describe("IDLParser", () => {
     assertExists(enumDef);
     assertEquals(enumDef.kind, "enum");
     assertEquals(enumDef.members.length, 3);
-    assertEquals(enumDef.members[0], "RED");
-    assertEquals(enumDef.members[1], "GREEN");
-    assertEquals(enumDef.members[2], "BLUE");
+    assertEquals(enumDef.members[0].name, "RED");
+    assertEquals(enumDef.members[1].name, "GREEN");
+    assertEquals(enumDef.members[2].name, "BLUE");
   });
 
   it("should parse struct", () => {

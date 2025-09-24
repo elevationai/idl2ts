@@ -850,7 +850,8 @@ export class TypeScriptGenerator {
 
     for (let i = 0; i < node.members.length; i++) {
       const member = node.members[i];
-      this.emit(`${member} = ${i},`);
+      const value = member.value !== undefined ? member.value : i;
+      this.emit(`${member.name} = ${value},`);
     }
 
     this.dedent();
@@ -864,7 +865,7 @@ export class TypeScriptGenerator {
       this.indent();
       this.emit(`"${repoId}",`);
       this.emit(`"${node.name}",`);
-      this.emit(`[${node.members.map((m: string) => `"${m}"`).join(", ")}]`);
+      this.emit(`[${node.members.map((m) => `"${m.name}"`).join(", ")}]`);
       this.dedent();
       this.emit(`);`);
       this.emit("");

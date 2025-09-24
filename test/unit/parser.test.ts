@@ -377,7 +377,10 @@ describe("IDLParser", () => {
       const color = findMember(module, "Color") as AST.EnumNode;
 
       assertEquals(color.kind, "enum");
-      assertEquals(color.members, ["RED", "GREEN", "BLUE"]);
+      assertEquals(color.members.length, 3);
+      assertEquals(color.members[0].name, "RED");
+      assertEquals(color.members[1].name, "GREEN");
+      assertEquals(color.members[2].name, "BLUE");
     });
 
     it("should parse enum with trailing comma", () => {
@@ -395,7 +398,10 @@ describe("IDLParser", () => {
       const module = findDefinition(ast, "Test") as AST.ModuleNode;
       const status = findMember(module, "Status") as AST.EnumNode;
 
-      assertEquals(status.members, ["PENDING", "ACTIVE", "COMPLETED"]);
+      assertEquals(status.members.length, 3);
+      assertEquals(status.members[0].name, "PENDING");
+      assertEquals(status.members[1].name, "ACTIVE");
+      assertEquals(status.members[2].name, "COMPLETED");
     });
   });
 
