@@ -70,6 +70,7 @@ export interface OperationNode extends BaseNode {
   parameters: ParameterNode[];
   raises?: string[];
   isOneway?: boolean;
+  context?: string[];
 }
 
 export interface ParameterNode extends BaseNode {

@@ -528,12 +528,20 @@ export class IDLParser {
       this.consume(")");
     }
 
-    // Parse context clause if present (we ignore it for TypeScript generation)
+    // Parse context clause if present
+    // Context clauses are a CORBA-specific feature for passing implicit environmental properties
+    // (like user ID, locale, timezone) from client to server alongside the explicit parameters.
+    // We parse and store them in the AST for completeness, but ignore them during TypeScript
+    // generation because:
+    // 1. TypeScript has no built-in equivalent for CORBA-style context propagation
+    // 2. Context handling is an ORB runtime concern, not part of the static type system
+    // 3. Modern approaches use explicit parameters, headers, or middleware for such data
+    // The context data remains in the AST for potential future use (documentation, validation, etc.)
+    let context: string[] | undefined;
     if (this.peek() === "context") {
       this.consume("context");
       this.consume("(");
-      // Parse context strings but don't store them
-      this.parseContextList();
+      context = this.parseContextList();
       this.consume(")");
     }
 
@@ -546,19 +554,24 @@ export class IDLParser {
       parameters,
       raises,
       isOneway,
+      context,
     };
   }
 
-  private parseContextList(): void {
-    // Parse context list - just consume the tokens since we don't use them
-    // Context items are string literals
+  private parseContextList(): string[] {
+    // Parse context list and return the context property names
+    const contextItems: string[] = [];
     if (this.peek().startsWith('"')) {
-      this.consume(); // Consume the first string
+      // Remove quotes from the string literal
+      const firstItem = this.consume();
+      contextItems.push(firstItem.slice(1, -1)); // Remove surrounding quotes
       while (this.peek() === ",") {
         this.consume(",");
-        this.consume(); // Consume the next string
+        const nextItem = this.consume();
+        contextItems.push(nextItem.slice(1, -1)); // Remove surrounding quotes
       }
     }
+    return contextItems;
   }
 
   private parseParameters(): AST.ParameterNode[] {

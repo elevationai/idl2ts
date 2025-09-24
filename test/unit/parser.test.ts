@@ -727,19 +727,26 @@ describe("IDLParser", () => {
       // Verify all operations parsed successfully
       assertEquals(iface.members.length, 6);
 
-      // Check that operations have correct signatures (context should be ignored)
+      // Check that operations have correct signatures and context is preserved
       const simple = iface.members[0] as AST.OperationNode;
       assertEquals(simple.name, "simple");
       assertEquals(simple.returnType.kind, "primitiveType");
+      assertEquals(simple.context, ["user_id"]);
+
+      const multiple = iface.members[1] as AST.OperationNode;
+      assertEquals(multiple.name, "multiple");
+      assertEquals(multiple.context, ["user_id", "session_id", "trace_id"]);
 
       const withReturn = iface.members[2] as AST.OperationNode;
       assertEquals(withReturn.name, "withReturn");
       assertEquals((withReturn.returnType as AST.PrimitiveTypeNode).type, "long");
+      assertEquals(withReturn.context, ["auth_token"]);
 
       const withBoth = iface.members[5] as AST.OperationNode;
       assertEquals(withBoth.name, "withBoth");
       assertEquals(withBoth.parameters.length, 1);
       assertEquals(withBoth.raises?.length, 1);
+      assertEquals(withBoth.context, ["operation_id", "timestamp"]);
     });
   });
 

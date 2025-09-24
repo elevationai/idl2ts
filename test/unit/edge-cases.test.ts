@@ -726,7 +726,7 @@ describe("Edge Cases and Error Handling", () => {
         };
       `;
 
-      // Context should be ignored in TypeScript generation
+      // Context is parsed and stored in AST but ignored in TypeScript generation
       const results = generateTypeScript(idl);
       const output = results.get("Test.ts") || "";
 
