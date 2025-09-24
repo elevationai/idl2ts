@@ -1,6 +1,7 @@
 import { describe, it } from "@std/testing/bdd";
 import { assert, assertEquals, assertExists } from "@std/assert";
-import { CodeMatcher, compile, compileToString, generateTypeScript } from "../helpers/test-utils.ts";
+import { CodeMatcher, compile, compileToString, generateTypeScript, parseIDL } from "../helpers/test-utils.ts";
+import { TypeScriptGenerator } from "../../src/generator/TypeScriptGenerator.ts";
 
 describe("TypeScriptGenerator", () => {
   describe("Type Mapping", () => {
@@ -435,6 +436,47 @@ describe("TypeScriptGenerator", () => {
   });
 
   describe("Cross-Module References", () => {
+    it("should resolve cross-module nested types correctly", () => {
+      const idl = `
+        module Common {
+          interface Logger {
+            enum Level { DEBUG, INFO, WARN, ERROR };
+            void log(in Level level, in string message);
+          };
+        };
+
+        module App {
+          interface Service {
+            enum Level { LOW, MEDIUM, HIGH };  // Different enum with same name
+            void setLevel(in Level priority);  // Should use local Level
+            void logMessage(in ::Common::Logger::Level level, in string msg);  // Should use Common's nested Level
+          };
+        };
+      `;
+
+      const ast = parseIDL(idl);
+      const generator = new TypeScriptGenerator({ emitHelpers: false });
+      const results = generator.generate(ast);
+
+      const commonOutput = results.get("Common.ts") || "";
+      const appOutput = results.get("App.ts") || "";
+
+      // Common module should have Logger interface and Logger_Level enum
+      assert(commonOutput.includes("export enum Logger_Level"));
+      assert(commonOutput.includes("log(level: Logger_Level, message: string)"));
+
+      // App module should have Service interface and Service_Level enum
+      assert(appOutput.includes("export enum Service_Level"));
+      assert(appOutput.includes("setLevel(priority: Service_Level)"));
+
+      // App should import Common for cross-module reference
+      assert(appOutput.includes("import"));
+      assert(appOutput.includes("Common"));
+
+      // App.Service.logMessage should use Common.Logger_Level
+      assert(appOutput.includes("logMessage(level: Common.Logger_Level, msg: string)"));
+    });
+
     it("should generate imports for cross-module types", () => {
       const idl = `
         module Common {

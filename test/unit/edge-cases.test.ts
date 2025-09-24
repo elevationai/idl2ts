@@ -559,12 +559,12 @@ describe("Edge Cases and Error Handling", () => {
           struct Data {
             long value;
           };
-          
+
           interface Service {
             struct Data {
               string content;
             };
-            
+
             Data getData();  // Should refer to nested Data
             ::Test::Data getGlobalData();  // Should refer to module-level Data
           };
@@ -578,6 +578,54 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("export interface Service_Data")); // Nested
       assert(output.includes("getData(): Promise<Service_Data>"));
       assert(output.includes("getGlobalData(): Promise<Data>"));
+    });
+
+    it("should apply type resolution heuristics correctly", () => {
+      const idl = `
+        module Test {
+          interface Status {
+            string getMessage();
+          };
+
+          interface Component {
+            enum Status { OK, ERROR, WARNING };
+            struct Config {
+              Status status;  // Should refer to nested enum
+              string name;
+            };
+
+            Status getStatus();  // Should refer to nested enum
+            Config getConfig();
+          };
+
+          interface Monitor {
+            struct Status {
+              long code;
+              string message;
+            };
+
+            Status checkStatus();  // Should refer to nested struct
+          };
+        };
+      `;
+
+      const results = generateTypeScript(idl);
+      const output = results.get("Test.ts") || "";
+
+      // Check that all types are generated
+      assert(output.includes("export interface Status"));  // Top-level interface
+      assert(output.includes("export enum Component_Status"));  // Nested enum
+      assert(output.includes("export interface Component_Config"));  // Nested struct
+      assert(output.includes("export interface Monitor_Status"));  // Nested struct
+
+      // Check Component interface - should prefer nested enum
+      assert(output.includes("getStatus(): Promise<Component_Status>"));
+
+      // Check Component_Config struct - should use nested enum for status field
+      assert(output.includes("status: Component_Status"));
+
+      // Check Monitor interface - should use nested struct
+      assert(output.includes("checkStatus(): Promise<Monitor_Status>"));
     });
   });
 

@@ -1779,7 +1779,7 @@ export class TypeScriptGenerator {
     switch (node.kind) {
       case "primitiveType":
         return this.mapPrimitiveType(node.type);
-      case "namedType":
+      case "namedType": {
         // Check if this is a qualified name with ::
         if (node.name.includes("::")) {
           let parts = node.name.split("::");
@@ -1791,6 +1791,23 @@ export class TypeScriptGenerator {
 
           if (parts.length >= 2) {
             const moduleName = parts[0];
+
+            // Check if this is a nested type reference (e.g., Module::Interface::Type)
+            if (parts.length === 3) {
+              const interfaceName = parts[1];
+              const typeName = parts[2];
+
+              // Look for the flattened type name
+              const flattenedName = `${interfaceName}_${typeName}`;
+
+              if (moduleName !== this.currentModule) {
+                this.addImport(moduleName, isTypeOnly);
+                return `${moduleName}.${flattenedName}`;
+              }
+              return flattenedName;
+            }
+
+            // Standard qualified name (e.g., Module::Type)
             const typeName = parts.slice(1).join("_");
             if (moduleName !== this.currentModule) {
               this.addImport(moduleName, isTypeOnly);
@@ -1841,6 +1858,31 @@ export class TypeScriptGenerator {
           }
         }
 
+        // For unqualified names in the current module, first check if it's a nested type
+        const currentModuleOutput = this.modules.get(this.currentModule);
+        if (currentModuleOutput) {
+          // If we have interface context, check nested types first
+          if (sourceInterface) {
+            const flattenedTypeName = this.findFlattenedType(
+              node.name,
+              currentModuleOutput,
+              sourceInterface,
+            );
+            if (flattenedTypeName) {
+              return flattenedTypeName;
+            }
+          }
+
+          // Check if it's a flattened type without interface preference
+          const flattenedTypeName = this.findFlattenedType(
+            node.name,
+            currentModuleOutput,
+          );
+          if (flattenedTypeName) {
+            return flattenedTypeName;
+          }
+        }
+
         // For unqualified names, check if it exists in other imported modules
         // This handles the case where we're generating stubs with inherited types
         for (const [moduleName, module] of this.modules) {
@@ -1855,6 +1897,7 @@ export class TypeScriptGenerator {
 
         // For unqualified names in the current module
         return this.getPrefixedName(node.name);
+      }
       case "sequenceType":
         return `${
           this.mapType(
@@ -2169,17 +2212,63 @@ export class TypeScriptGenerator {
       }
     }
 
-    // If multiple matches, prefer enum types over interface types
-    // This handles the MediaOutput_MediaType vs MediaType case
+    // If multiple matches, apply heuristics to select the best match
     if (allMatches.length > 0) {
-      // Check if any of the matches correspond to enum types (they will be shorter typically)
-      // For MediaOutput_MediaType vs MediaType, prefer the nested enum
-      // Return first match for now, can be enhanced with better heuristics
-      // Full implementation needed:
-      // - Implement proper heuristics to prefer the most appropriate type
-      // - Consider scope hierarchy (prefer local over global)
-      // - Prefer enum types over interface types when applicable
-      // - Use full qualification paths to disambiguate
+      // Build a list with type information for better selection
+      const matchesWithInfo: Array<{ name: string; type: string; interfaceName: string }> = [];
+
+      for (const match of allMatches) {
+        const interfaceName = match.split("_")[0];
+        // Find the actual type of this match
+        for (const def of module.definitions) {
+          if (def.kind === "interface" && (def as AST.InterfaceNode).name === interfaceName) {
+            const interfaceDef = def as AST.InterfaceNode;
+            for (const member of interfaceDef.members) {
+              if (member.name === typeName) {
+                matchesWithInfo.push({
+                  name: match,
+                  type: member.kind,
+                  interfaceName: interfaceName
+                });
+                break;
+              }
+            }
+          }
+        }
+      }
+
+      // Apply heuristics:
+      // 1. Prefer enum types over other types for discriminator-like usage
+      const enumMatches = matchesWithInfo.filter(m => m.type === "enum");
+      if (enumMatches.length > 0) {
+        // If we have a preferred interface and it has an enum, use it
+        if (preferredInterface) {
+          const preferredEnum = enumMatches.find(m => m.interfaceName === preferredInterface);
+          if (preferredEnum) return preferredEnum.name;
+        }
+        // Otherwise return the first enum match
+        return enumMatches[0].name;
+      }
+
+      // 2. Prefer struct types over interface types for data structures
+      const structMatches = matchesWithInfo.filter(m => m.type === "struct");
+      if (structMatches.length > 0) {
+        // If we have a preferred interface and it has a struct, use it
+        if (preferredInterface) {
+          const preferredStruct = structMatches.find(m => m.interfaceName === preferredInterface);
+          if (preferredStruct) return preferredStruct.name;
+        }
+        // Otherwise return the first struct match
+        return structMatches[0].name;
+      }
+
+      // 3. For other types, prefer local scope (preferred interface) if available
+      if (preferredInterface) {
+        const localMatch = matchesWithInfo.find(m => m.interfaceName === preferredInterface);
+        if (localMatch) return localMatch.name;
+      }
+
+      // 4. Default to first match if no other heuristics apply
       return allMatches[0];
     }
 
