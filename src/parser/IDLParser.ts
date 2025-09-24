@@ -348,6 +348,8 @@ export class IDLParser {
         return this.parseException();
       case "union":
         return this.parseUnion();
+      case "native":
+        return this.parseNative();
       default:
         if (token === "#" || token === ";") {
           this.consume();
@@ -950,6 +952,16 @@ export class IDLParser {
       name,
       type,
       value,
+    };
+  }
+
+  private parseNative(): AST.NativeNode {
+    this.consume("native");
+    const name = this.consume();
+    this.consumeSemicolon();
+    return {
+      kind: "native",
+      name,
     };
   }
 

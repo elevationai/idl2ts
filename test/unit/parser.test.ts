@@ -635,6 +635,37 @@ describe("IDLParser", () => {
     });
   });
 
+  describe("Native Types", () => {
+    it("should parse native type declarations", () => {
+      const idl = `
+        module Test {
+          native Handle;
+          native WindowPtr;
+
+          interface NativeOps {
+            Handle getHandle();
+            void setHandle(in Handle h);
+            WindowPtr createWindow(in string title);
+          };
+        };
+      `;
+
+      const ast = parseIDL(idl);
+      const module = findDefinition(ast, "Test") as AST.ModuleNode;
+
+      // Check native type declarations
+      const natives = module.definitions.filter(d => d.kind === "native");
+      assertEquals(natives.length, 2);
+      assertEquals(natives[0].name, "Handle");
+      assertEquals(natives[1].name, "WindowPtr");
+
+      // Check that native types can be used in interfaces
+      const iface = module.definitions.find(d => d.kind === "interface") as AST.InterfaceNode;
+      const getHandle = iface.members[0] as AST.OperationNode;
+      assertEquals((getHandle.returnType as AST.NamedTypeNode).name, "Handle");
+    });
+  });
+
   describe("Context Expressions", () => {
     it("should parse operations with context clauses", () => {
       const idl = `

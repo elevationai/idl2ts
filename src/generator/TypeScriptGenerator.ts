@@ -254,6 +254,9 @@ export class TypeScriptGenerator {
       case "exception":
         this.generateException(node);
         break;
+      case "native":
+        this.generateNative(node);
+        break;
     }
   }
 
@@ -939,6 +942,18 @@ export class TypeScriptGenerator {
     }
 
     this.emit(`export const ${name}: ${tsType} = ${value};`);
+    this.emit("");
+  }
+
+  private generateNative(node: AST.NativeNode): void {
+    // Register native type in type registry as a typedef to 'any'
+    const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
+    this.typeRegistry.set(fullName, { kind: 'typedef', node: { kind: 'typedef', name: node.name, type: { kind: 'primitiveType', type: 'any' } } as AST.TypedefNode });
+    this.typeRegistry.set(node.name, { kind: 'typedef', node: { kind: 'typedef', name: node.name, type: { kind: 'primitiveType', type: 'any' } } as AST.TypedefNode });
+
+    // Generate type alias to any
+    const name = this.getPrefixedName(node.name);
+    this.emit(`export type ${name} = any;`);
     this.emit("");
   }
 

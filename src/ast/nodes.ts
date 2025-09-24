@@ -35,7 +35,8 @@ export type DefinitionNode =
   | EnumNode
   | TypedefNode
   | ConstantNode
-  | ExceptionNode;
+  | ExceptionNode
+  | NativeNode;
 
 export interface ModuleNode extends BaseNode {
   kind: "module";
@@ -140,6 +141,11 @@ export interface ExceptionNode extends BaseNode {
   kind: "exception";
   name: string;
   members: MemberNode[];
+}
+
+export interface NativeNode extends BaseNode {
+  kind: "native";
+  name: string;
 }
 
 export type TypeNode =

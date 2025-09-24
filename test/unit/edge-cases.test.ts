@@ -638,7 +638,7 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("methodWithContext(): Promise<void>"));
     });
 
-    it.ignore("should handle native types", () => {
+    it("should handle native types", () => {
       const idl = `
         module Test {
           native NativeHandle;
