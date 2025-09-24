@@ -816,14 +816,60 @@ export class TypeScriptGenerator {
     this.indent();
 
     const variants: string[] = [];
+    let defaultCase: AST.UnionCaseNode | null = null;
+    const handledLabels = new Set<string | number | boolean>();
+
+    // First pass: collect explicit cases and find default
     for (const caseNode of node.cases) {
       if (caseNode.member) {
-        const discriminatorValue = caseNode.isDefault
-          ? '"default"'
-          : caseNode.labels.map((l: string | number | boolean) => JSON.stringify(l)).join(" | ");
+        if (caseNode.isDefault) {
+          defaultCase = caseNode;
+        } else {
+          const discriminatorValue = caseNode.labels.map((l: string | number | boolean) => JSON.stringify(l)).join(" | ");
+          variants.push(
+            `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(caseNode.member.name)}: ${this.mapType(caseNode.member.type)} }`,
+          );
+          // Track which labels are explicitly handled
+          for (const label of caseNode.labels) {
+            handledLabels.add(label);
+          }
+        }
+      }
+    }
 
+    // If there's a default case, generate variants for all unhandled discriminator values
+    if (defaultCase && defaultCase.member) {
+      // For enum discriminators, find all unhandled enum values
+      if (node.discriminatorType.kind === "namedType") {
+        const enumName = node.discriminatorType.name;
+        // Try to find the enum definition
+        const enumDef = this.findEnumDefinition(enumName);
+        if (enumDef) {
+          const unhandledLabels: string[] = [];
+          for (const member of enumDef.members) {
+            if (!handledLabels.has(member.name)) {
+              unhandledLabels.push(JSON.stringify(member.name));
+            }
+          }
+          if (unhandledLabels.length > 0) {
+            const discriminatorValue = unhandledLabels.join(" | ");
+            variants.push(
+              `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(defaultCase.member.name)}: ${this.mapType(defaultCase.member.type)} }`,
+            );
+          }
+        } else {
+          // Fallback: use a generic "default" discriminator
+          // This isn't ideal but maintains backward compatibility
+          variants.push(
+            `{ discriminator: "default"; ${this.escapeReservedWord(defaultCase.member.name)}: ${this.mapType(defaultCase.member.type)} }`,
+          );
+        }
+      } else {
+        // For non-enum discriminators (like long), we can't enumerate all values
+        // Use a special marker that TypeScript can understand
+        // Note: This is a limitation - we can't represent "all other values" in TypeScript's type system perfectly
         variants.push(
-          `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(caseNode.member.name)}: ${this.mapType(caseNode.member.type)} }`,
+          `{ discriminator: string | number; ${this.escapeReservedWord(defaultCase.member.name)}: ${this.mapType(defaultCase.member.type)} }`,
         );
       }
     }
@@ -870,12 +916,20 @@ export class TypeScriptGenerator {
     const members: string[] = [];
     for (const caseNode of node.cases) {
       if (caseNode.member) {
-        for (const label of caseNode.labels) {
-          const labelValue = typeof label === "string" ? `"${label}"` : label;
+        if (caseNode.isDefault) {
+          // For default case, use a special label value (0 for CORBA)
           const memberTypeCode = this.getTypeCodeForType(caseNode.member.type);
           members.push(
-            `{ label: ${labelValue}, name: "${caseNode.member.name}", type: ${memberTypeCode} }`,
+            `{ label: 0, name: "${caseNode.member.name}", type: ${memberTypeCode}, isDefault: true }`,
           );
+        } else {
+          for (const label of caseNode.labels) {
+            const labelValue = typeof label === "string" ? `"${label}"` : label;
+            const memberTypeCode = this.getTypeCodeForType(caseNode.member.type);
+            members.push(
+              `{ label: ${labelValue}, name: "${caseNode.member.name}", type: ${memberTypeCode} }`,
+            );
+          }
         }
       }
     }
@@ -2416,51 +2470,67 @@ export class TypeScriptGenerator {
     lines.push(`  switch (_discriminator) {`);
 
     // Generate cases for each union case
+    let defaultCase: AST.UnionCaseNode | null = null;
+
     for (const caseNode of unionNode.cases) {
       if (caseNode.member) {
-        for (const label of caseNode.labels) {
-          // For enum discriminators, labels are enum member names
-          // We need to convert them to the actual enum values
-          if (unionNode.discriminatorType.kind === "namedType") {
-            // It's an enum type - use the qualified enum member name
-            // For cross-module types, we need to qualify them properly
-            let enumType = unionNode.discriminatorType.name;
-            if (enumType.includes("::")) {
-              const parts = enumType.split("::");
-              enumType = `${parts[0]}.${parts[parts.length - 1]}`;
-            } else {
-              // Try to resolve it
-              const resolved = this.findTypeInRegistry(enumType);
-              if (resolved) {
-                // If it's in a different module, we need to qualify it
-                if (this.currentModule !== "types" && enumType === "evtFilterType") {
-                  enumType = "types." + enumType;
+        if (caseNode.isDefault) {
+          // Save default case for later
+          defaultCase = caseNode;
+        } else {
+          for (const label of caseNode.labels) {
+            // For enum discriminators, labels are enum member names
+            // We need to convert them to the actual enum values
+            if (unionNode.discriminatorType.kind === "namedType") {
+              // It's an enum type - use the qualified enum member name
+              // For cross-module types, we need to qualify them properly
+              let enumType = unionNode.discriminatorType.name;
+              if (enumType.includes("::")) {
+                const parts = enumType.split("::");
+                enumType = `${parts[0]}.${parts[parts.length - 1]}`;
+              } else {
+                // Try to resolve it
+                const resolved = this.findTypeInRegistry(enumType);
+                if (resolved) {
+                  // If it's in a different module, we need to qualify it
+                  if (this.currentModule !== "types" && enumType === "evtFilterType") {
+                    enumType = "types." + enumType;
+                  }
                 }
               }
+              lines.push(`    case ${enumType}.${label}:`);
+            } else {
+              // Primitive type - use the value directly
+              const labelValue = typeof label === "string" ? `"${label}"` : label;
+              lines.push(`    case ${labelValue}:`);
             }
-            lines.push(`    case ${enumType}.${label}:`);
-          } else {
-            // Primitive type - use the value directly
-            const labelValue = typeof label === "string" ? `"${label}"` : label;
-            lines.push(`    case ${labelValue}:`);
           }
+
+          // Unmarshal the member for this case
+          const memberUnmarshal = this.getUnmarshalCall(caseNode.member.type);
+          const memberName = this.escapeReservedWord(caseNode.member.name);
+
+          // Create the union object with discriminator and the appropriate field
+          // Use the label as a string literal for the discriminator field
+          const discriminatorValue = caseNode.labels[0];
+          const discriminatorStr = typeof discriminatorValue === "string" ? `"${discriminatorValue}"` : `${discriminatorValue}`;
+          lines.push(`      return { discriminator: ${discriminatorStr} as const, ${memberName}: ${memberUnmarshal} };`);
         }
-
-        // Unmarshal the member for this case
-        const memberUnmarshal = this.getUnmarshalCall(caseNode.member.type);
-        const memberName = this.escapeReservedWord(caseNode.member.name);
-
-        // Create the union object with discriminator and the appropriate field
-        // Use the label as a string literal for the discriminator field
-        const discriminatorValue = caseNode.labels[0];
-        const discriminatorStr = typeof discriminatorValue === "string" ? `"${discriminatorValue}"` : `${discriminatorValue}`;
-        lines.push(`      return { discriminator: ${discriminatorStr} as const, ${memberName}: ${memberUnmarshal} };`);
       }
     }
 
     // Default case
     lines.push(`    default:`);
-    lines.push(`      throw new Error(\`Unknown union discriminator: \${_discriminator}\`);`);
+    if (defaultCase && defaultCase.member) {
+      // If there's a default case in the union, unmarshal its member
+      const memberUnmarshal = this.getUnmarshalCall(defaultCase.member.type);
+      const memberName = this.escapeReservedWord(defaultCase.member.name);
+      // For default, use the actual discriminator value read from the stream
+      lines.push(`      return { discriminator: _discriminator as any, ${memberName}: ${memberUnmarshal} };`);
+    } else {
+      // No default case - throw error for unknown discriminator
+      lines.push(`      throw new Error(\`Unknown union discriminator: \${_discriminator}\`);`);
+    }
     lines.push(`  }`);
     lines.push(`})()`);
 
@@ -2482,14 +2552,116 @@ export class TypeScriptGenerator {
     // Determine how to write the discriminator based on its type
     const discriminatorType = unionNode.discriminatorType;
 
+    // Marshal the discriminator value first
+    lines.push(`  // Marshal the discriminator`);
+    if (discriminatorType.kind === "namedType") {
+      // For enum discriminators, we need to convert the string discriminator to enum value
+      // Check if the enum is from a different module and needs qualification
+      let enumName = discriminatorType.name;
+      if (enumName.includes("::")) {
+        // Qualified name like types::evtFilterType
+        const parts = enumName.split("::");
+        const moduleName = parts[0];
+        const typeName = parts[parts.length - 1];
+        if (moduleName !== this.currentModule) {
+          // Need to qualify with module name
+          enumName = `${moduleName}.${typeName}`;
+        } else {
+          enumName = typeName;
+        }
+      } else {
+        // Unqualified name - need to determine if it's in a different module
+        const enumDef = this.findEnumDefinition(discriminatorType.name);
+        if (enumDef) {
+          // Check if the enum is in a different module
+          const typeInfo = this.typeRegistry.get(discriminatorType.name);
+          if (typeInfo) {
+            // Check if it needs module qualification
+            for (const [moduleName, moduleOutput] of this.modules.entries()) {
+              if (moduleName !== this.currentModule) {
+                for (const def of moduleOutput.definitions) {
+                  if (def.kind === "enum" && def.name === discriminatorType.name) {
+                    // Found in a different module - needs qualification
+                    enumName = `${moduleName}.${discriminatorType.name}`;
+                    break;
+                  }
+                }
+                if (enumName !== discriminatorType.name) break;
+              }
+            }
+          }
+          // If not found in other modules, it's local
+          if (enumName === discriminatorType.name) {
+            enumName = this.resolveTypeName(discriminatorType.name, false);
+          }
+        } else {
+          // Fallback to regular resolution
+          enumName = this.resolveTypeName(discriminatorType.name, false);
+        }
+      }
+      lines.push(`  // Convert string discriminator to enum value`);
+      lines.push(`  let _discriminatorValue: number;`);
+      lines.push(`  switch (_union.discriminator) {`);
+
+      // Collect all discriminator values actually used in the union
+      const usedDiscriminators = new Set<string>();
+      for (const caseNode of unionNode.cases) {
+        if (caseNode.isDefault && caseNode.member) {
+          // For default case, we need to include all unhandled enum values
+          const enumDef = this.findEnumDefinition(discriminatorType.name);
+          if (enumDef) {
+            // Add all enum members that aren't explicitly handled
+            const handledLabels = new Set<string>();
+            for (const c of unionNode.cases) {
+              if (!c.isDefault) {
+                for (const label of c.labels) {
+                  handledLabels.add(String(label));
+                }
+              }
+            }
+            for (const member of enumDef.members) {
+              if (!handledLabels.has(member.name)) {
+                usedDiscriminators.add(member.name);
+              }
+            }
+          }
+        } else {
+          // Regular case - add its labels
+          for (const label of caseNode.labels) {
+            usedDiscriminators.add(String(label));
+          }
+        }
+      }
+
+      // Generate cases only for discriminator values actually used
+      for (const discriminator of usedDiscriminators) {
+        lines.push(`    case "${discriminator}":`);
+        lines.push(`      _discriminatorValue = ${enumName}.${discriminator};`);
+        lines.push(`      break;`);
+      }
+
+      lines.push(`    default:`);
+      lines.push(`      throw new Error(\`Invalid discriminator value: \${(_union as { discriminator: unknown }).discriminator}\`);`);
+      lines.push(`  }`);
+      lines.push(`  outputStream.writeLong(_discriminatorValue);`);
+    } else {
+      // For primitive discriminators, write directly
+      lines.push(`  ${this.getMarshalCall(discriminatorType, "_union.discriminator")};`);
+    }
+
     // Generate switch statement to handle each case
+    lines.push(`  // Marshal the union member based on discriminator`);
     lines.push(`  switch (_union.discriminator) {`);
 
-    // Generate cases for each union case
+    // Track the default case
+    let defaultCase: AST.UnionCaseNode | null = null;
+
+    // Generate cases for non-default union cases
     for (const caseNode of unionNode.cases) {
       if (caseNode.member) {
         if (caseNode.isDefault) {
-          lines.push(`    case "default": {`);
+          // Save default case for later - it will be handled in the default: clause
+          defaultCase = caseNode;
         } else {
           // Generate case labels
           for (let i = 0; i < caseNode.labels.length; i++) {
@@ -2504,79 +2676,74 @@ export class TypeScriptGenerator {
               lines.push(`    case ${labelValue}:`);
             }
           }
+
+          // Marshal the member value for this case
+          const memberName = this.escapeReservedWord(caseNode.member.name);
+          const memberMarshal = this.getMarshalCall(caseNode.member.type, `_union.${memberName}`);
+          lines.push(`      ${memberMarshal};`);
+          lines.push(`      break;`);
+          lines.push(`    }`);
         }
-
-        // Write the discriminator value
-        let discriminatorValue: string;
-        if (caseNode.isDefault) {
-          // For default case, we need a value that doesn't match any other case
-          // This is tricky - in CORBA, the default case handles any discriminator
-          // value not explicitly listed. We'll write a special value or the first
-          // non-matched value
-          if (discriminatorType.kind === "primitiveType") {
-            switch (discriminatorType.type) {
-              case "long":
-              case "short":
-              case "unsigned long":
-              case "unsigned short":
-                discriminatorValue = "-1; // Default case";
-                break;
-              case "boolean":
-                discriminatorValue = "false; // Default case";
-                break;
-              default:
-                discriminatorValue = "0; // Default case";
-            }
-          } else {
-            discriminatorValue = "-1; // Default case";
-          }
-        } else {
-          // For regular cases, get the actual discriminator value
-          const label = caseNode.labels[0];
-          if (discriminatorType.kind === "namedType") {
-            // It's an enum - need to get the enum value
-            let enumType = discriminatorType.name;
-            if (enumType.includes("::")) {
-              const parts = enumType.split("::");
-              enumType = `${parts[0]}.${parts[parts.length - 1]}`;
-            } else {
-              // Try to resolve it
-              const resolved = this.findTypeInRegistry(enumType);
-              if (resolved) {
-                // If it's in a different module, we need to qualify it
-                if (this.currentModule !== "types" && enumType === "evtFilterType") {
-                  enumType = "types." + enumType;
-                }
-              }
-            }
-            discriminatorValue = `${enumType}.${label}`;
-          } else {
-            // Primitive type - use the value directly
-            discriminatorValue = `${label}`;
-          }
-        }
-
-        // Marshal the discriminator
-        lines.push(`      const _discriminatorValue = ${discriminatorValue};`);
-        const discriminatorMarshal = this.getMarshalCall(discriminatorType, "_discriminatorValue");
-        lines.push(`      ${discriminatorMarshal};`);
-
-        // Marshal the member value
-        const memberName = this.escapeReservedWord(caseNode.member.name);
-        const memberMarshal = this.getMarshalCall(caseNode.member.type, `_union.${memberName}`);
-        lines.push(`      ${memberMarshal};`);
-        lines.push(`      break;`);
-        lines.push(`    }`);
       }
     }
 
-    // Default error case
-    lines.push(`    default:`);
-    lines.push(`      throw new Error(\`Unknown union discriminator: \${(_union as { discriminator: unknown }).discriminator}\`);`);
+    // Handle default case
+    if (defaultCase && defaultCase.member) {
+      lines.push(`    default: {`);
+      // For default case, marshal the default member
+      const memberName = this.escapeReservedWord(defaultCase.member.name);
+      const memberMarshal = this.getMarshalCall(defaultCase.member.type, `_union.${memberName}`);
+      lines.push(`      ${memberMarshal};`);
+      lines.push(`      break;`);
+      lines.push(`    }`);
+    } else {
+      // No default case - throw error for unknown discriminator
+      lines.push(`    default:`);
+      lines.push(`      throw new Error(\`Unknown union discriminator: \${(_union as { discriminator: unknown }).discriminator}\`);`);
+    }
+
     lines.push(`  }`);
     lines.push(`})()`);
 
     return lines.join("\n");
+  }
+
+  private findEnumDefinition(enumName: string): AST.EnumNode | null {
+    // Handle qualified names like Types::Status
+    let simpleName = enumName;
+    if (enumName.includes("::")) {
+      const parts = enumName.split("::");
+      simpleName = parts[parts.length - 1];
+    }
+
+    // First check current module definitions
+    if (this.currentModuleDefinitions) {
+      for (const def of this.currentModuleDefinitions) {
+        if (def.kind === "enum" && def.name === simpleName) {
+          return def as AST.EnumNode;
+        }
+      }
+    }
+
+    // Check type registry with both qualified and simple names
+    let typeInfo = this.typeRegistry.get(enumName);
+    if (!typeInfo) {
+      typeInfo = this.typeRegistry.get(simpleName);
+    }
+    if (typeInfo && typeInfo.kind === 'enum' && typeInfo.node) {
+      return typeInfo.node as AST.EnumNode;
+    }
+
+    // Check all modules
+    for (const module of this.modules.values()) {
+      for (const def of module.definitions) {
+        if (def.kind === "enum" && def.name === simpleName) {
+          return def as AST.EnumNode;
+        }
+      }
+    }
+
+    return null;
   }
 
   private findTypeInRegistry(typeName: string): { kind: string; node?: AST.DefinitionNode } | undefined {

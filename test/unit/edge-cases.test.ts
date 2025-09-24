@@ -510,7 +510,8 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("export type ManyTypes ="));
       assert(output.includes("{ discriminator: 1; boolVal: boolean }"));
       assert(output.includes("{ discriminator: 10; wstringVal: string }"));
-      assert(output.includes('{ discriminator: "default"; anyVal: unknown }'));
+      // Default case should allow any discriminator value not explicitly handled
+      assert(output.includes('{ discriminator: string | number; anyVal: unknown }'));
     });
   });
 

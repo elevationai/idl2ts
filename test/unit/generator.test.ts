@@ -380,8 +380,9 @@ describe("TypeScriptGenerator", () => {
       assert(output.includes("{ discriminator: 1; intValue: number }"));
       assert(output.includes("{ discriminator: 2; floatValue: number }"));
       assert(output.includes("{ discriminator: 3; stringValue: string }"));
+      // Default case should allow any discriminator value not explicitly handled
       assert(
-        output.includes('{ discriminator: "default"; boolValue: boolean }'),
+        output.includes('{ discriminator: string | number; boolValue: boolean }'),
       );
     });
 

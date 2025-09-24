@@ -39,9 +39,9 @@ describe("Union Marshaling", () => {
       assert(testFile.includes('case "STRING":'));
 
       // Check that discriminator values are written using enum
-      assert(testFile.includes("const _discriminatorValue = DataType.INT"));
-      assert(testFile.includes("const _discriminatorValue = DataType.FLOAT"));
-      assert(testFile.includes("const _discriminatorValue = DataType.STRING"));
+      assert(testFile.includes("_discriminatorValue = DataType.INT"));
+      assert(testFile.includes("_discriminatorValue = DataType.FLOAT"));
+      assert(testFile.includes("_discriminatorValue = DataType.STRING"));
 
       // Check that discriminator is marshaled
       assert(testFile.includes("outputStream.writeLong(_discriminatorValue)"));
@@ -130,13 +130,9 @@ describe("Union Marshaling", () => {
       assert(testFile.includes("case 2:"));
       assert(testFile.includes("case 3:"));
 
-      // Check that numeric discriminator values are set
-      assert(testFile.includes("const _discriminatorValue = 1"));
-      assert(testFile.includes("const _discriminatorValue = 2"));
-      assert(testFile.includes("const _discriminatorValue = 3"));
-
+      // For primitive discriminators, we write the discriminator directly
       // Check discriminator marshaling (long type)
-      assert(testFile.includes("outputStream.writeLong(_discriminatorValue)"));
+      assert(testFile.includes("outputStream.writeLong(_union.discriminator)"));
     });
 
     it("should generate proper unmarshaling for union with boolean discriminator", () => {
@@ -198,14 +194,11 @@ describe("Union Marshaling", () => {
 
       assert(testFile);
 
-      // Check TypeScript type generation
-      assert(testFile.includes('{ discriminator: "default"; defaultOption: boolean }'));
+      // Check TypeScript type generation - default case allows any discriminator value
+      assert(testFile.includes('{ discriminator: string | number; defaultOption: boolean }'));
 
       // Check marshaling handles default case
-      assert(testFile.includes('case "default":'));
-
-      // For default case, should write a special discriminator value
-      assert(testFile.includes("const _discriminatorValue = -1; // Default case"));
+      assert(testFile.includes('default:') && testFile.includes('defaultOption'));
 
       // Check that default option is marshaled
       assert(testFile.includes("outputStream.writeBoolean(_union.defaultOption)"));
@@ -285,10 +278,9 @@ describe("Union Marshaling", () => {
       assert(testFile.includes("case 4:"));
       assert(testFile.includes("case 5:"));
 
-      // Each case should set the first label as discriminator value
-      // (since we need a single value to write)
-      const case1Match = testFile.match(/case 1:[\s\S]*?const _discriminatorValue = 1/);
-      assert(case1Match);
+      // For primitive discriminators, we write the discriminator directly
+      // Check that the marshaling properly handles multiple labels
+      assert(testFile.includes("outputStream.writeLong(_union.discriminator)"));
     });
 
     it("should handle union with nested struct types", () => {
@@ -367,8 +359,8 @@ describe("Union Marshaling", () => {
              dataFile.includes('import { Status } from "./Types.ts"'));
 
       // Check that enum is properly qualified in marshaling
-      assert(dataFile.includes("const _discriminatorValue = Types.Status.ACTIVE") ||
-             dataFile.includes("const _discriminatorValue = Status.ACTIVE"));
+      assert(dataFile.includes("_discriminatorValue = Types.Status.ACTIVE") ||
+             dataFile.includes("_discriminatorValue = Status.ACTIVE"));
 
       // Check unmarshaling uses qualified enum
       assert(dataFile.includes("case Types.Status.ACTIVE:") ||
