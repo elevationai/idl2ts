@@ -524,7 +524,7 @@ describe("IDLCompiler Integration", () => {
   });
 
   describe("Real-world Examples", () => {
-    it.ignore("should compile CORBA-style service definition", () => {
+    it("should compile CORBA-style service definition", () => {
       const idlPath = `${tempDir}/service.idl`;
       const idlContent = `
         #pragma prefix "com.example"
@@ -603,40 +603,70 @@ describe("IDLCompiler Integration", () => {
 
       compiler.compile(idlPath);
 
-      // Check Auth module
-      const authPath = `${tempDir}/Services.ts`;
+      // Check that separate files are created for each module
+      // Services.ts for the outer module
+      const servicesPath = `${tempDir}/Services.ts`;
       try {
-        const stat = Deno.statSync(authPath);
+        const stat = Deno.statSync(servicesPath);
         assert(stat.isFile);
       }
       catch (e) {
         throw new Error(`Services module was not created: ${e}`);
       }
 
-      const authOutput = Deno.readTextFileSync(authPath);
+      // Auth.ts for the Auth nested module
+      const authPath = `${tempDir}/Auth.ts`;
+      try {
+        const stat = Deno.statSync(authPath);
+        assert(stat.isFile);
+      }
+      catch (e) {
+        throw new Error(`Auth module was not created: ${e}`);
+      }
 
-      // Check nested namespace structure
-      assert(authOutput.includes("export namespace Services"));
-      assert(authOutput.includes("export namespace Auth"));
-      assert(authOutput.includes("export namespace User"));
+      // User.ts for the User nested module
+      const userPath = `${tempDir}/User.ts`;
+      try {
+        const stat = Deno.statSync(userPath);
+        assert(stat.isFile);
+      }
+      catch (e) {
+        throw new Error(`User module was not created: ${e}`);
+      }
+
+      // Check Auth module contents
+      const authOutput = Deno.readTextFileSync(authPath);
 
       // Check Auth types
       assert(authOutput.includes("export interface Credentials"));
       assert(authOutput.includes("export interface Token"));
-      assert(authOutput.includes("export interface AuthenticationFailed"));
+      assert(authOutput.includes("export class AuthenticationFailed"));
+      assert(authOutput.includes("export class TokenExpired"));
       assert(authOutput.includes("export interface AuthService"));
       assert(authOutput.includes("export class AuthService_Stub"));
 
-      // Check User types
-      assert(authOutput.includes("export interface Profile"));
-      assert(authOutput.includes("authToken: Auth.Token"));
-      assert(authOutput.includes("export interface UserService"));
-      assert(authOutput.includes("export class UserService_Stub"));
+      // Check User module contents
+      const userOutput = Deno.readTextFileSync(userPath);
 
-      // Check CORBA import
-      assert(
-        authOutput.includes('import type { CORBA } from "@example/corba"'),
-      );
+      // Check User types
+      assert(userOutput.includes("export interface Profile"));
+      assert(userOutput.includes("export class UserNotFound"));
+      assert(userOutput.includes("export class InvalidProfile"));
+      assert(userOutput.includes("export interface UserService"));
+      assert(userOutput.includes("export class UserService_Stub"));
+
+      // Check cross-module imports - User imports Services, not Auth directly
+      assert(userOutput.includes('import * as Services from "./Services.ts"') ||
+             userOutput.includes('import { Services } from "./Services.ts"'));
+
+      // Check cross-references in types - uses flattened type names
+      assert(userOutput.includes("authToken: Services.Auth_Token"));
+
+      // Check custom CORBA import
+      assert(authOutput.includes('@example/corba') ||
+             authOutput.includes('from "@example/corba"'));
+      assert(userOutput.includes('@example/corba') ||
+             userOutput.includes('from "@example/corba"'));
     });
   });
 });

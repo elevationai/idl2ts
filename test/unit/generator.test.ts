@@ -662,14 +662,16 @@ describe("TypeScriptGenerator", () => {
         emitHelpers: false,
       });
 
-      // This depends on what helpers are implemented
-      // For now, just check that the option is respected
-      // Full implementation needed:
-      // - Verify specific helper functions are included/excluded
-      // - Check helper function correctness
-      // - Validate that generated code uses helpers appropriately
-      assertExists(outputWithHelpers.get("Test.ts"));
-      assertExists(outputWithoutHelpers.get("Test.ts"));
+      // The emitHelpers option is accepted but not yet implemented
+      // Currently both outputs should be identical since no helpers are emitted
+      const withHelpers = outputWithHelpers.get("Test.ts");
+      const withoutHelpers = outputWithoutHelpers.get("Test.ts");
+
+      assertExists(withHelpers);
+      assertExists(withoutHelpers);
+
+      // Since helpers are not implemented yet, both outputs should be identical
+      assertEquals(withHelpers, withoutHelpers);
     });
   });
 

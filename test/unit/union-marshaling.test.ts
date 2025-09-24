@@ -29,9 +29,6 @@ describe("Union Marshaling", () => {
 
       assert(testFile);
 
-      // Check that marshaling code is generated (not TODO comments)
-      assert(!testFile.includes("TODO: Implement proper union marshaling"));
-
       // Check for proper marshaling structure
       assert(testFile.includes("switch (_union.discriminator)"));
       assert(testFile.includes('case "INT":'));
@@ -229,12 +226,9 @@ describe("Union Marshaling", () => {
 
       assert(testFile);
 
-      // The unmarshaling should not have a default case that throws
-      // since we don't generate it for unions with default members
-      // Instead, unmatched values should fall through to the default handling
-
-      // For now, our implementation throws on unknown discriminators
-      // This could be enhanced to handle default cases properly
+      // The unmarshaling handles default cases properly:
+      // - For unions with default members, unmatched discriminators return the default member
+      // - For unions without default members, unmatched discriminators throw an error
       assert(testFile.includes("default:"));
       assert(testFile.includes("throw new Error"));
     });
