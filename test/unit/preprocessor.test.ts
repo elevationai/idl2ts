@@ -397,11 +397,108 @@ describe("IDLPreprocessor", () => {
 
       const result = preprocessor.preprocess(input);
 
-      // #ifdef is not implemented, only handled as #if which skips content
-      // #else toggles the skip state
-      // Since #ifdef is treated as #if, it will skip the first branch
+      // FEATURE_X is not defined, so #ifdef should take the #else branch
       assert(!result.processedContent.includes("module FeatureX"));
       assert(result.processedContent.includes("module NoFeature"));
+    });
+
+    it("should handle #ifndef (if not defined)", () => {
+      const input = `
+        #define HAVE_FEATURE_A
+
+        #ifndef HAVE_FEATURE_A
+        module WithoutA {
+          const long VALUE = 0;
+        };
+        #endif
+
+        #ifndef HAVE_FEATURE_B
+        module WithoutB {
+          const long VALUE = 1;
+        };
+        #endif
+      `;
+
+      const result = preprocessor.preprocess(input);
+
+      // HAVE_FEATURE_A is defined, so #ifndef should skip
+      assert(!result.processedContent.includes("module WithoutA"));
+
+      // HAVE_FEATURE_B is not defined, so #ifndef should include
+      assert(result.processedContent.includes("module WithoutB"));
+    });
+
+    it("should handle #ifdef with defined macros", () => {
+      const input = `
+        #define FEATURE_X
+        #define FEATURE_Y 42
+
+        #ifdef FEATURE_X
+        module FeatureX {
+          const long VALUE = 1;
+        };
+        #else
+        module NoFeatureX {
+          const long VALUE = 0;
+        };
+        #endif
+
+        #ifdef FEATURE_Y
+        module FeatureY {
+          const long VALUE = FEATURE_Y;
+        };
+        #endif
+
+        #ifdef FEATURE_Z
+        module FeatureZ {
+          const long VALUE = 99;
+        };
+        #endif
+      `;
+
+      const result = preprocessor.preprocess(input);
+
+      // FEATURE_X is defined, so should include FeatureX
+      assert(result.processedContent.includes("module FeatureX"));
+      assert(!result.processedContent.includes("module NoFeatureX"));
+
+      // FEATURE_Y is defined, so should include FeatureY
+      assert(result.processedContent.includes("module FeatureY"));
+      assert(result.processedContent.includes("const long VALUE = 42"));
+
+      // FEATURE_Z is not defined, so should not include FeatureZ
+      assert(!result.processedContent.includes("module FeatureZ"));
+    });
+
+    it("should handle nested #ifdef directives", () => {
+      const input = `
+        #define FEATURE_A
+        #define FEATURE_C
+
+        #ifdef FEATURE_A
+          module FeatureA {
+            #ifdef FEATURE_B
+              const long VALUE = 2;
+            #else
+              #ifdef FEATURE_C
+                const long VALUE = 3;
+              #else
+                const long VALUE = 1;
+              #endif
+            #endif
+          };
+        #endif
+      `;
+
+      const result = preprocessor.preprocess(input);
+
+      // FEATURE_A is defined, so FeatureA module should be included
+      assert(result.processedContent.includes("module FeatureA"));
+
+      // FEATURE_B is not defined but FEATURE_C is, so VALUE should be 3
+      assert(result.processedContent.includes("const long VALUE = 3"));
+      assert(!result.processedContent.includes("const long VALUE = 2"));
+      assert(!result.processedContent.includes("const long VALUE = 1"));
     });
 
     it("should handle #if / #elif / #endif", () => {
