@@ -7,6 +7,12 @@ export interface PreprocessorResult {
   defines: Map<string, string>;
 }
 
+interface ConditionalState {
+  active: boolean;        // Whether this block is currently active
+  hasBeenActive: boolean; // Whether any branch has been active
+  type: 'if' | 'ifdef' | 'ifndef';
+}
+
 export class IDLPreprocessor {
   private includeGuards: Set<string> = new Set();
   private defines: Map<string, string> = new Map();
@@ -15,9 +21,72 @@ export class IDLPreprocessor {
   private processedIncludes: string[] = [];
   private baseDir: string = "";
   private processingStack: string[] = [];
+  private conditionalStack: ConditionalState[] = [];
 
   constructor(includePaths: string[] = []) {
     this.includePaths = includePaths;
+  }
+
+  /**
+   * Evaluates a preprocessor conditional expression
+   */
+  private evaluateExpression(expr: string): boolean {
+    // Handle defined() operator
+    expr = expr.replace(/defined\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)/g, (_, name) => {
+      return this.defines.has(name) ? '1' : '0';
+    });
+
+    // Handle defined without parentheses
+    expr = expr.replace(/defined\s+([A-Za-z_][A-Za-z0-9_]*)/g, (_, name) => {
+      return this.defines.has(name) ? '1' : '0';
+    });
+
+    // Replace macros with their values
+    for (const [macro, value] of this.defines) {
+      const regex = new RegExp(`\\b${macro}\\b`, 'g');
+      expr = expr.replace(regex, value);
+    }
+
+    // Replace any remaining undefined macros with 0
+    expr = expr.replace(/\b[A-Za-z_][A-Za-z0-9_]*\b/g, '0');
+
+    // Evaluate boolean operators
+    expr = expr.replace(/\|\|/g, '|');
+    expr = expr.replace(/&&/g, '&');
+    expr = expr.replace(/!/g, '~');
+
+    try {
+      // Simple expression evaluator
+      // For safety, only allow numbers, operators, and parentheses
+      if (!/^[0-9\s()\-+*/%<>=!~&|^]+$/.test(expr)) {
+        return false;
+      }
+
+      // Convert comparison operators
+      expr = expr.replace(/==/g, '===');
+      expr = expr.replace(/!=/g, '!==');
+
+      // Evaluate the expression
+      // Using Function constructor for controlled evaluation
+      const result = new Function('return ' + expr)();
+      return Boolean(result);
+    } catch {
+      // If evaluation fails, treat as false
+      return false;
+    }
+  }
+
+  /**
+   * Check if current code should be included based on conditional stack
+   */
+  private shouldIncludeContent(): boolean {
+    // If no conditionals, include content
+    if (this.conditionalStack.length === 0) {
+      return true;
+    }
+
+    // All conditionals in the stack must be active
+    return this.conditionalStack.every(state => state.active);
   }
 
   preprocess(content: string, filePath?: string): PreprocessorResult {
@@ -44,44 +113,27 @@ export class IDLPreprocessor {
 
     const lines = content.split("\n");
     const processedLines: string[] = [];
-    let insideIfndef = false;
-    let skipContent = false;
-    let currentGuard = "";
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
       // Handle #ifndef
       if (line.startsWith("#ifndef")) {
-        const guard = line.substring(7).trim();
-        currentGuard = guard;
-        if (this.includeGuards.has(guard)) {
-          skipContent = true;
-        }
-        insideIfndef = true;
-        continue;
-      }
+        const macro = line.substring(7).trim();
+        const isActive = !this.defines.has(macro);
+        this.conditionalStack.push({
+          active: isActive && this.shouldIncludeContent(),
+          hasBeenActive: isActive && this.shouldIncludeContent(),
+          type: 'ifndef'
+        });
 
-      // Handle #define
-      if (line.startsWith("#define")) {
-        const parts = line.substring(7).trim().split(/\s+/);
-        const name = parts[0];
-        const value = parts.slice(1).join(" ") || "1";
-
-        if (insideIfndef && name === currentGuard) {
-          this.includeGuards.add(name);
-        }
-
-        this.defines.set(name, value);
-        continue;
-      }
-
-      // Handle #endif
-      if (line.startsWith("#endif")) {
-        if (insideIfndef) {
-          insideIfndef = false;
-          skipContent = false;
-          currentGuard = "";
+        // Track include guards
+        if (isActive && this.conditionalStack.length === 1) {
+          // This might be an include guard
+          const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : "";
+          if (nextLine.startsWith("#define") && nextLine.includes(macro)) {
+            this.includeGuards.add(macro);
+          }
         }
         continue;
       }
@@ -89,15 +141,81 @@ export class IDLPreprocessor {
       // Handle #ifdef
       if (line.startsWith("#ifdef")) {
         const macro = line.substring(6).trim();
-        if (!this.defines.has(macro)) {
-          skipContent = true;
+        const isActive = this.defines.has(macro);
+        this.conditionalStack.push({
+          active: isActive && this.shouldIncludeContent(),
+          hasBeenActive: isActive && this.shouldIncludeContent(),
+          type: 'ifdef'
+        });
+        continue;
+      }
+
+      // Handle #if
+      if (line.startsWith("#if ")) {
+        const expr = line.substring(3).trim();
+        const isActive = this.evaluateExpression(expr);
+        this.conditionalStack.push({
+          active: isActive && this.shouldIncludeContent(),
+          hasBeenActive: isActive && this.shouldIncludeContent(),
+          type: 'if'
+        });
+        continue;
+      }
+
+      // Handle #elif
+      if (line.startsWith("#elif")) {
+        if (this.conditionalStack.length > 0) {
+          const current = this.conditionalStack[this.conditionalStack.length - 1];
+          if (!current.hasBeenActive) {
+            const expr = line.substring(5).trim();
+            const parentActive = this.conditionalStack.length > 1 ?
+              this.conditionalStack.slice(0, -1).every(s => s.active) : true;
+            const isActive = this.evaluateExpression(expr) && parentActive;
+            current.active = isActive;
+            current.hasBeenActive = current.hasBeenActive || isActive;
+          } else {
+            current.active = false;
+          }
+        }
+        continue;
+      }
+
+      // Handle #else
+      if (line.startsWith("#else")) {
+        if (this.conditionalStack.length > 0) {
+          const current = this.conditionalStack[this.conditionalStack.length - 1];
+          if (!current.hasBeenActive) {
+            const parentActive = this.conditionalStack.length > 1 ?
+              this.conditionalStack.slice(0, -1).every(s => s.active) : true;
+            current.active = parentActive;
+            current.hasBeenActive = true;
+          } else {
+            current.active = false;
+          }
+        }
+        continue;
+      }
+
+      // Handle #endif
+      if (line.startsWith("#endif")) {
+        this.conditionalStack.pop();
+        continue;
+      }
+
+      // Handle #define
+      if (line.startsWith("#define")) {
+        if (this.shouldIncludeContent()) {
+          const parts = line.substring(7).trim().split(/\s+/);
+          const name = parts[0];
+          const value = parts.slice(1).join(" ") || "1";
+          this.defines.set(name, value);
         }
         continue;
       }
 
       // Handle #include
       if (line.startsWith("#include")) {
-        if (!skipContent) {
+        if (this.shouldIncludeContent()) {
           const includeMatch = line.match(/#include\s*["<]([^">]+)[">]/);
           if (includeMatch) {
             const includePath = includeMatch[1];
@@ -143,43 +261,27 @@ export class IDLPreprocessor {
 
       // Handle #pragma
       if (line.startsWith("#pragma")) {
-        const pragmaMatch = line.match(/#pragma\s+(\w+)(?:\s+(.*))?/);
-        if (pragmaMatch) {
-          const pragmaType = pragmaMatch[1];
-          const pragmaValue = pragmaMatch[2] ? pragmaMatch[2].trim().replace(/"/g, "") : "";
-          this.pragmas.set(pragmaType, pragmaValue);
+        if (this.shouldIncludeContent()) {
+          const pragmaMatch = line.match(/#pragma\s+(\w+)(?:\s+(.*))?/);
+          if (pragmaMatch) {
+            const pragmaType = pragmaMatch[1];
+            const pragmaValue = pragmaMatch[2] ? pragmaMatch[2].trim().replace(/"/g, "") : "";
+            this.pragmas.set(pragmaType, pragmaValue);
 
-          // For position-dependent pragmas like inhibit_code_generation,
-          // inject a marker into the content
-          if (pragmaType === "inhibit_code_generation" && pragmaValue === "") {
-            // Global inhibit - inject marker
-            processedLines.push(`__PRAGMA_GLOBAL_INHIBIT__`);
+            // For position-dependent pragmas like inhibit_code_generation,
+            // inject a marker into the content
+            if (pragmaType === "inhibit_code_generation" && pragmaValue === "") {
+              // Global inhibit - inject marker
+              processedLines.push(`__PRAGMA_GLOBAL_INHIBIT__`);
+            }
           }
         }
         continue;
       }
 
-      // Handle #if, #elif, #else
-      if (line.startsWith("#if ") || line.startsWith("#elif")) {
-        // For now, skip complex conditionals
-        // Full implementation needed:
-        // - Parse and evaluate conditional expressions
-        // - Track defined macros and their values
-        // - Implement proper conditional block inclusion/exclusion
-        // - Support nested conditionals
-        // - Handle #ifdef, #ifndef, #if defined() variants
-        skipContent = true;
-        continue;
-      }
-
-      if (line.startsWith("#else")) {
-        skipContent = !skipContent;
-        continue;
-      }
-
       // Handle #error
       if (line.startsWith("#error")) {
-        if (!skipContent) {
+        if (this.shouldIncludeContent()) {
           const message = line.substring(6).trim();
           console.error(`Preprocessor error: ${message}`);
         }
@@ -188,7 +290,7 @@ export class IDLPreprocessor {
 
       // Handle #warning
       if (line.startsWith("#warning")) {
-        if (!skipContent) {
+        if (this.shouldIncludeContent()) {
           const message = line.substring(8).trim();
           console.warn(`Preprocessor warning: ${message}`);
         }
@@ -196,7 +298,7 @@ export class IDLPreprocessor {
       }
 
       // Skip content if we're in a false conditional
-      if (skipContent) {
+      if (!this.shouldIncludeContent()) {
         continue;
       }
 
@@ -351,5 +453,6 @@ export class IDLPreprocessor {
     this.pragmas.clear();
     this.processedIncludes = [];
     this.processingStack = [];
+    this.conditionalStack = [];
   }
 }
