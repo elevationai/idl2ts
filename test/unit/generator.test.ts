@@ -496,7 +496,9 @@ describe("TypeScriptGenerator", () => {
       const results = generateTypeScript(idl);
       const businessOutput = results.get("Business.ts") || "";
 
+      // When generating stubs, we need value imports for TypeCodes
       assert(
+        businessOutput.includes('import * as Common from "./Common.ts"') ||
         businessOutput.includes('import type * as Common from "./Common.ts"'),
       );
       assert(businessOutput.includes("getTime(): Promise<Common.Timestamp>"));

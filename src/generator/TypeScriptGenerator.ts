@@ -687,6 +687,23 @@ export class TypeScriptGenerator {
       }
     }
 
+    // If we have a simple named type and source module context, check if the type
+    // is defined in the source module (for inherited attributes)
+    if (
+      type.kind === "namedType" && !type.name.includes("::") &&
+      sourceModule && sourceModule !== this.currentModule
+    ) {
+      // Check if this type exists in the source module
+      const sourceModuleOutput = this.modules.get(sourceModule);
+      if (
+        sourceModuleOutput &&
+        this.typeExistsInModule(type.name, sourceModuleOutput)
+      ) {
+        this.addImport(sourceModule, false); // Need value import for TypeCode
+        return `${sourceModule}.TC_${type.name}`;
+      }
+    }
+
     return this.getTypeCodeForType(type);
   }
 
@@ -1274,6 +1291,20 @@ export class TypeScriptGenerator {
     this.emit(`const request = create_request(this._ref, "${node.name}");`);
     this.markCorbaImportUsed("create_request");
 
+    // Set the return type for the request
+    if (node.returnType.kind !== "primitiveType" || node.returnType.type !== "void") {
+      const returnTypeCode = this.getTypeCodeForTypeWithContext(
+        node.returnType,
+        sourceModule,
+        sourceInterface,
+      );
+      this.emit(`request.set_return_type(${returnTypeCode});`);
+      // Mark TypeCode used if it's being referenced
+      if (returnTypeCode.includes("TypeCode") || returnTypeCode.includes("TC_")) {
+        this.markCorbaImportUsed("TypeCode");
+      }
+    }
+
     for (const param of node.parameters) {
       if (param.direction === "in" || param.direction === "inout") {
         const typeCode = this.getTypeCodeForTypeWithContext(
@@ -1384,6 +1415,19 @@ export class TypeScriptGenerator {
       `const request = create_request(this._ref, "_get_${node.name}");`,
     );
     this.markCorbaImportUsed("create_request");
+
+    // Set the return type for the attribute getter
+    const returnTypeCode = this.getTypeCodeForTypeWithContext(
+      node.type,
+      sourceModule || this.currentModule,
+      sourceInterface || interfaceName,
+    );
+    this.emit(`request.set_return_type(${returnTypeCode});`);
+    // Mark TypeCode used if it's being referenced
+    if (returnTypeCode.includes("TypeCode") || returnTypeCode.includes("TC_")) {
+      this.markCorbaImportUsed("TypeCode");
+    }
+
     this.emit("await request.invoke();");
     this.emit(`return request.return_value() as ${tsType};`);
     this.dedent();
