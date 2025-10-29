@@ -31,14 +31,15 @@ export class OmniORBTestHarness {
         idlFile,
         category,
         success: true,
-        output: `Generated ${result.size} file(s)`
+        output: `Generated ${result.size} file(s)`,
       };
-    } catch (error) {
+    }
+    catch (error) {
       return {
         idlFile,
         category,
         success: false,
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
   }
@@ -69,13 +70,14 @@ export class OmniORBTestHarness {
       total: this.results.length,
       successful: 0,
       failed: 0,
-      byCategory: {} as Record<string, { total: number; successful: number; failed: number }>
+      byCategory: {} as Record<string, { total: number; successful: number; failed: number }>,
     };
 
     for (const result of this.results) {
       if (result.success) {
         summary.successful++;
-      } else {
+      }
+      else {
         summary.failed++;
       }
 
@@ -86,7 +88,8 @@ export class OmniORBTestHarness {
       summary.byCategory[result.category].total++;
       if (result.success) {
         summary.byCategory[result.category].successful++;
-      } else {
+      }
+      else {
         summary.byCategory[result.category].failed++;
       }
     }
@@ -112,7 +115,7 @@ export class OmniORBTestHarness {
   }
 
   getFailures(): TestResult[] {
-    return this.results.filter(r => !r.success);
+    return this.results.filter((r) => !r.success);
   }
 
   printFailures(): void {

@@ -23,7 +23,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -71,7 +71,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -116,7 +116,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -148,7 +148,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -162,8 +162,8 @@ describe("Union Marshaling", () => {
       assert(testFile.includes("case false:"));
 
       // Check result construction
-      assert(testFile.includes('discriminator: true as const'));
-      assert(testFile.includes('discriminator: false as const'));
+      assert(testFile.includes("discriminator: true as const"));
+      assert(testFile.includes("discriminator: false as const"));
     });
   });
 
@@ -185,17 +185,17 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
       assert(testFile);
 
       // Check TypeScript type generation - default case allows any discriminator value
-      assert(testFile.includes('{ discriminator: string | number; defaultOption: boolean }'));
+      assert(testFile.includes("{ discriminator: string | number; defaultOption: boolean }"));
 
       // Check marshaling handles default case
-      assert(testFile.includes('default:') && testFile.includes('defaultOption'));
+      assert(testFile.includes("default:") && testFile.includes("defaultOption"));
 
       // Check that default option is marshaled
       assert(testFile.includes("outputStream.writeBoolean(_union.defaultOption)"));
@@ -220,7 +220,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -255,7 +255,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -301,7 +301,7 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const testFile = output.get("Test.ts");
 
@@ -342,23 +342,29 @@ describe("Union Marshaling", () => {
 
       const output = generateTypeScript(idl, {
         includeStubs: true,
-        includeSkeletons: true
+        includeSkeletons: true,
       });
       const dataFile = output.get("Data.ts");
 
       assert(dataFile);
 
       // Check import of Types module (could be namespace import or named import)
-      assert(dataFile.includes('import * as Types from "./Types.ts"') ||
-             dataFile.includes('import { Status } from "./Types.ts"'));
+      assert(
+        dataFile.includes('import * as Types from "./Types.ts"') ||
+          dataFile.includes('import { Status } from "./Types.ts"'),
+      );
 
       // Check that enum is properly qualified in marshaling
-      assert(dataFile.includes("_discriminatorValue = Types.Status.ACTIVE") ||
-             dataFile.includes("_discriminatorValue = Status.ACTIVE"));
+      assert(
+        dataFile.includes("_discriminatorValue = Types.Status.ACTIVE") ||
+          dataFile.includes("_discriminatorValue = Status.ACTIVE"),
+      );
 
       // Check unmarshaling uses qualified enum
-      assert(dataFile.includes("case Types.Status.ACTIVE:") ||
-             dataFile.includes("case Status.ACTIVE:"));
+      assert(
+        dataFile.includes("case Types.Status.ACTIVE:") ||
+          dataFile.includes("case Status.ACTIVE:"),
+      );
     });
   });
 });

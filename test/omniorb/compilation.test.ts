@@ -61,7 +61,7 @@ Deno.test("OmniORB IDL Compilation Tests", async (t) => {
     await t.step(`${category} (${files.length} files)`, async (t2) => {
       // Test each IDL file individually
       for (const file of files) {
-        const filename = file.split('/').pop()!;
+        const filename = file.split("/").pop()!;
 
         await t2.step(filename, async () => {
           const result = await harness.testIDLFile(file, category);
@@ -72,8 +72,9 @@ Deno.test("OmniORB IDL Compilation Tests", async (t) => {
               throw new Error(`[${filename}] Expected to fail but compiled successfully`);
             }
             // Test passes - it failed as expected
-            console.log(`    ✓ Failed as expected: ${result.error?.split('\n')[0]}`);
-          } else {
+            console.log(`    ✓ Failed as expected: ${result.error?.split("\n")[0]}`);
+          }
+          else {
             // This file should compile successfully
             if (!result.success) {
               throw new Error(`[${filename}] ${result.error!}`);

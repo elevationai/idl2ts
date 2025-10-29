@@ -8,9 +8,9 @@ export interface PreprocessorResult {
 }
 
 interface ConditionalState {
-  active: boolean;        // Whether this block is currently active
+  active: boolean; // Whether this block is currently active
   hasBeenActive: boolean; // Whether any branch has been active
-  type: 'if' | 'ifdef' | 'ifndef';
+  type: "if" | "ifdef" | "ifndef";
 }
 
 export class IDLPreprocessor {
@@ -33,27 +33,27 @@ export class IDLPreprocessor {
   private evaluateExpression(expr: string): boolean {
     // Handle defined() operator
     expr = expr.replace(/defined\s*\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\)/g, (_, name) => {
-      return this.defines.has(name) ? '1' : '0';
+      return this.defines.has(name) ? "1" : "0";
     });
 
     // Handle defined without parentheses
     expr = expr.replace(/defined\s+([A-Za-z_][A-Za-z0-9_]*)/g, (_, name) => {
-      return this.defines.has(name) ? '1' : '0';
+      return this.defines.has(name) ? "1" : "0";
     });
 
     // Replace macros with their values
     for (const [macro, value] of this.defines) {
-      const regex = new RegExp(`\\b${macro}\\b`, 'g');
+      const regex = new RegExp(`\\b${macro}\\b`, "g");
       expr = expr.replace(regex, value);
     }
 
     // Replace any remaining undefined macros with 0
-    expr = expr.replace(/\b[A-Za-z_][A-Za-z0-9_]*\b/g, '0');
+    expr = expr.replace(/\b[A-Za-z_][A-Za-z0-9_]*\b/g, "0");
 
     // Evaluate boolean operators
-    expr = expr.replace(/\|\|/g, '|');
-    expr = expr.replace(/&&/g, '&');
-    expr = expr.replace(/!/g, '~');
+    expr = expr.replace(/\|\|/g, "|");
+    expr = expr.replace(/&&/g, "&");
+    expr = expr.replace(/!/g, "~");
 
     try {
       // Simple expression evaluator
@@ -63,14 +63,15 @@ export class IDLPreprocessor {
       }
 
       // Convert comparison operators
-      expr = expr.replace(/==/g, '===');
-      expr = expr.replace(/!=/g, '!==');
+      expr = expr.replace(/==/g, "===");
+      expr = expr.replace(/!=/g, "!==");
 
       // Evaluate the expression
       // Using Function constructor for controlled evaluation
-      const result = new Function('return ' + expr)();
+      const result = new Function("return " + expr)();
       return Boolean(result);
-    } catch {
+    }
+    catch {
       // If evaluation fails, treat as false
       return false;
     }
@@ -86,7 +87,7 @@ export class IDLPreprocessor {
     }
 
     // All conditionals in the stack must be active
-    return this.conditionalStack.every(state => state.active);
+    return this.conditionalStack.every((state) => state.active);
   }
 
   preprocess(content: string, filePath?: string): PreprocessorResult {
@@ -124,7 +125,7 @@ export class IDLPreprocessor {
         this.conditionalStack.push({
           active: isActive && this.shouldIncludeContent(),
           hasBeenActive: isActive && this.shouldIncludeContent(),
-          type: 'ifndef'
+          type: "ifndef",
         });
 
         // Track include guards
@@ -145,7 +146,7 @@ export class IDLPreprocessor {
         this.conditionalStack.push({
           active: isActive && this.shouldIncludeContent(),
           hasBeenActive: isActive && this.shouldIncludeContent(),
-          type: 'ifdef'
+          type: "ifdef",
         });
         continue;
       }
@@ -157,7 +158,7 @@ export class IDLPreprocessor {
         this.conditionalStack.push({
           active: isActive && this.shouldIncludeContent(),
           hasBeenActive: isActive && this.shouldIncludeContent(),
-          type: 'if'
+          type: "if",
         });
         continue;
       }
@@ -168,12 +169,12 @@ export class IDLPreprocessor {
           const current = this.conditionalStack[this.conditionalStack.length - 1];
           if (!current.hasBeenActive) {
             const expr = line.substring(5).trim();
-            const parentActive = this.conditionalStack.length > 1 ?
-              this.conditionalStack.slice(0, -1).every(s => s.active) : true;
+            const parentActive = this.conditionalStack.length > 1 ? this.conditionalStack.slice(0, -1).every((s) => s.active) : true;
             const isActive = this.evaluateExpression(expr) && parentActive;
             current.active = isActive;
             current.hasBeenActive = current.hasBeenActive || isActive;
-          } else {
+          }
+          else {
             current.active = false;
           }
         }
@@ -185,11 +186,11 @@ export class IDLPreprocessor {
         if (this.conditionalStack.length > 0) {
           const current = this.conditionalStack[this.conditionalStack.length - 1];
           if (!current.hasBeenActive) {
-            const parentActive = this.conditionalStack.length > 1 ?
-              this.conditionalStack.slice(0, -1).every(s => s.active) : true;
+            const parentActive = this.conditionalStack.length > 1 ? this.conditionalStack.slice(0, -1).every((s) => s.active) : true;
             current.active = parentActive;
             current.hasBeenActive = true;
-          } else {
+          }
+          else {
             current.active = false;
           }
         }

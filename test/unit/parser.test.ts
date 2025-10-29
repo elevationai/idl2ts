@@ -654,20 +654,20 @@ describe("IDLParser", () => {
       const module = findDefinition(ast, "Test") as AST.ModuleNode;
 
       // Check typedef with fixed-point type
-      const money = module.definitions.find(d => d.kind === "typedef" && d.name === "Money") as AST.TypedefNode;
+      const money = module.definitions.find((d) => d.kind === "typedef" && d.name === "Money") as AST.TypedefNode;
       assertEquals(money.type.kind, "fixedType");
       const moneyType = money.type as AST.FixedTypeNode;
       assertEquals(moneyType.totalDigits, 10);
       assertEquals(moneyType.fractionalDigits, 2);
 
-      const smallMoney = module.definitions.find(d => d.kind === "typedef" && d.name === "SmallMoney") as AST.TypedefNode;
+      const smallMoney = module.definitions.find((d) => d.kind === "typedef" && d.name === "SmallMoney") as AST.TypedefNode;
       assertEquals(smallMoney.type.kind, "fixedType");
       const smallMoneyType = smallMoney.type as AST.FixedTypeNode;
       assertEquals(smallMoneyType.totalDigits, 5);
       assertEquals(smallMoneyType.fractionalDigits, 3);
 
       // Check that fixed-point typedefs can be used in interfaces
-      const iface = module.definitions.find(d => d.kind === "interface") as AST.InterfaceNode;
+      const iface = module.definitions.find((d) => d.kind === "interface") as AST.InterfaceNode;
       const getBalance = iface.members[0] as AST.OperationNode;
       assertEquals(getBalance.returnType.kind, "namedType");
       assertEquals((getBalance.returnType as AST.NamedTypeNode).name, "Money");
@@ -693,13 +693,13 @@ describe("IDLParser", () => {
       const module = findDefinition(ast, "Test") as AST.ModuleNode;
 
       // Check native type declarations
-      const natives = module.definitions.filter(d => d.kind === "native");
+      const natives = module.definitions.filter((d) => d.kind === "native");
       assertEquals(natives.length, 2);
       assertEquals(natives[0].name, "Handle");
       assertEquals(natives[1].name, "WindowPtr");
 
       // Check that native types can be used in interfaces
-      const iface = module.definitions.find(d => d.kind === "interface") as AST.InterfaceNode;
+      const iface = module.definitions.find((d) => d.kind === "interface") as AST.InterfaceNode;
       const getHandle = iface.members[0] as AST.OperationNode;
       assertEquals((getHandle.returnType as AST.NamedTypeNode).name, "Handle");
     });

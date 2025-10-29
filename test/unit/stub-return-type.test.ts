@@ -22,10 +22,10 @@ describe("Stub Return Type Generation", () => {
     assert(testFile);
 
     // Check that set_return_type is called for each non-void return type
-    assert(testFile.includes('request.set_return_type(TypeCode.TC_long)'));
-    assert(testFile.includes('request.set_return_type(TypeCode.TC_string)'));
-    assert(testFile.includes('request.set_return_type(TypeCode.TC_boolean)'));
-    assert(testFile.includes('request.set_return_type(TypeCode.TC_float)'));
+    assert(testFile.includes("request.set_return_type(TypeCode.TC_long)"));
+    assert(testFile.includes("request.set_return_type(TypeCode.TC_string)"));
+    assert(testFile.includes("request.set_return_type(TypeCode.TC_boolean)"));
+    assert(testFile.includes("request.set_return_type(TypeCode.TC_float)"));
   });
 
   it("should NOT generate set_return_type for void operations", () => {
@@ -46,7 +46,7 @@ describe("Stub Return Type Generation", () => {
 
     // Check that set_return_type is NOT called for void operations
     const doSomethingMatch = testFile.match(
-      /async doSomething\(\)[^}]*}/s
+      /async doSomething\(\)[^}]*}/s,
     );
     assert(doSomethingMatch);
     assert(!doSomethingMatch[0].includes("set_return_type"));
@@ -69,7 +69,7 @@ describe("Stub Return Type Generation", () => {
     assert(testFile);
 
     // Check that set_return_type is called with the typedef's TypeCode
-    assert(testFile.includes('request.set_return_type(TC_UserID)'));
+    assert(testFile.includes("request.set_return_type(TC_UserID)"));
   });
 
   it("should generate set_return_type for struct return types", () => {
@@ -92,7 +92,7 @@ describe("Stub Return Type Generation", () => {
     assert(testFile);
 
     // Check that set_return_type is called with the struct's TypeCode
-    assert(testFile.includes('request.set_return_type(TC_Result)'));
+    assert(testFile.includes("request.set_return_type(TC_Result)"));
   });
 
   it("should generate set_return_type for enum return types", () => {
@@ -112,7 +112,7 @@ describe("Stub Return Type Generation", () => {
     assert(testFile);
 
     // Check that set_return_type is called with the enum's TypeCode
-    assert(testFile.includes('request.set_return_type(TC_Status)'));
+    assert(testFile.includes("request.set_return_type(TC_Status)"));
   });
 
   it("should generate set_return_type for cross-module return types", () => {
@@ -136,8 +136,8 @@ describe("Stub Return Type Generation", () => {
     assert(servicesFile);
 
     // Check that set_return_type references the correct module
-    assert(servicesFile.includes('request.set_return_type(Types.TC_ID)'));
-    assert(servicesFile.includes('request.set_return_type(Types.TC_ReturnCode)'));
+    assert(servicesFile.includes("request.set_return_type(Types.TC_ID)"));
+    assert(servicesFile.includes("request.set_return_type(Types.TC_ReturnCode)"));
   });
 
   it("should handle operations with both return values and out parameters", () => {
@@ -158,8 +158,8 @@ describe("Stub Return Type Generation", () => {
     assert(testFile);
 
     // Should have set_return_type for the RC return value
-    assert(testFile.includes('request.set_return_type(TC_RC)'));
+    assert(testFile.includes("request.set_return_type(TC_RC)"));
     // Should also handle the out parameter
-    assert(testFile.includes('request.add_out_arg(TC_Level)'));
+    assert(testFile.includes("request.add_out_arg(TC_Level)"));
   });
 });

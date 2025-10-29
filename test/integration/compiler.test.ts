@@ -144,7 +144,7 @@ describe("IDLCompiler Integration", () => {
       // With skeletons enabled by default, we now get a regular import, not type-only
       assert(
         mainContent.includes('import * as Common from "./Common.ts"') ||
-        mainContent.includes('import type * as Common from "./Common.ts"'),
+          mainContent.includes('import type * as Common from "./Common.ts"'),
       );
       assert(mainContent.includes("getTime(): Promise<Common.Timestamp>"));
     });
@@ -656,17 +656,23 @@ describe("IDLCompiler Integration", () => {
       assert(userOutput.includes("export class UserService_Stub"));
 
       // Check cross-module imports - User imports Services, not Auth directly
-      assert(userOutput.includes('import * as Services from "./Services.ts"') ||
-             userOutput.includes('import { Services } from "./Services.ts"'));
+      assert(
+        userOutput.includes('import * as Services from "./Services.ts"') ||
+          userOutput.includes('import { Services } from "./Services.ts"'),
+      );
 
       // Check cross-references in types - uses flattened type names
       assert(userOutput.includes("authToken: Services.Auth_Token"));
 
       // Check custom CORBA import
-      assert(authOutput.includes('@example/corba') ||
-             authOutput.includes('from "@example/corba"'));
-      assert(userOutput.includes('@example/corba') ||
-             userOutput.includes('from "@example/corba"'));
+      assert(
+        authOutput.includes("@example/corba") ||
+          authOutput.includes('from "@example/corba"'),
+      );
+      assert(
+        userOutput.includes("@example/corba") ||
+          userOutput.includes('from "@example/corba"'),
+      );
     });
   });
 });

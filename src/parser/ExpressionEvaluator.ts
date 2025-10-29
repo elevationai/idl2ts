@@ -23,7 +23,7 @@ export class ExpressionEvaluator {
    */
   private tokenize(expression: string): string[] {
     const tokens: string[] = [];
-    let current = '';
+    let current = "";
     let i = 0;
 
     while (i < expression.length) {
@@ -34,45 +34,47 @@ export class ExpressionEvaluator {
       if (/\s/.test(char)) {
         if (current) {
           tokens.push(current);
-          current = '';
+          current = "";
         }
         i++;
         continue;
       }
 
       // Handle two-character operators
-      if (char === '<' && nextChar === '<') {
+      if (char === "<" && nextChar === "<") {
         if (current) {
           tokens.push(current);
-          current = '';
+          current = "";
         }
-        tokens.push('<<');
+        tokens.push("<<");
         i += 2;
         continue;
       }
-      if (char === '>' && nextChar === '>') {
+      if (char === ">" && nextChar === ">") {
         if (current) {
           tokens.push(current);
-          current = '';
+          current = "";
         }
-        tokens.push('>>');
+        tokens.push(">>");
         i += 2;
         continue;
       }
 
       // Handle single-character operators and parentheses
-      if ('+-*/%()&|^~'.includes(char)) {
+      if ("+-*/%()&|^~".includes(char)) {
         if (current) {
           tokens.push(current);
-          current = '';
+          current = "";
         }
 
         // Handle unary minus
-        if (char === '-' && (tokens.length === 0 ||
-            tokens[tokens.length - 1] === '(' ||
-            this.isOperator(tokens[tokens.length - 1]))) {
+        if (
+          char === "-" && (tokens.length === 0 ||
+            tokens[tokens.length - 1] === "(" ||
+            this.isOperator(tokens[tokens.length - 1]))
+        ) {
           // This is a unary minus
-          current = '-';
+          current = "-";
           i++;
           // Consume the number or identifier
           while (i < expression.length && /[0-9a-zA-Z_]/.test(expression[i])) {
@@ -80,7 +82,7 @@ export class ExpressionEvaluator {
             i++;
           }
           tokens.push(current);
-          current = '';
+          current = "";
           continue;
         }
 
@@ -111,20 +113,23 @@ export class ExpressionEvaluator {
     for (const token of tokens) {
       if (this.isNumber(token) || this.isIdentifier(token)) {
         output.push(token);
-      } else if (token === '(') {
+      }
+      else if (token === "(") {
         operators.push(token);
-      } else if (token === ')') {
-        while (operators.length > 0 && operators[operators.length - 1] !== '(') {
+      }
+      else if (token === ")") {
+        while (operators.length > 0 && operators[operators.length - 1] !== "(") {
           output.push(operators.pop()!);
         }
         operators.pop(); // Remove the '('
-      } else if (this.isOperator(token)) {
+      }
+      else if (this.isOperator(token)) {
         while (
           operators.length > 0 &&
-          operators[operators.length - 1] !== '(' &&
+          operators[operators.length - 1] !== "(" &&
           this.getPrecedence(operators[operators.length - 1]) >= this.getPrecedence(token) &&
           (this.isLeftAssociative(token) ||
-           this.getPrecedence(operators[operators.length - 1]) > this.getPrecedence(token))
+            this.getPrecedence(operators[operators.length - 1]) > this.getPrecedence(token))
         ) {
           output.push(operators.pop()!);
         }
@@ -148,26 +153,29 @@ export class ExpressionEvaluator {
     for (const token of tokens) {
       if (this.isNumber(token)) {
         stack.push(this.parseNumber(token));
-      } else if (this.isIdentifier(token)) {
+      }
+      else if (this.isIdentifier(token)) {
         const value = this.constants.get(token);
         if (value === undefined) {
           throw new Error(`Unknown constant: ${token}`);
         }
         stack.push(value);
-      } else if (this.isOperator(token)) {
-        if (token === '~') {
+      }
+      else if (this.isOperator(token)) {
+        if (token === "~") {
           // Unary operator
           const a = stack.pop();
           if (a === undefined) {
-            throw new Error('Invalid expression');
+            throw new Error("Invalid expression");
           }
           stack.push(~a);
-        } else {
+        }
+        else {
           // Binary operator
           const b = stack.pop();
           const a = stack.pop();
           if (a === undefined || b === undefined) {
-            throw new Error('Invalid expression');
+            throw new Error("Invalid expression");
           }
           stack.push(this.applyOperator(token, a, b));
         }
@@ -175,7 +183,7 @@ export class ExpressionEvaluator {
     }
 
     if (stack.length !== 1) {
-      throw new Error('Invalid expression');
+      throw new Error("Invalid expression");
     }
 
     return stack[0];
@@ -186,20 +194,28 @@ export class ExpressionEvaluator {
    */
   private applyOperator(operator: string, a: number, b: number): number {
     switch (operator) {
-      case '+': return a + b;
-      case '-': return a - b;
-      case '*': return a * b;
-      case '/':
-        if (b === 0) throw new Error('Division by zero');
+      case "+":
+        return a + b;
+      case "-":
+        return a - b;
+      case "*":
+        return a * b;
+      case "/":
+        if (b === 0) throw new Error("Division by zero");
         return Math.trunc(a / b); // IDL uses integer division
-      case '%':
-        if (b === 0) throw new Error('Division by zero');
+      case "%":
+        if (b === 0) throw new Error("Division by zero");
         return a % b;
-      case '<<': return a << b;
-      case '>>': return a >> b;
-      case '&': return a & b;
-      case '|': return a | b;
-      case '^': return a ^ b;
+      case "<<":
+        return a << b;
+      case ">>":
+        return a >> b;
+      case "&":
+        return a & b;
+      case "|":
+        return a | b;
+      case "^":
+        return a ^ b;
       default:
         throw new Error(`Unknown operator: ${operator}`);
     }
@@ -210,18 +226,26 @@ export class ExpressionEvaluator {
    */
   private getPrecedence(operator: string): number {
     switch (operator) {
-      case '|': return 1;
-      case '^': return 2;
-      case '&': return 3;
-      case '<<':
-      case '>>': return 4;
-      case '+':
-      case '-': return 5;
-      case '*':
-      case '/':
-      case '%': return 6;
-      case '~': return 7; // Unary operators have highest precedence
-      default: return 0;
+      case "|":
+        return 1;
+      case "^":
+        return 2;
+      case "&":
+        return 3;
+      case "<<":
+      case ">>":
+        return 4;
+      case "+":
+      case "-":
+        return 5;
+      case "*":
+      case "/":
+      case "%":
+        return 6;
+      case "~":
+        return 7; // Unary operators have highest precedence
+      default:
+        return 0;
     }
   }
 
@@ -230,14 +254,14 @@ export class ExpressionEvaluator {
    */
   private isLeftAssociative(operator: string): boolean {
     // All operators in IDL are left-associative except unary operators
-    return operator !== '~';
+    return operator !== "~";
   }
 
   /**
    * Checks if a token is an operator
    */
   private isOperator(token: string): boolean {
-    return ['~', '+', '-', '*', '/', '%', '<<', '>>', '&', '|', '^'].includes(token);
+    return ["~", "+", "-", "*", "/", "%", "<<", ">>", "&", "|", "^"].includes(token);
   }
 
   /**
@@ -258,15 +282,15 @@ export class ExpressionEvaluator {
    * Parses a number token (decimal or hex)
    */
   private parseNumber(token: string): number {
-    if (token.startsWith('-')) {
+    if (token.startsWith("-")) {
       const positive = token.substring(1);
-      if (positive.startsWith('0x') || positive.startsWith('0X')) {
+      if (positive.startsWith("0x") || positive.startsWith("0X")) {
         return -parseInt(positive, 16);
       }
       return -parseInt(positive, 10);
     }
 
-    if (token.startsWith('0x') || token.startsWith('0X')) {
+    if (token.startsWith("0x") || token.startsWith("0X")) {
       return parseInt(token, 16);
     }
     return parseInt(token, 10);

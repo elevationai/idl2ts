@@ -28,22 +28,22 @@ describe("Cross-Module TypeCode References", () => {
     assert(componentsFile);
 
     // Check that TypeCodes are properly qualified
-    assert(componentsFile.includes('request.set_return_type(Characteristics.TC_DataTypeList)'),
-      "Should qualify TC_DataTypeList with module name");
+    assert(
+      componentsFile.includes("request.set_return_type(Characteristics.TC_DataTypeList)"),
+      "Should qualify TC_DataTypeList with module name",
+    );
 
-    assert(componentsFile.includes('request.set_return_type(Characteristics.TC_MediaTypeListDef)'),
-      "Should qualify TC_MediaTypeListDef with module name");
+    assert(
+      componentsFile.includes("request.set_return_type(Characteristics.TC_MediaTypeListDef)"),
+      "Should qualify TC_MediaTypeListDef with module name",
+    );
 
-    assert(componentsFile.includes('request.set_return_type(Characteristics.TC_DataType)'),
-      "Should qualify TC_DataType with module name");
+    assert(componentsFile.includes("request.set_return_type(Characteristics.TC_DataType)"), "Should qualify TC_DataType with module name");
 
     // Should NOT have unqualified references
-    assert(!componentsFile.includes('request.set_return_type(TC_DataTypeList)'),
-      "Should not have unqualified TC_DataTypeList");
-    assert(!componentsFile.includes('request.set_return_type(TC_MediaTypeListDef)'),
-      "Should not have unqualified TC_MediaTypeListDef");
-    assert(!componentsFile.includes('request.set_return_type(TC_DataType)'),
-      "Should not have unqualified TC_DataType");
+    assert(!componentsFile.includes("request.set_return_type(TC_DataTypeList)"), "Should not have unqualified TC_DataTypeList");
+    assert(!componentsFile.includes("request.set_return_type(TC_MediaTypeListDef)"), "Should not have unqualified TC_MediaTypeListDef");
+    assert(!componentsFile.includes("request.set_return_type(TC_DataType)"), "Should not have unqualified TC_DataType");
   });
 
   it("should not qualify TypeCode references for same-module types", () => {
@@ -69,10 +69,8 @@ describe("Cross-Module TypeCode References", () => {
     assert(componentsFile);
 
     // Same-module TypeCodes should not be qualified
-    assert(componentsFile.includes('request.set_return_type(TC_LocalList)'),
-      "Same-module TC_LocalList should not be qualified");
+    assert(componentsFile.includes("request.set_return_type(TC_LocalList)"), "Same-module TC_LocalList should not be qualified");
 
-    assert(componentsFile.includes('request.set_return_type(TC_LocalStruct)'),
-      "Same-module TC_LocalStruct should not be qualified");
+    assert(componentsFile.includes("request.set_return_type(TC_LocalStruct)"), "Same-module TC_LocalStruct should not be qualified");
   });
 });

@@ -2,7 +2,6 @@ import { assertEquals } from "https://deno.land/std@0.208.0/assert/mod.ts";
 import { TypeScriptGenerator } from "../../src/generator/TypeScriptGenerator.ts";
 import { IDLParser } from "../../src/parser/IDLParser.ts";
 
-
 Deno.test("POA skeleton generation - basic operations", () => {
   const parser = new IDLParser();
   const generator = new TypeScriptGenerator();
@@ -172,7 +171,6 @@ Deno.test("POA skeleton generation - complex types", () => {
   assertEquals(generatedCode.includes("outputStream.writeLong(result.x)"), true); // Marshal struct field x
   assertEquals(generatedCode.includes("outputStream.writeLong(result.y)"), true); // Marshal struct field y
 });
-
 
 Deno.test("POA skeleton generation - no skeleton flag", () => {
   const parser = new IDLParser();

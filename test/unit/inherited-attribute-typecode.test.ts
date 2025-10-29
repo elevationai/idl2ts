@@ -33,12 +33,13 @@ describe("Inherited Attribute TypeCode Generation", () => {
 
     // The inherited attribute mtList has type MediaTypeListDef which is defined in Characteristics
     // So the TypeCode should be qualified as Characteristics.TC_MediaTypeListDef
-    assert(componentsFile.includes('request.set_return_type(Characteristics.TC_MediaTypeListDef)'),
-      "Should qualify TC_MediaTypeListDef with Characteristics module");
+    assert(
+      componentsFile.includes("request.set_return_type(Characteristics.TC_MediaTypeListDef)"),
+      "Should qualify TC_MediaTypeListDef with Characteristics module",
+    );
 
     // Should NOT have unqualified reference
-    assert(!componentsFile.includes('request.set_return_type(TC_MediaTypeListDef)'),
-      "Should not have unqualified TC_MediaTypeListDef");
+    assert(!componentsFile.includes("request.set_return_type(TC_MediaTypeListDef)"), "Should not have unqualified TC_MediaTypeListDef");
   });
 
   it("should handle complex inheritance chains across modules", () => {
@@ -77,16 +78,12 @@ describe("Inherited Attribute TypeCode Generation", () => {
     assert(componentsFile);
 
     // Both attributes are from Base module, so TypeCodes should be qualified with Base
-    assert(componentsFile.includes('request.set_return_type(Base.TC_DataType)'),
-      "Should qualify TC_DataType with Base module");
+    assert(componentsFile.includes("request.set_return_type(Base.TC_DataType)"), "Should qualify TC_DataType with Base module");
 
-    assert(componentsFile.includes('request.set_return_type(Base.TC_Status)'),
-      "Should qualify TC_Status with Base module");
+    assert(componentsFile.includes("request.set_return_type(Base.TC_Status)"), "Should qualify TC_Status with Base module");
 
     // Should NOT have unqualified references
-    assert(!componentsFile.includes('request.set_return_type(TC_DataType)'),
-      "Should not have unqualified TC_DataType");
-    assert(!componentsFile.includes('request.set_return_type(TC_Status)'),
-      "Should not have unqualified TC_Status");
+    assert(!componentsFile.includes("request.set_return_type(TC_DataType)"), "Should not have unqualified TC_DataType");
+    assert(!componentsFile.includes("request.set_return_type(TC_Status)"), "Should not have unqualified TC_Status");
   });
 });

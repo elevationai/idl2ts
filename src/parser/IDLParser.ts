@@ -110,7 +110,8 @@ export class IDLParser {
         const parsedMembers = this.parseStructMember();
         if (parsedMembers) {
           members.push(...parsedMembers);
-        } else {
+        }
+        else {
           break;
         }
       }
@@ -208,7 +209,8 @@ export class IDLParser {
         memberNames.push(this.consume());
         // Use the enum name if provided, otherwise use the member name
         type = { kind: "namedType", name: enumName || memberNames[0] };
-      } else {
+      }
+      else {
         // This is a regular enum type reference, get the member name
         memberNames.push(this.consume());
         type = { kind: "namedType", name: enumName! };
@@ -230,7 +232,8 @@ export class IDLParser {
         memberNames.push(this.consume());
         // Use the struct name if provided, otherwise use the member name
         type = { kind: "namedType", name: structName || memberNames[0] };
-      } else {
+      }
+      else {
         // This is a regular struct type reference, get the member name
         memberNames.push(this.consume());
         type = { kind: "namedType", name: structName! };
@@ -254,7 +257,8 @@ export class IDLParser {
         // If we had a name before switch, it's the type name
         // If not, use the member name as the type name
         type = { kind: "namedType", name: unionName || memberName };
-      } else {
+      }
+      else {
         // This is a regular union type reference, get the member name
         memberNames.push(this.consume());
         type = { kind: "namedType", name: unionName! };
@@ -270,7 +274,8 @@ export class IDLParser {
         this.consume(",");
         memberNames.push(this.consume());
       }
-    } else {
+    }
+    else {
       return null;
     }
 
@@ -307,9 +312,10 @@ export class IDLParser {
 
       // Parse the dimension expression
       const dimValue = this.parseValue(dimExpr);
-      if (typeof dimValue === 'number') {
+      if (typeof dimValue === "number") {
         dimensions.push(dimValue);
-      } else {
+      }
+      else {
         // If it's not a number, try to parse as integer
         dimensions.push(parseInt(String(dimValue)));
       }
@@ -657,7 +663,8 @@ export class IDLParser {
       const parsedMembers = this.parseStructMember();
       if (parsedMembers) {
         members.push(...parsedMembers);
-      } else {
+      }
+      else {
         break;
       }
     }
@@ -726,10 +733,12 @@ export class IDLParser {
         if (this.peek(1) === "::") {
           // It's a qualified name, parse the full name
           value = this.parseQualifiedName();
-        } else if (this.peek() === "-") {
+        }
+        else if (this.peek() === "-") {
           // Handle negative numbers
           value = this.consume() + this.consume();
-        } else {
+        }
+        else {
           value = this.consume();
         }
 
@@ -785,7 +794,7 @@ export class IDLParser {
     this.consume("{");
 
     const members: AST.EnumMemberNode[] = [];
-    let nextValue = 0;  // Enum values start at 0 by default
+    let nextValue = 0; // Enum values start at 0 by default
 
     while (this.peek() !== "}" && this.currentToken < this.tokens.length) {
       const memberName = this.consume();
@@ -803,13 +812,15 @@ export class IDLParser {
 
         // Evaluate the expression
         const evaluatedValue = this.parseValue(valueExpr);
-        if (typeof evaluatedValue === 'number') {
+        if (typeof evaluatedValue === "number") {
           memberValue = evaluatedValue;
-        } else {
+        }
+        else {
           throw new Error(`Enum member value must be a constant integer expression: ${valueExpr}`);
         }
         nextValue = memberValue + 1;
-      } else {
+      }
+      else {
         // Use auto-incremented value
         memberValue = nextValue++;
       }
@@ -817,7 +828,7 @@ export class IDLParser {
       members.push({
         kind: "enumMember",
         name: memberName,
-        value: memberValue
+        value: memberValue,
       });
 
       if (this.peek() === ",") {
@@ -865,7 +876,8 @@ export class IDLParser {
           this.parseAnonymousStruct(); // Parse anonymous struct body
           name = this.consume(); // The typedef alias name comes after the struct definition
           type = { kind: "namedType", name: structName || name };
-        } else {
+        }
+        else {
           type = { kind: "namedType", name: structName! };
           name = this.consume();
         }
@@ -881,7 +893,8 @@ export class IDLParser {
           this.parseAnonymousUnion(); // Parse anonymous union body
           name = this.consume(); // The typedef alias name comes after the union definition
           type = { kind: "namedType", name: unionName || name };
-        } else {
+        }
+        else {
           type = { kind: "namedType", name: unionName! };
           name = this.consume();
         }
@@ -897,7 +910,8 @@ export class IDLParser {
           this.parseAnonymousEnum(); // Parse anonymous enum body
           name = this.consume(); // The typedef alias name comes after the enum definition
           type = { kind: "namedType", name: enumName || name };
-        } else {
+        }
+        else {
           type = { kind: "namedType", name: enumName! };
           name = this.consume();
         }
@@ -955,7 +969,7 @@ export class IDLParser {
     this.consume(";");
 
     // Store constant value if it's numeric
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       this.definedConstants.set(name, value);
       this.expressionEvaluator.setConstant(name, value);
     }
@@ -993,7 +1007,8 @@ export class IDLParser {
         const parsedMembers = this.parseStructMember();
         if (parsedMembers) {
           members.push(...parsedMembers);
-        } else {
+        }
+        else {
           break;
         }
       }

@@ -158,7 +158,7 @@ describe("Edge Cases and Error Handling", () => {
         parseIDL(idl); // Verify parsing doesn't throw
         const output = generateTypeScript(idl, {
           includeStubs: true,
-          includeSkeletons: true
+          includeSkeletons: true,
         });
 
         const testFile = output.get("Test.ts");
@@ -197,8 +197,8 @@ describe("Edge Cases and Error Handling", () => {
         assert(!testFile.includes("interface interface:"), "Should not have unescaped interface keyword");
         assert(!testFile.includes("module module:"), "Should not have unescaped module keyword");
         assert(!testFile.includes("struct struct:"), "Should not have unescaped struct keyword");
-
-      } catch (error) {
+      }
+      catch (error) {
         throw new Error(`Failed to handle reserved words: ${error}`);
       }
     });
@@ -511,7 +511,7 @@ describe("Edge Cases and Error Handling", () => {
       assert(output.includes("{ discriminator: 1; boolVal: boolean }"));
       assert(output.includes("{ discriminator: 10; wstringVal: string }"));
       // Default case should allow any discriminator value not explicitly handled
-      assert(output.includes('{ discriminator: string | number; anyVal: unknown }'));
+      assert(output.includes("{ discriminator: string | number; anyVal: unknown }"));
     });
   });
 
@@ -661,10 +661,10 @@ describe("Edge Cases and Error Handling", () => {
       const output = results.get("Test.ts") || "";
 
       // Check that all types are generated
-      assert(output.includes("export interface Status"));  // Top-level interface
-      assert(output.includes("export enum Component_Status"));  // Nested enum
-      assert(output.includes("export interface Component_Config"));  // Nested struct
-      assert(output.includes("export interface Monitor_Status"));  // Nested struct
+      assert(output.includes("export interface Status")); // Top-level interface
+      assert(output.includes("export enum Component_Status")); // Nested enum
+      assert(output.includes("export interface Component_Config")); // Nested struct
+      assert(output.includes("export interface Monitor_Status")); // Nested struct
 
       // Check Component interface - should prefer nested enum
       assert(output.includes("getStatus(): Promise<Component_Status>"));

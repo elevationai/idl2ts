@@ -27,29 +27,103 @@ export class TypeScriptGenerator {
   // TypeScript/JavaScript reserved words that need escaping
   private static readonly RESERVED_WORDS = new Set([
     // JavaScript reserved words
-    'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default',
-    'delete', 'do', 'else', 'export', 'extends', 'finally', 'for', 'function',
-    'if', 'import', 'in', 'instanceof', 'new', 'return', 'super', 'switch',
-    'this', 'throw', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield',
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "else",
+    "export",
+    "extends",
+    "finally",
+    "for",
+    "function",
+    "if",
+    "import",
+    "in",
+    "instanceof",
+    "new",
+    "return",
+    "super",
+    "switch",
+    "this",
+    "throw",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "while",
+    "with",
+    "yield",
 
     // TypeScript reserved words
-    'abstract', 'any', 'boolean', 'constructor', 'declare', 'get', 'implements',
-    'interface', 'let', 'module', 'namespace', 'never', 'number', 'object',
-    'package', 'private', 'protected', 'public', 'readonly', 'require', 'set',
-    'static', 'string', 'symbol', 'type', 'undefined', 'unique', 'unknown',
+    "abstract",
+    "any",
+    "boolean",
+    "constructor",
+    "declare",
+    "get",
+    "implements",
+    "interface",
+    "let",
+    "module",
+    "namespace",
+    "never",
+    "number",
+    "object",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "readonly",
+    "require",
+    "set",
+    "static",
+    "string",
+    "symbol",
+    "type",
+    "undefined",
+    "unique",
+    "unknown",
 
     // IDL-specific keywords that could conflict with TypeScript
-    'struct', 'union', 'exception',
+    "struct",
+    "union",
+    "exception",
 
     // Future reserved words
-    'enum', 'await', 'async',
+    "enum",
+    "await",
+    "async",
 
     // Global identifiers that could cause conflicts
-    'Array', 'Object', 'String', 'Number', 'Boolean', 'Date', 'RegExp', 'Error',
-    'Promise', 'Map', 'Set', 'JSON', 'Math', 'console', 'window', 'document',
+    "Array",
+    "Object",
+    "String",
+    "Number",
+    "Boolean",
+    "Date",
+    "RegExp",
+    "Error",
+    "Promise",
+    "Map",
+    "Set",
+    "JSON",
+    "Math",
+    "console",
+    "window",
+    "document",
 
     // CORBA-specific identifiers we want to avoid conflicts with
-    'CORBA', 'TypeCode', 'ObjectRef', 'CorbaStub'
+    "CORBA",
+    "TypeCode",
+    "ObjectRef",
+    "CorbaStub",
   ]);
 
   private options: GeneratorOptions;
@@ -353,9 +427,9 @@ export class TypeScriptGenerator {
 
     // Register type for CDR marshaling with both qualified and unqualified names
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
-    this.typeRegistry.set(fullName, { kind: 'interface', node });
+    this.typeRegistry.set(fullName, { kind: "interface", node });
     // Also register with just the name for local lookups
-    this.typeRegistry.set(node.name, { kind: 'interface', node });
+    this.typeRegistry.set(node.name, { kind: "interface", node });
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
       this.currentInterface = prevInterface;
@@ -459,7 +533,9 @@ export class TypeScriptGenerator {
     }
     else if (!hasReturn) {
       // Out parameters but void return - return object with just out params
-      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`).join(
+      const outParamTypes = outParams.map((p: AST.ParameterNode) =>
+        `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`
+      ).join(
         "; ",
       );
       returnType = `Promise<{ ${outParamTypes} }>`;
@@ -467,7 +543,9 @@ export class TypeScriptGenerator {
     else {
       // Both return value and out parameters - return object with both
       const returnValueType = this.mapType(node.returnType, true, this.currentModule, interfaceName);
-      const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`).join(
+      const outParamTypes = outParams.map((p: AST.ParameterNode) =>
+        `${p.name}: ${this.mapType(p.type, true, this.currentModule, interfaceName)}`
+      ).join(
         "; ",
       );
       returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
@@ -493,9 +571,9 @@ export class TypeScriptGenerator {
   private generateStruct(node: AST.StructNode): void {
     // Register type for CDR marshaling with both qualified and unqualified names
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
-    this.typeRegistry.set(fullName, { kind: 'struct', node });
+    this.typeRegistry.set(fullName, { kind: "struct", node });
     // Also register with just the name for local lookups
-    this.typeRegistry.set(node.name, { kind: 'struct', node });
+    this.typeRegistry.set(node.name, { kind: "struct", node });
 
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
@@ -509,9 +587,9 @@ export class TypeScriptGenerator {
       // Determine the parent interface for nested structs
       // If the struct name contains underscore, it's a nested type
       let parentInterface: string | undefined;
-      if (node.name.includes('_') && this.currentInterface) {
+      if (node.name.includes("_") && this.currentInterface) {
         // Extract the parent interface name from the prefixed struct name
-        const parts = node.name.split('_');
+        const parts = node.name.split("_");
         if (parts[0] === this.currentInterface) {
           parentInterface = this.currentInterface;
         }
@@ -820,9 +898,9 @@ export class TypeScriptGenerator {
   private generateUnion(node: AST.UnionNode): void {
     // Register type for CDR marshaling with both qualified and unqualified names
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
-    this.typeRegistry.set(fullName, { kind: 'union', node });
+    this.typeRegistry.set(fullName, { kind: "union", node });
     // Also register with just the name for local lookups
-    this.typeRegistry.set(node.name, { kind: 'union', node });
+    this.typeRegistry.set(node.name, { kind: "union", node });
 
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
@@ -841,10 +919,13 @@ export class TypeScriptGenerator {
       if (caseNode.member) {
         if (caseNode.isDefault) {
           defaultCase = caseNode;
-        } else {
+        }
+        else {
           const discriminatorValue = caseNode.labels.map((l: string | number | boolean) => JSON.stringify(l)).join(" | ");
           variants.push(
-            `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(caseNode.member.name)}: ${this.mapType(caseNode.member.type)} }`,
+            `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(caseNode.member.name)}: ${
+              this.mapType(caseNode.member.type)
+            } }`,
           );
           // Track which labels are explicitly handled
           for (const label of caseNode.labels) {
@@ -871,22 +952,28 @@ export class TypeScriptGenerator {
           if (unhandledLabels.length > 0) {
             const discriminatorValue = unhandledLabels.join(" | ");
             variants.push(
-              `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(defaultCase.member.name)}: ${this.mapType(defaultCase.member.type)} }`,
+              `{ discriminator: ${discriminatorValue}; ${this.escapeReservedWord(defaultCase.member.name)}: ${
+                this.mapType(defaultCase.member.type)
+              } }`,
             );
           }
-        } else {
+        }
+        else {
           // Fallback: use a generic "default" discriminator
           // This isn't ideal but maintains backward compatibility
           variants.push(
             `{ discriminator: "default"; ${this.escapeReservedWord(defaultCase.member.name)}: ${this.mapType(defaultCase.member.type)} }`,
           );
         }
-      } else {
+      }
+      else {
         // For non-enum discriminators (like long), we can't enumerate all values
         // Use a special marker that TypeScript can understand
         // Note: This is a limitation - we can't represent "all other values" in TypeScript's type system perfectly
         variants.push(
-          `{ discriminator: string | number; ${this.escapeReservedWord(defaultCase.member.name)}: ${this.mapType(defaultCase.member.type)} }`,
+          `{ discriminator: string | number; ${this.escapeReservedWord(defaultCase.member.name)}: ${
+            this.mapType(defaultCase.member.type)
+          } }`,
         );
       }
     }
@@ -939,7 +1026,8 @@ export class TypeScriptGenerator {
           members.push(
             `{ label: 0, name: "${caseNode.member.name}", type: ${memberTypeCode}, isDefault: true }`,
           );
-        } else {
+        }
+        else {
           for (const label of caseNode.labels) {
             const labelValue = typeof label === "string" ? `"${label}"` : label;
             const memberTypeCode = this.getTypeCodeForType(caseNode.member.type);
@@ -972,9 +1060,9 @@ export class TypeScriptGenerator {
   private generateEnum(node: AST.EnumNode): void {
     // Register type for CDR marshaling with both qualified and unqualified names
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
-    this.typeRegistry.set(fullName, { kind: 'enum', node });
+    this.typeRegistry.set(fullName, { kind: "enum", node });
     // Also register with just the name for local lookups
-    this.typeRegistry.set(node.name, { kind: 'enum', node });
+    this.typeRegistry.set(node.name, { kind: "enum", node });
 
     // Check if code generation is inhibited for this type
     if (this.shouldInhibitCodeGeneration(node.name)) {
@@ -1012,9 +1100,9 @@ export class TypeScriptGenerator {
   private generateTypedef(node: AST.TypedefNode): void {
     // Register typedef for CDR marshaling with both qualified and unqualified names
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
-    this.typeRegistry.set(fullName, { kind: 'typedef', node });
+    this.typeRegistry.set(fullName, { kind: "typedef", node });
     // Also register with just the name for local lookups
-    this.typeRegistry.set(node.name, { kind: 'typedef', node });
+    this.typeRegistry.set(node.name, { kind: "typedef", node });
 
     const name = this.getPrefixedName(node.name);
     const tsType = this.mapType(node.type);
@@ -1081,8 +1169,14 @@ export class TypeScriptGenerator {
   private generateNative(node: AST.NativeNode): void {
     // Register native type in type registry as a typedef to 'any'
     const fullName = this.currentModulePrefix ? `${this.currentModulePrefix}::${node.name}` : node.name;
-    this.typeRegistry.set(fullName, { kind: 'typedef', node: { kind: 'typedef', name: node.name, type: { kind: 'primitiveType', type: 'any' } } as AST.TypedefNode });
-    this.typeRegistry.set(node.name, { kind: 'typedef', node: { kind: 'typedef', name: node.name, type: { kind: 'primitiveType', type: 'any' } } as AST.TypedefNode });
+    this.typeRegistry.set(fullName, {
+      kind: "typedef",
+      node: { kind: "typedef", name: node.name, type: { kind: "primitiveType", type: "any" } } as AST.TypedefNode,
+    });
+    this.typeRegistry.set(node.name, {
+      kind: "typedef",
+      node: { kind: "typedef", name: node.name, type: { kind: "primitiveType", type: "any" } } as AST.TypedefNode,
+    });
 
     // Generate type alias to any
     const name = this.getPrefixedName(node.name);
@@ -1562,14 +1656,14 @@ export class TypeScriptGenerator {
     this.emit("");
     // Generate standard CORBA _invoke method for static skeleton
     // Check if interface has any operations or attributes early to determine if responseHandler will be used
-    const hasOperationsOrAttributes = node.members.some(member =>
-      member.kind === "operation" || member.kind === "attribute"
-    );
+    const hasOperationsOrAttributes = node.members.some((member) => member.kind === "operation" || member.kind === "attribute");
 
     // Prefix responseHandler with underscore if it won't be used
     const responseHandlerParam = hasOperationsOrAttributes ? "responseHandler" : "_responseHandler";
 
-    this.emit(`async _invoke(operation: string, _inputStream: CDRInputStream, ${responseHandlerParam}: ResponseHandler): Promise<CDROutputStream> {`);
+    this.emit(
+      `async _invoke(operation: string, _inputStream: CDRInputStream, ${responseHandlerParam}: ResponseHandler): Promise<CDROutputStream> {`,
+    );
     this.markCorbaImportUsed("CDRInputStream");
     this.markCorbaImportUsed("CDROutputStream");
     this.markCorbaImportUsed("ResponseHandler");
@@ -1581,7 +1675,8 @@ export class TypeScriptGenerator {
       this.emit("");
       // For empty interfaces, throw directly without unreachable return
       this.emit(`throw new Error(\`Unknown operation: \${operation}\`);`);
-    } else {
+    }
+    else {
       this.emit(`const outputStream = responseHandler.createReply();`);
       this.emit("");
       this.emit(`switch (operation) {`);
@@ -1589,84 +1684,94 @@ export class TypeScriptGenerator {
 
       // Generate cases for each operation
       for (const member of node.members) {
-      if (member.kind === "operation") {
-        this.emit(`case "${member.name}": {`);
-        this.indent();
-
-        // Unmarshal input parameters
-        const inParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === "in" || p.direction === "inout");
-        if (inParams.length > 0) {
-          this.emit("// Unmarshal input parameters");
-          for (const param of inParams) {
-            const unmarshalCall = this.getUnmarshalCall(param.type);
-            this.emit(`const ${param.name} = ${unmarshalCall};`);
-          }
-        }
-
-        // Call the abstract method
-        const outParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === "out" || p.direction === "inout");
-        const hasReturn = member.returnType.kind !== "primitiveType" || member.returnType.type !== "void";
-
-        if (member.isOneway) {
-          // Oneway operations don't wait for result
-          this.emit(`this.${member.name}(${member.parameters.filter((p: AST.ParameterNode) => p.direction === "in" || p.direction === "inout").map((p: AST.ParameterNode) => p.name).join(", ")}); // oneway - no wait`);
-        } else if (outParams.length === 0 && hasReturn) {
-          // Only return value
-          this.emit(`const result = await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
-          this.emit("");
-          this.emit("// Marshal return value and out parameters");
-          const marshalCall = this.getMarshalCall(member.returnType, "result", node.name);
-          this.emit(`${marshalCall};`);
-        } else if (outParams.length > 0) {
-          // Has out parameters
-          const resultVar = hasReturn || outParams.length > 0 ? "const result = " : "";
-          this.emit(`${resultVar}await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
-          this.emit("");
-          this.emit("// Marshal return value and out parameters");
-
-          if (hasReturn) {
-            const marshalCall = this.getMarshalCall(member.returnType, "result.returnValue", node.name);
-            this.emit(`${marshalCall};`);
-          }
-
-          for (const param of outParams) {
-            const marshalCall = this.getMarshalCall(param.type, `result.${param.name}`, node.name);
-            this.emit(`${marshalCall};`);
-          }
-        } else {
-          // void return, no out params
-          this.emit(`await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
-        }
-
-        this.emit("break;");
-        this.dedent();
-        this.emit("}");
-      } else if (member.kind === "attribute") {
-        // Generate getter case
-        this.emit(`case "get_${member.name}": {`);
-        this.indent();
-        this.emit(`const result = await this.get_${member.name}();`);
-        // Don't pass interface context for attributes - they should resolve to their declared type
-        // not to nested types within the interface
-        const marshalCall = this.getMarshalCall(member.type, "result");
-        this.emit(`${marshalCall};`);
-        this.emit("break;");
-        this.dedent();
-        this.emit("}");
-
-        // Generate setter case if not readonly
-        if (!member.isReadonly) {
-          this.emit(`case "set_${member.name}": {`);
+        if (member.kind === "operation") {
+          this.emit(`case "${member.name}": {`);
           this.indent();
-          const unmarshalCall = this.getUnmarshalCall(member.type);
-          this.emit(`const value = ${unmarshalCall};`);
-          this.emit(`await this.set_${member.name}(value);`);
+
+          // Unmarshal input parameters
+          const inParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === "in" || p.direction === "inout");
+          if (inParams.length > 0) {
+            this.emit("// Unmarshal input parameters");
+            for (const param of inParams) {
+              const unmarshalCall = this.getUnmarshalCall(param.type);
+              this.emit(`const ${param.name} = ${unmarshalCall};`);
+            }
+          }
+
+          // Call the abstract method
+          const outParams = member.parameters.filter((p: AST.ParameterNode) => p.direction === "out" || p.direction === "inout");
+          const hasReturn = member.returnType.kind !== "primitiveType" || member.returnType.type !== "void";
+
+          if (member.isOneway) {
+            // Oneway operations don't wait for result
+            this.emit(
+              `this.${member.name}(${
+                member.parameters.filter((p: AST.ParameterNode) => p.direction === "in" || p.direction === "inout").map((
+                  p: AST.ParameterNode,
+                ) => p.name).join(", ")
+              }); // oneway - no wait`,
+            );
+          }
+          else if (outParams.length === 0 && hasReturn) {
+            // Only return value
+            this.emit(`const result = await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
+            this.emit("");
+            this.emit("// Marshal return value and out parameters");
+            const marshalCall = this.getMarshalCall(member.returnType, "result", node.name);
+            this.emit(`${marshalCall};`);
+          }
+          else if (outParams.length > 0) {
+            // Has out parameters
+            const resultVar = hasReturn || outParams.length > 0 ? "const result = " : "";
+            this.emit(`${resultVar}await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
+            this.emit("");
+            this.emit("// Marshal return value and out parameters");
+
+            if (hasReturn) {
+              const marshalCall = this.getMarshalCall(member.returnType, "result.returnValue", node.name);
+              this.emit(`${marshalCall};`);
+            }
+
+            for (const param of outParams) {
+              const marshalCall = this.getMarshalCall(param.type, `result.${param.name}`, node.name);
+              this.emit(`${marshalCall};`);
+            }
+          }
+          else {
+            // void return, no out params
+            this.emit(`await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
+          }
+
           this.emit("break;");
           this.dedent();
           this.emit("}");
         }
+        else if (member.kind === "attribute") {
+          // Generate getter case
+          this.emit(`case "get_${member.name}": {`);
+          this.indent();
+          this.emit(`const result = await this.get_${member.name}();`);
+          // Don't pass interface context for attributes - they should resolve to their declared type
+          // not to nested types within the interface
+          const marshalCall = this.getMarshalCall(member.type, "result");
+          this.emit(`${marshalCall};`);
+          this.emit("break;");
+          this.dedent();
+          this.emit("}");
+
+          // Generate setter case if not readonly
+          if (!member.isReadonly) {
+            this.emit(`case "set_${member.name}": {`);
+            this.indent();
+            const unmarshalCall = this.getUnmarshalCall(member.type);
+            this.emit(`const value = ${unmarshalCall};`);
+            this.emit(`await this.set_${member.name}(value);`);
+            this.emit("break;");
+            this.dedent();
+            this.emit("}");
+          }
+        }
       }
-    }
 
       this.emit("default: {");
       this.indent();
@@ -1722,9 +1827,11 @@ export class TypeScriptGenerator {
           // Unknown primitive type - try string as safe fallback
           return "_inputStream.readString()";
       }
-    } else if (type.kind === "stringType") {
+    }
+    else if (type.kind === "stringType") {
       return type.type === "wstring" ? "_inputStream.readWString()" : "_inputStream.readString()";
-    } else if (type.kind === "namedType") {
+    }
+    else if (type.kind === "namedType") {
       // Convert :: to . for cross-module references in TypeScript
       let lookupName = type.name;
       if (type.name.includes("::")) {
@@ -1740,16 +1847,16 @@ export class TypeScriptGenerator {
       const typeInfo = this.findTypeInRegistry(lookupName);
       if (typeInfo) {
         switch (typeInfo.kind) {
-          case 'enum':
+          case "enum":
             // Enums are marshaled as longs in CORBA
             return "_inputStream.readLong()";
-          case 'interface': {
+          case "interface": {
             // Interfaces are object references - read IOR string
             // Cast through unknown to the specific interface type to avoid type errors
             const interfaceType = this.resolveTypeName(type.name, true);
             return `({ _ior: _inputStream.readString() } as unknown as ${interfaceType})`;
           }
-          case 'typedef': {
+          case "typedef": {
             // Follow the typedef to the underlying type
             const typedefNode = typeInfo.node as AST.TypedefNode;
             if (typedefNode) {
@@ -1757,10 +1864,10 @@ export class TypeScriptGenerator {
             }
             return `_inputStream.readString()`;
           }
-          case 'struct':
+          case "struct":
             // Generate inline struct unmarshaling
             return this.generateStructUnmarshal(typeInfo.node as AST.StructNode, type.name);
-          case 'union':
+          case "union":
             // Generate inline union unmarshaling
             return this.generateUnionUnmarshal(typeInfo.node as AST.UnionNode, type.name);
           default:
@@ -1769,14 +1876,17 @@ export class TypeScriptGenerator {
       }
       // If type not found, assume it's a long (common for numeric typedefs)
       return `_inputStream.readLong()`;
-    } else if (type.kind === "sequenceType") {
+    }
+    else if (type.kind === "sequenceType") {
       const elementUnmarshal = this.getUnmarshalCall(type.elementType);
       return `(() => { const length = _inputStream.readULong(); const result = []; for (let i = 0; i < length; i++) { result.push(${elementUnmarshal}); } return result; })()`;
-    } else if (type.kind === "arrayType") {
+    }
+    else if (type.kind === "arrayType") {
       const elementUnmarshal = this.getUnmarshalCall(type.elementType);
       const totalSize = type.dimensions.reduce((a, b) => a * b, 1);
       return `(() => { const result = []; for (let i = 0; i < ${totalSize}; i++) { result.push(${elementUnmarshal}); } return result; })()`;
-    } else {
+    }
+    else {
       // Unknown type - try string as fallback
       return "_inputStream.readString()";
     }
@@ -1785,32 +1895,47 @@ export class TypeScriptGenerator {
   private getElementUnmarshalCall(type: AST.TypeNode): string {
     if (type.kind === "primitiveType") {
       switch (type.type) {
-        case "boolean": return "(s) => s.readBoolean()";
+        case "boolean":
+          return "(s) => s.readBoolean()";
         case "char":
-        case "wchar": return "(s) => s.readChar()";
-        case "octet": return "(s) => s.readOctet()";
-        case "short": return "(s) => s.readShort()";
-        case "unsigned short": return "(s) => s.readUShort()";
-        case "long": return "(s) => s.readLong()";
-        case "unsigned long": return "(s) => s.readULong()";
-        case "long long": return "(s) => s.readLongLong()";
-        case "unsigned long long": return "(s) => s.readULongLong()";
-        case "float": return "(s) => s.readFloat()";
-        case "double": return "(s) => s.readDouble()";
+        case "wchar":
+          return "(s) => s.readChar()";
+        case "octet":
+          return "(s) => s.readOctet()";
+        case "short":
+          return "(s) => s.readShort()";
+        case "unsigned short":
+          return "(s) => s.readUShort()";
+        case "long":
+          return "(s) => s.readLong()";
+        case "unsigned long":
+          return "(s) => s.readULong()";
+        case "long long":
+          return "(s) => s.readLongLong()";
+        case "unsigned long long":
+          return "(s) => s.readULongLong()";
+        case "float":
+          return "(s) => s.readFloat()";
+        case "double":
+          return "(s) => s.readDouble()";
         default:
           this.markCorbaImportUsed("decodeAny");
           return "(s) => decodeAny(s)"; // For any/unknown types
       }
-    } else if (type.kind === "stringType") {
+    }
+    else if (type.kind === "stringType") {
       return type.type === "wstring" ? "(s) => s.readWString()" : "(s) => s.readString()";
-    } else if (type.kind === "namedType") {
+    }
+    else if (type.kind === "namedType") {
       // For named types in sequences/arrays, check the type
       const typeInfo = this.findTypeInRegistry(type.name);
-      if (typeInfo && typeInfo.kind === 'enum') {
+      if (typeInfo && typeInfo.kind === "enum") {
         return "(s) => s.readLong()";
-      } else if (typeInfo && typeInfo.kind === 'interface') {
+      }
+      else if (typeInfo && typeInfo.kind === "interface") {
         return "(s) => { const iorStr = s.readString(); return { _ior: iorStr }; }";
-      } else if (typeInfo && typeInfo.kind === 'typedef') {
+      }
+      else if (typeInfo && typeInfo.kind === "typedef") {
         // Follow the typedef to the underlying type
         const typedefNode = typeInfo.node as AST.TypedefNode;
         if (typedefNode) {
@@ -1819,7 +1944,8 @@ export class TypeScriptGenerator {
       }
       // For structs/unions, would need custom logic
       return "(s) => s.readString()";
-    } else {
+    }
+    else {
       return "(s) => s.readString()";
     }
   }
@@ -1863,9 +1989,11 @@ export class TypeScriptGenerator {
           this.markCorbaImportUsed("Any");
           return `encodeAny(outputStream, Any.fromValue(${value}))`;
       }
-    } else if (type.kind === "stringType") {
+    }
+    else if (type.kind === "stringType") {
       return type.type === "wstring" ? `outputStream.writeWString(${value})` : `outputStream.writeString(${value})`;
-    } else if (type.kind === "namedType") {
+    }
+    else if (type.kind === "namedType") {
       // Look up the type in the registry to determine how to marshal it
       // Handle cross-module references (C++ :: to TypeScript .)
       let lookupName = type.name;
@@ -1891,13 +2019,13 @@ export class TypeScriptGenerator {
       }
       if (typeInfo) {
         switch (typeInfo.kind) {
-          case 'enum':
+          case "enum":
             // Enums are marshaled as longs in CORBA
             return `outputStream.writeLong(${value})`;
-          case 'interface':
+          case "interface":
             // Interfaces are object references - write IOR string
             return `outputStream.writeString((${value} as { _ior?: string })?._ior || "")`;
-          case 'typedef': {
+          case "typedef": {
             // Follow the typedef to the underlying type
             const typedefNode = typeInfo.node as AST.TypedefNode;
             if (typedefNode) {
@@ -1905,33 +2033,36 @@ export class TypeScriptGenerator {
             }
             this.markCorbaImportUsed("encodeAny");
             this.markCorbaImportUsed("Any");
-            return `encodeAny(outputStream, Any.fromValue(${value}))`;  // fallback to Any marshaling
+            return `encodeAny(outputStream, Any.fromValue(${value}))`; // fallback to Any marshaling
           }
-          case 'struct':
+          case "struct":
             // Generate inline struct marshaling
             return this.generateStructMarshal(typeInfo.node as AST.StructNode, value, interfaceContext);
-          case 'union':
+          case "union":
             // Generate inline union marshaling
             return this.generateUnionMarshal(typeInfo.node as AST.UnionNode, value, interfaceContext);
           default:
-            return `encodeAny(outputStream, Any.fromValue(${value}))`;  // fallback to Any marshaling
+            return `encodeAny(outputStream, Any.fromValue(${value}))`; // fallback to Any marshaling
         }
       }
       // If type not found, use Any marshaling as fallback
       this.markCorbaImportUsed("encodeAny");
       this.markCorbaImportUsed("Any");
       return `encodeAny(outputStream, Any.fromValue(${value}))`;
-    } else if (type.kind === "sequenceType") {
+    }
+    else if (type.kind === "sequenceType") {
       // Use proper sequence marshaling with length prefix
       const elementType = type.elementType;
-      const marshalElement = this.getMarshalCall(elementType, 'element', interfaceContext);
+      const marshalElement = this.getMarshalCall(elementType, "element", interfaceContext);
       return `outputStream.writeULong(${value}.length); ${value}.forEach((element) => { ${marshalElement}; })`;
-    } else if (type.kind === "arrayType") {
+    }
+    else if (type.kind === "arrayType") {
       // Arrays don't have length prefix, just marshal each element
       const elementType = type.elementType;
-      const marshalElement = this.getMarshalCall(elementType, 'element', interfaceContext);
+      const marshalElement = this.getMarshalCall(elementType, "element", interfaceContext);
       return `${value}.forEach((element) => { ${marshalElement}; })`;
-    } else {
+    }
+    else {
       return `outputStream.writeAny(${value})`;
     }
   }
@@ -1990,11 +2121,12 @@ export class TypeScriptGenerator {
           if (sourceInterface) {
             // In interface context, prefer nested type
             return this.nestedTypes.get(node.name)!;
-          } else {
+          }
+          else {
             // At module level, check if there's a top-level type first
-            const hasTopLevel = this.currentModuleDefinitions?.some(def =>
+            const hasTopLevel = this.currentModuleDefinitions?.some((def) =>
               (def.kind === "interface" || def.kind === "struct" || def.kind === "enum" ||
-               def.kind === "typedef" || def.kind === "exception" || def.kind === "union") &&
+                def.kind === "typedef" || def.kind === "exception" || def.kind === "union") &&
               (def as { name?: string }).name === node.name
             );
             // Only use nested type if there's no top-level type
@@ -2049,13 +2181,15 @@ export class TypeScriptGenerator {
             if (def.kind === "interface" && (def as AST.InterfaceNode).name === sourceInterface) {
               const interfaceDef = def as AST.InterfaceNode;
               for (const member of interfaceDef.members) {
-                if (member.name === node.name && (
-                  member.kind === "enum" ||
-                  member.kind === "struct" ||
-                  member.kind === "union" ||
-                  member.kind === "typedef" ||
-                  member.kind === "exception"
-                )) {
+                if (
+                  member.name === node.name && (
+                    member.kind === "enum" ||
+                    member.kind === "struct" ||
+                    member.kind === "union" ||
+                    member.kind === "typedef" ||
+                    member.kind === "exception"
+                  )
+                ) {
                   // Found nested type - return flattened name
                   return `${sourceInterface}_${node.name}`;
                 }
@@ -2418,7 +2552,7 @@ export class TypeScriptGenerator {
                 matchesWithInfo.push({
                   name: match,
                   type: member.kind,
-                  interfaceName: interfaceName
+                  interfaceName: interfaceName,
                 });
                 break;
               }
@@ -2431,10 +2565,10 @@ export class TypeScriptGenerator {
       // 1. Prefer enum types over other types for discriminator-like usage, but ONLY if we have interface context
       // Without interface context, we should not prefer nested types
       if (preferredInterface) {
-        const enumMatches = matchesWithInfo.filter(m => m.type === "enum");
+        const enumMatches = matchesWithInfo.filter((m) => m.type === "enum");
         if (enumMatches.length > 0) {
           // If we have a preferred interface and it has an enum, use it
-          const preferredEnum = enumMatches.find(m => m.interfaceName === preferredInterface);
+          const preferredEnum = enumMatches.find((m) => m.interfaceName === preferredInterface);
           if (preferredEnum) return preferredEnum.name;
           // Otherwise return the first enum match
           return enumMatches[0].name;
@@ -2442,11 +2576,11 @@ export class TypeScriptGenerator {
       }
 
       // 2. Prefer struct types over interface types for data structures
-      const structMatches = matchesWithInfo.filter(m => m.type === "struct");
+      const structMatches = matchesWithInfo.filter((m) => m.type === "struct");
       if (structMatches.length > 0) {
         // If we have a preferred interface and it has a struct, use it
         if (preferredInterface) {
-          const preferredStruct = structMatches.find(m => m.interfaceName === preferredInterface);
+          const preferredStruct = structMatches.find((m) => m.interfaceName === preferredInterface);
           if (preferredStruct) return preferredStruct.name;
         }
         // Otherwise return the first struct match
@@ -2455,7 +2589,7 @@ export class TypeScriptGenerator {
 
       // 3. For other types, prefer local scope (preferred interface) if available
       if (preferredInterface) {
-        const localMatch = matchesWithInfo.find(m => m.interfaceName === preferredInterface);
+        const localMatch = matchesWithInfo.find((m) => m.interfaceName === preferredInterface);
         if (localMatch) return localMatch.name;
       }
 
@@ -2521,7 +2655,8 @@ export class TypeScriptGenerator {
         if (caseNode.isDefault) {
           // Save default case for later
           defaultCase = caseNode;
-        } else {
+        }
+        else {
           for (const label of caseNode.labels) {
             // For enum discriminators, labels are enum member names
             // We need to convert them to the actual enum values
@@ -2532,7 +2667,8 @@ export class TypeScriptGenerator {
               if (enumType.includes("::")) {
                 const parts = enumType.split("::");
                 enumType = `${parts[0]}.${parts[parts.length - 1]}`;
-              } else {
+              }
+              else {
                 // Try to resolve it
                 const resolved = this.findTypeInRegistry(enumType);
                 if (resolved) {
@@ -2543,7 +2679,8 @@ export class TypeScriptGenerator {
                 }
               }
               lines.push(`    case ${enumType}.${label}:`);
-            } else {
+            }
+            else {
               // Primitive type - use the value directly
               const labelValue = typeof label === "string" ? `"${label}"` : label;
               lines.push(`    case ${labelValue}:`);
@@ -2571,7 +2708,8 @@ export class TypeScriptGenerator {
       const memberName = this.escapeReservedWord(defaultCase.member.name);
       // For default, use the actual discriminator value read from the stream
       lines.push(`      return { discriminator: _discriminator as any, ${memberName}: ${memberUnmarshal} };`);
-    } else {
+    }
+    else {
       // No default case - throw error for unknown discriminator
       lines.push(`      throw new Error(\`Unknown union discriminator: \${_discriminator}\`);`);
     }
@@ -2610,10 +2748,12 @@ export class TypeScriptGenerator {
         if (moduleName !== this.currentModule) {
           // Need to qualify with module name
           enumName = `${moduleName}.${typeName}`;
-        } else {
+        }
+        else {
           enumName = typeName;
         }
-      } else {
+      }
+      else {
         // Unqualified name - need to determine if it's in a different module
         const enumDef = this.findEnumDefinition(discriminatorType.name);
         if (enumDef) {
@@ -2638,7 +2778,8 @@ export class TypeScriptGenerator {
           if (enumName === discriminatorType.name) {
             enumName = this.resolveTypeName(discriminatorType.name, false);
           }
-        } else {
+        }
+        else {
           // Fallback to regular resolution
           enumName = this.resolveTypeName(discriminatorType.name, false);
         }
@@ -2669,7 +2810,8 @@ export class TypeScriptGenerator {
               }
             }
           }
-        } else {
+        }
+        else {
           // Regular case - add its labels
           for (const label of caseNode.labels) {
             usedDiscriminators.add(String(label));
@@ -2688,7 +2830,8 @@ export class TypeScriptGenerator {
       lines.push(`      throw new Error(\`Invalid discriminator value: \${(_union as { discriminator: unknown }).discriminator}\`);`);
       lines.push(`  }`);
       lines.push(`  outputStream.writeLong(_discriminatorValue);`);
-    } else {
+    }
+    else {
       // For primitive discriminators, write directly
       lines.push(`  ${this.getMarshalCall(discriminatorType, "_union.discriminator")};`);
     }
@@ -2706,7 +2849,8 @@ export class TypeScriptGenerator {
         if (caseNode.isDefault) {
           // Save default case for later - it will be handled in the default: clause
           defaultCase = caseNode;
-        } else {
+        }
+        else {
           // Generate case labels
           for (let i = 0; i < caseNode.labels.length; i++) {
             const label = caseNode.labels[i];
@@ -2715,7 +2859,8 @@ export class TypeScriptGenerator {
             if (i === caseNode.labels.length - 1) {
               // Last label gets the opening brace
               lines.push(`    case ${labelValue}: {`);
-            } else {
+            }
+            else {
               // Other labels just fall through
               lines.push(`    case ${labelValue}:`);
             }
@@ -2740,7 +2885,8 @@ export class TypeScriptGenerator {
       lines.push(`      ${memberMarshal};`);
       lines.push(`      break;`);
       lines.push(`    }`);
-    } else {
+    }
+    else {
       // No default case - throw error for unknown discriminator
       lines.push(`    default:`);
       lines.push(`      throw new Error(\`Unknown union discriminator: \${(_union as { discriminator: unknown }).discriminator}\`);`);
@@ -2774,7 +2920,7 @@ export class TypeScriptGenerator {
     if (!typeInfo) {
       typeInfo = this.typeRegistry.get(simpleName);
     }
-    if (typeInfo && typeInfo.kind === 'enum' && typeInfo.node) {
+    if (typeInfo && typeInfo.kind === "enum" && typeInfo.node) {
       return typeInfo.node as AST.EnumNode;
     }
 
@@ -2814,8 +2960,8 @@ export class TypeScriptGenerator {
     }
 
     // 3. Try cross-module lookup (types.timeout -> types::timeout)
-    if (typeName.includes('.')) {
-      const qualifiedName = typeName.replace(/\./g, '::');
+    if (typeName.includes(".")) {
+      const qualifiedName = typeName.replace(/\./g, "::");
       typeInfo = this.typeRegistry.get(qualifiedName);
       if (typeInfo) return typeInfo;
     }

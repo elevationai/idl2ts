@@ -166,7 +166,7 @@ describe("ExpressionEvaluator", () => {
       assertThrows(
         () => evaluator.evaluate("UNDEFINED_CONST"),
         Error,
-        "Unknown constant: UNDEFINED_CONST"
+        "Unknown constant: UNDEFINED_CONST",
       );
     });
   });
@@ -187,7 +187,7 @@ describe("ExpressionEvaluator", () => {
       evaluator.setConstant("SIZE", size);
       assertEquals(
         evaluator.evaluate("(SIZE + ALIGNMENT - 1) & ~(ALIGNMENT - 1)"),
-        16
+        16,
       );
     });
 
@@ -199,11 +199,11 @@ describe("ExpressionEvaluator", () => {
 
       assertEquals(
         evaluator.evaluate("FLAG_READ | FLAG_WRITE"),
-        0x03
+        0x03,
       );
       assertEquals(
         evaluator.evaluate("FLAG_READ | FLAG_WRITE | FLAG_EXEC"),
-        0x07
+        0x07,
       );
     });
   });
@@ -214,7 +214,7 @@ describe("ExpressionEvaluator", () => {
       assertThrows(
         () => evaluator.evaluate("10 / 0"),
         Error,
-        "Division by zero"
+        "Division by zero",
       );
     });
 
@@ -223,7 +223,7 @@ describe("ExpressionEvaluator", () => {
       assertThrows(
         () => evaluator.evaluate("+ +"),
         Error,
-        "Invalid expression"
+        "Invalid expression",
       );
     });
   });
@@ -238,7 +238,7 @@ describe("IDL Parser with Expression Evaluator", () => {
     `;
 
     const ast = parseIDL(idl);
-    const constants = ast.definitions.filter(d => d.kind === "constant");
+    const constants = ast.definitions.filter((d) => d.kind === "constant");
 
     assertEquals(constants.length, 3);
     assertEquals(constants[0].name, "SIZE");
@@ -258,7 +258,7 @@ describe("IDL Parser with Expression Evaluator", () => {
     `;
 
     const ast = parseIDL(idl);
-    const constants = ast.definitions.filter(d => d.kind === "constant");
+    const constants = ast.definitions.filter((d) => d.kind === "constant");
 
     assertEquals(constants.length, 4);
     assertEquals(constants[0].value, 16);
@@ -279,7 +279,7 @@ describe("IDL Parser with Expression Evaluator", () => {
     `;
 
     const ast = parseIDL(idl);
-    const structs = ast.definitions.filter(d => d.kind === "struct");
+    const structs = ast.definitions.filter((d) => d.kind === "struct");
 
     assertEquals(structs.length, 1);
     const dataStruct = structs[0] as AST.StructNode;
@@ -302,7 +302,7 @@ describe("IDL Parser with Expression Evaluator", () => {
     `;
 
     const ast = parseIDL(idl);
-    const enums = ast.definitions.filter(d => d.kind === "enum");
+    const enums = ast.definitions.filter((d) => d.kind === "enum");
 
     assertEquals(enums.length, 1);
     const errorEnum = enums[0] as AST.EnumNode;
@@ -322,7 +322,7 @@ describe("IDL Parser with Expression Evaluator", () => {
     `;
 
     const ast = parseIDL(idl);
-    const constants = ast.definitions.filter(d => d.kind === "constant");
+    const constants = ast.definitions.filter((d) => d.kind === "constant");
 
     assertEquals(constants[0].value, 0xFF);
     assertEquals(constants[1].value, 0x01);

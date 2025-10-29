@@ -382,7 +382,7 @@ describe("TypeScriptGenerator", () => {
       assert(output.includes("{ discriminator: 3; stringValue: string }"));
       // Default case should allow any discriminator value not explicitly handled
       assert(
-        output.includes('{ discriminator: string | number; boolValue: boolean }'),
+        output.includes("{ discriminator: string | number; boolValue: boolean }"),
       );
     });
 
@@ -499,7 +499,7 @@ describe("TypeScriptGenerator", () => {
       // When generating stubs, we need value imports for TypeCodes
       assert(
         businessOutput.includes('import * as Common from "./Common.ts"') ||
-        businessOutput.includes('import type * as Common from "./Common.ts"'),
+          businessOutput.includes('import type * as Common from "./Common.ts"'),
       );
       assert(businessOutput.includes("getTime(): Promise<Common.Timestamp>"));
     });

@@ -346,7 +346,9 @@ describe("Conditional Preprocessing", () => {
       const preprocessor = new IDLPreprocessor();
       let errorMessage = "";
       const originalError = console.error;
-      console.error = (msg: string) => { errorMessage = msg; };
+      console.error = (msg: string) => {
+        errorMessage = msg;
+      };
 
       try {
         const input = `
@@ -357,7 +359,8 @@ describe("Conditional Preprocessing", () => {
 
         preprocessor.preprocess(input);
         assertEquals(errorMessage.includes("This is an error"), true);
-      } finally {
+      }
+      finally {
         console.error = originalError;
       }
     });
@@ -366,7 +369,9 @@ describe("Conditional Preprocessing", () => {
       const preprocessor = new IDLPreprocessor();
       let errorMessage = "";
       const originalError = console.error;
-      console.error = (msg: string) => { errorMessage = msg; };
+      console.error = (msg: string) => {
+        errorMessage = msg;
+      };
 
       try {
         const input = `
@@ -377,7 +382,8 @@ describe("Conditional Preprocessing", () => {
 
         preprocessor.preprocess(input);
         assertEquals(errorMessage, "");
-      } finally {
+      }
+      finally {
         console.error = originalError;
       }
     });
@@ -386,7 +392,9 @@ describe("Conditional Preprocessing", () => {
       const preprocessor = new IDLPreprocessor();
       let warningMessage = "";
       const originalWarn = console.warn;
-      console.warn = (msg: string) => { warningMessage = msg; };
+      console.warn = (msg: string) => {
+        warningMessage = msg;
+      };
 
       try {
         const input = `
@@ -395,7 +403,8 @@ describe("Conditional Preprocessing", () => {
 
         preprocessor.preprocess(input);
         assertEquals(warningMessage.includes("This is a warning"), true);
-      } finally {
+      }
+      finally {
         console.warn = originalWarn;
       }
     });
