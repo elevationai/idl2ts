@@ -1,6 +1,6 @@
 {
   "name": "@eai/idl2ts",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "CORBA IDL to TypeScript compiler for Deno",
   "exports": {
     ".": "./src/index.ts",

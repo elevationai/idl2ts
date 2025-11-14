@@ -1112,12 +1112,15 @@ export class TypeScriptGenerator {
     // Generate TypeCode alias for typedef if stubs are enabled
     if (this.options.includeStubs) {
       const baseTypeCode = this.getTypeCodeForType(node.type);
-      this.emit(`export const TC_${name} = ${baseTypeCode};`);
+      const repositoryId = this.getRepositoryId(name);
+      // For typedefs, create a proper alias TypeCode with the IDL repository ID
+      this.emit(`export const TC_${name} = TypeCode.create_alias_tc(`);
+      this.emit(`  "${repositoryId}",`);
+      this.emit(`  "${name}",`);
+      this.emit(`  ${baseTypeCode},`);
+      this.emit(`);`);
       this.emit("");
-      // Mark TypeCode used if it's being referenced
-      if (baseTypeCode.includes("TypeCode")) {
-        this.markCorbaImportUsed("TypeCode");
-      }
+      this.markCorbaImportUsed("TypeCode");
     }
   }
 

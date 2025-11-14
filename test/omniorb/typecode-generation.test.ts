@@ -102,16 +102,37 @@ typedef sequence<string, 10> BoundedStringSeq;
   assertEquals(tsCode.includes("export type LongSeq = number[];"), true, "Should generate LongSeq type");
   assertEquals(tsCode.includes("export type BoundedStringSeq = string[];"), true, "Should generate BoundedStringSeq type");
 
-  // Verify TypeCode constants are generated
+  // Verify TypeCode constants are generated with proper alias TypeCodes
   assertEquals(
-    tsCode.includes("export const TC_LongSeq = TypeCode.create_sequence_tc(0, TypeCode.TC_long);"),
+    tsCode.includes("export const TC_LongSeq = TypeCode.create_alias_tc("),
     true,
-    "Should generate TC_LongSeq for unbounded sequence",
+    "Should generate TC_LongSeq using create_alias_tc",
   );
   assertEquals(
-    tsCode.includes("export const TC_BoundedStringSeq = TypeCode.create_sequence_tc(10, TypeCode.TC_string);"),
+    tsCode.includes('"LongSeq",'),
     true,
-    "Should generate TC_BoundedStringSeq for bounded sequence",
+    "TC_LongSeq should include the typedef name",
+  );
+  assertEquals(
+    tsCode.includes("TypeCode.create_sequence_tc(0, TypeCode.TC_long)"),
+    true,
+    "TC_LongSeq should wrap the sequence TypeCode",
+  );
+
+  assertEquals(
+    tsCode.includes("export const TC_BoundedStringSeq = TypeCode.create_alias_tc("),
+    true,
+    "Should generate TC_BoundedStringSeq using create_alias_tc",
+  );
+  assertEquals(
+    tsCode.includes('"BoundedStringSeq",'),
+    true,
+    "TC_BoundedStringSeq should include the typedef name",
+  );
+  assertEquals(
+    tsCode.includes("TypeCode.create_sequence_tc(10, TypeCode.TC_string)"),
+    true,
+    "TC_BoundedStringSeq should wrap the bounded sequence TypeCode",
   );
 });
 
@@ -152,7 +173,36 @@ typedef string MyString;
   assertEquals(tsCode.includes("export type MyLong = number;"), true, "Should generate MyLong type");
   assertEquals(tsCode.includes("export type MyString = string;"), true, "Should generate MyString type");
 
-  // Verify TypeCode constants are generated
-  assertEquals(tsCode.includes("export const TC_MyLong = TypeCode.TC_long;"), true, "Should alias TC_MyLong to TC_long");
-  assertEquals(tsCode.includes("export const TC_MyString = TypeCode.TC_string;"), true, "Should alias TC_MyString to TC_string");
+  // Verify TypeCode constants are generated with proper alias TypeCodes
+  assertEquals(
+    tsCode.includes("export const TC_MyLong = TypeCode.create_alias_tc("),
+    true,
+    "Should generate TC_MyLong using create_alias_tc",
+  );
+  assertEquals(
+    tsCode.includes('"MyLong",'),
+    true,
+    "TC_MyLong should include the typedef name",
+  );
+  assertEquals(
+    tsCode.includes("TypeCode.TC_long"),
+    true,
+    "TC_MyLong should reference TC_long",
+  );
+
+  assertEquals(
+    tsCode.includes("export const TC_MyString = TypeCode.create_alias_tc("),
+    true,
+    "Should generate TC_MyString using create_alias_tc",
+  );
+  assertEquals(
+    tsCode.includes('"MyString",'),
+    true,
+    "TC_MyString should include the typedef name",
+  );
+  assertEquals(
+    tsCode.includes("TypeCode.TC_string"),
+    true,
+    "TC_MyString should reference TC_string",
+  );
 });
