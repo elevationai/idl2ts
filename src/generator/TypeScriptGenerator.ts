@@ -179,9 +179,9 @@ export class TypeScriptGenerator {
     }
   }
 
-  private markCorbaTypeUsed(): void {
+  private markCorbaTypeUsed(importName: string = "CORBA"): void {
     if (this.currentModuleOutput) {
-      this.currentModuleOutput.corbaTypeImports.add("CORBA");
+      this.currentModuleOutput.corbaTypeImports.add(importName);
     }
   }
 
@@ -285,12 +285,18 @@ export class TypeScriptGenerator {
     const hasTypeImports = module.corbaTypeImports.size > 0;
 
     if (hasValueImports && hasTypeImports) {
-      // Both value and type usage - combine them and deduplicate
-      const allImports = [
+      // Both value and type usage - use inline type keywords for type-only imports
+      const allImportNames = [
         ...new Set([...module.corbaImports, ...module.corbaTypeImports]),
       ];
+      const importSpecifiers = allImportNames.map((name) => {
+        if (module.corbaTypeImports.has(name) && !module.corbaImports.has(name)) {
+          return `type ${name}`;
+        }
+        return name;
+      });
       lines.push(
-        `import { ${allImports.join(", ")} } from "${this.options.corbaImportPath || "corba"}";`,
+        `import { ${importSpecifiers.join(", ")} } from "${this.options.corbaImportPath || "corba"}";`,
       );
     }
     else if (hasTypeImports && !hasValueImports) {
@@ -706,7 +712,7 @@ export class TypeScriptGenerator {
     // Build the repository ID using pragma-aware method
     const repoId = this.getRepositoryId(node.name);
 
-    this.emit(`export const ${tcName} = TypeCode.create_struct_tc(`);
+    this.emit(`export const ${tcName}: TypeCode = TypeCode.create_struct_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
     this.emit(`"${node.name}",`);
@@ -1008,7 +1014,7 @@ export class TypeScriptGenerator {
       node.discriminatorType,
     );
 
-    this.emit(`export const ${tcName} = TypeCode.create_union_tc(`);
+    this.emit(`export const ${tcName}: TypeCode = TypeCode.create_union_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
     this.emit(`"${node.name}",`);
@@ -1085,7 +1091,7 @@ export class TypeScriptGenerator {
     // Generate TypeCode for enum if stubs are enabled
     if (this.options.includeStubs) {
       const repoId = this.getRepositoryId(node.name);
-      this.emit(`export const TC_${name} = TypeCode.create_enum_tc(`);
+      this.emit(`export const TC_${name}: TypeCode = TypeCode.create_enum_tc(`);
       this.indent();
       this.emit(`"${repoId}",`);
       this.emit(`"${node.name}",`);
@@ -1114,7 +1120,7 @@ export class TypeScriptGenerator {
       const baseTypeCode = this.getTypeCodeForType(node.type);
       const repositoryId = this.getRepositoryId(name);
       // For typedefs, create a proper alias TypeCode with the IDL repository ID
-      this.emit(`export const TC_${name} = TypeCode.create_alias_tc(`);
+      this.emit(`export const TC_${name}: TypeCode = TypeCode.create_alias_tc(`);
       this.emit(`  "${repositoryId}",`);
       this.emit(`  "${name}",`);
       this.emit(`  ${baseTypeCode},`);
@@ -1224,7 +1230,7 @@ export class TypeScriptGenerator {
     // Build the repository ID using pragma-aware method
     const repoId = this.getRepositoryId(node.name);
 
-    this.emit(`export const ${tcName} = TypeCode.create_interface_tc(`);
+    this.emit(`export const ${tcName}: TypeCode = TypeCode.create_interface_tc(`);
     this.indent();
     this.emit(`"${repoId}",`);
     this.emit(`"${node.name}",`);
@@ -1667,9 +1673,9 @@ export class TypeScriptGenerator {
     this.emit(
       `async _invoke(operation: string, _inputStream: CDRInputStream, ${responseHandlerParam}: ResponseHandler): Promise<CDROutputStream> {`,
     );
-    this.markCorbaImportUsed("CDRInputStream");
-    this.markCorbaImportUsed("CDROutputStream");
-    this.markCorbaImportUsed("ResponseHandler");
+    this.markCorbaTypeUsed("CDRInputStream");
+    this.markCorbaTypeUsed("CDROutputStream");
+    this.markCorbaTypeUsed("ResponseHandler");
     this.indent();
 
     if (!hasOperationsOrAttributes) {
