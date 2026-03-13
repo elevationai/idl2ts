@@ -32,7 +32,11 @@ struct typeStruct {
   assertEquals(tsCode.includes("tc: CORBA.TypeCode;"), true, "Should have 'tc' member as CORBA.TypeCode");
   assertEquals(tsCode.includes("b: number;"), true, "Should have 'b' member");
 
-  assertEquals(tsCode.includes("export const TC_typeStruct = TypeCode.create_struct_tc("), true, "Should generate TC_typeStruct constant");
+  assertEquals(
+    tsCode.includes("export const TC_typeStruct: TypeCode = TypeCode.create_struct_tc("),
+    true,
+    "Should generate TC_typeStruct constant",
+  );
   assertEquals(/"IDL:[^"]+"/.test(tsCode), true, "Should have a repository ID");
 });
 
@@ -54,7 +58,7 @@ enum testUnionEnum { G, H, I };
   assertEquals(tsCode.includes("I = 2,"), true, "Should have I = 2");
 
   assertEquals(
-    tsCode.includes("export const TC_testUnionEnum = TypeCode.create_enum_tc("),
+    tsCode.includes("export const TC_testUnionEnum: TypeCode = TypeCode.create_enum_tc("),
     true,
     "Should generate TC_testUnionEnum constant",
   );
@@ -82,7 +86,11 @@ union MyUnion switch(Color) {
   // Verify union type is generated
   assertEquals(tsCode.includes("export type MyUnion ="), true, "Should generate union type");
 
-  assertEquals(tsCode.includes("export const TC_MyUnion = TypeCode.create_union_tc("), true, "Should generate TC_MyUnion constant");
+  assertEquals(
+    tsCode.includes("export const TC_MyUnion: TypeCode = TypeCode.create_union_tc("),
+    true,
+    "Should generate TC_MyUnion constant",
+  );
   assertEquals(/"IDL:[^"]+"/.test(tsCode), true, "Should have a repository ID");
 });
 
@@ -104,7 +112,7 @@ typedef sequence<string, 10> BoundedStringSeq;
 
   // Verify TypeCode constants are generated with proper alias TypeCodes
   assertEquals(
-    tsCode.includes("export const TC_LongSeq = TypeCode.create_alias_tc("),
+    tsCode.includes("export const TC_LongSeq: TypeCode = TypeCode.create_alias_tc("),
     true,
     "Should generate TC_LongSeq using create_alias_tc",
   );
@@ -120,7 +128,7 @@ typedef sequence<string, 10> BoundedStringSeq;
   );
 
   assertEquals(
-    tsCode.includes("export const TC_BoundedStringSeq = TypeCode.create_alias_tc("),
+    tsCode.includes("export const TC_BoundedStringSeq: TypeCode = TypeCode.create_alias_tc("),
     true,
     "Should generate TC_BoundedStringSeq using create_alias_tc",
   );
@@ -150,7 +158,7 @@ interface TestInterface {
   assertExists(tsCode, "Should generate TypeScript file");
 
   assertEquals(
-    tsCode.includes("export const TC_TestInterface = TypeCode.create_interface_tc("),
+    tsCode.includes("export const TC_TestInterface: TypeCode = TypeCode.create_interface_tc("),
     true,
     "Should generate TC_TestInterface constant",
   );
@@ -175,7 +183,7 @@ typedef string MyString;
 
   // Verify TypeCode constants are generated with proper alias TypeCodes
   assertEquals(
-    tsCode.includes("export const TC_MyLong = TypeCode.create_alias_tc("),
+    tsCode.includes("export const TC_MyLong: TypeCode = TypeCode.create_alias_tc("),
     true,
     "Should generate TC_MyLong using create_alias_tc",
   );
@@ -191,7 +199,7 @@ typedef string MyString;
   );
 
   assertEquals(
-    tsCode.includes("export const TC_MyString = TypeCode.create_alias_tc("),
+    tsCode.includes("export const TC_MyString: TypeCode = TypeCode.create_alias_tc("),
     true,
     "Should generate TC_MyString using create_alias_tc",
   );

@@ -217,7 +217,7 @@ describe("IDLCompiler Integration", () => {
       // Now we import everything together since we generate interface TypeCodes and skeletons
       assert(
         output.includes(
-          'import { CorbaStub, create_request, TypeCode, Servant, CDRInputStream, CDROutputStream, ResponseHandler, CORBA } from "@myorg/corba"',
+          'import { CorbaStub, create_request, TypeCode, Servant, type CORBA, type CDRInputStream, type CDROutputStream, type ResponseHandler } from "@myorg/corba"',
         ),
       );
     });
