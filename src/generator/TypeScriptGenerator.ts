@@ -1757,7 +1757,7 @@ export class TypeScriptGenerator {
         }
         else if (member.kind === "attribute") {
           // Generate getter case
-          this.emit(`case "get_${member.name}": {`);
+          this.emit(`case "_get_${member.name}": {`);
           this.indent();
           this.emit(`const result = await this.get_${member.name}();`);
           // Don't pass interface context for attributes - they should resolve to their declared type
@@ -1770,7 +1770,7 @@ export class TypeScriptGenerator {
 
           // Generate setter case if not readonly
           if (!member.isReadonly) {
-            this.emit(`case "set_${member.name}": {`);
+            this.emit(`case "_set_${member.name}": {`);
             this.indent();
             const unmarshalCall = this.getUnmarshalCall(member.type);
             this.emit(`const value = ${unmarshalCall};`);

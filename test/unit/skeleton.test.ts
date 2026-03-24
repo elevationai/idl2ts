@@ -109,17 +109,17 @@ Deno.test("POA skeleton generation - attributes", () => {
   const generatedCode = result.get("index.ts") || "";
 
   // Check getter operations
-  assertEquals(generatedCode.includes('case "get_name":'), true);
-  assertEquals(generatedCode.includes('case "get_id":'), true);
+  assertEquals(generatedCode.includes('case "_get_name":'), true);
+  assertEquals(generatedCode.includes('case "_get_id":'), true);
   assertEquals(generatedCode.includes("await this.get_name()"), true);
   assertEquals(generatedCode.includes("await this.get_id()"), true);
 
   // Check setter operation (only for non-readonly)
-  assertEquals(generatedCode.includes('case "set_name":'), true);
+  assertEquals(generatedCode.includes('case "_set_name":'), true);
   assertEquals(generatedCode.includes("await this.set_name(value)"), true);
 
   // Should not have setter for readonly
-  assertEquals(generatedCode.includes('case "set_id":'), false);
+  assertEquals(generatedCode.includes('case "_set_id":'), false);
 });
 
 Deno.test("POA skeleton generation - sequences and arrays", () => {
