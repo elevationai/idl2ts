@@ -1860,10 +1860,10 @@ export class TypeScriptGenerator {
             // Enums are marshaled as longs in CORBA
             return "_inputStream.readLong()";
           case "interface": {
-            // Interfaces are object references - read IOR string
+            // Interfaces are object references - read full IOR struct (typeId + profiles)
             // Cast through unknown to the specific interface type to avoid type errors
             const interfaceType = this.resolveTypeName(type.name, true);
-            return `({ _ior: _inputStream.readString() } as unknown as ${interfaceType})`;
+            return `({ _ior: _inputStream.readObjectRef() } as unknown as ${interfaceType})`;
           }
           case "typedef": {
             // Follow the typedef to the underlying type
@@ -1942,7 +1942,7 @@ export class TypeScriptGenerator {
         return "(s) => s.readLong()";
       }
       else if (typeInfo && typeInfo.kind === "interface") {
-        return "(s) => { const iorStr = s.readString(); return { _ior: iorStr }; }";
+        return "(s) => ({ _ior: s.readObjectRef() })";
       }
       else if (typeInfo && typeInfo.kind === "typedef") {
         // Follow the typedef to the underlying type
