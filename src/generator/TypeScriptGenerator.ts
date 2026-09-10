@@ -1596,11 +1596,17 @@ export class TypeScriptGenerator {
 
     // Only process operations and attributes for skeleton
     for (const member of node.members) {
+      // Unqualified type names resolve against the interface that declared the
+      // member, so inherited members keep their original scope.
+      const srcModule = (member as AST.InterfaceMemberNode & ExtendedNode).__sourceModule || this.currentModule;
+      const srcInterface = (member as AST.InterfaceMemberNode & ExtendedNode).__sourceInterface || node.name;
+
       if (member.kind === "operation") {
         const params = member.parameters.map((p: AST.ParameterNode) => {
           // Make out and inout parameters optional since they're not commonly used
           const isOptional = p.direction === "out" || p.direction === "inout";
-          return isOptional ? `${p.name}?: ${this.mapType(p.type)}` : `${p.name}: ${this.mapType(p.type)}`;
+          const pType = this.mapType(p.type, false, srcModule, srcInterface);
+          return isOptional ? `${p.name}?: ${pType}` : `${p.name}: ${pType}`;
         }).join(", ");
 
         // Check if we have out parameters
@@ -1614,19 +1620,23 @@ export class TypeScriptGenerator {
         }
         else if (outParams.length === 0) {
           // No out parameters - return just the return value
-          returnType = `Promise<${this.mapType(member.returnType)}>`;
+          returnType = `Promise<${this.mapType(member.returnType, false, srcModule, srcInterface)}>`;
         }
         else if (!hasReturn) {
           // Out parameters but void return - return object with just out params
-          const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type)}`).join(
+          const outParamTypes = outParams.map((p: AST.ParameterNode) =>
+            `${p.name}: ${this.mapType(p.type, false, srcModule, srcInterface)}`
+          ).join(
             "; ",
           );
           returnType = `Promise<{ ${outParamTypes} }>`;
         }
         else {
           // Both return value and out parameters - return object with both
-          const returnValueType = this.mapType(member.returnType);
-          const outParamTypes = outParams.map((p: AST.ParameterNode) => `${p.name}: ${this.mapType(p.type)}`).join(
+          const returnValueType = this.mapType(member.returnType, false, srcModule, srcInterface);
+          const outParamTypes = outParams.map((p: AST.ParameterNode) =>
+            `${p.name}: ${this.mapType(p.type, false, srcModule, srcInterface)}`
+          ).join(
             "; ",
           );
           returnType = `Promise<{ returnValue: ${returnValueType}; ${outParamTypes} }>`;
@@ -1635,7 +1645,7 @@ export class TypeScriptGenerator {
         this.emit(`abstract ${this.escapeReservedWord(member.name)}(${params}): ${returnType};`);
       }
       else if (member.kind === "attribute") {
-        const tsType = this.mapType(member.type);
+        const tsType = this.mapType(member.type, false, srcModule, srcInterface);
         this.emit(`abstract get_${member.name}(): Promise<${tsType}>;`);
 
         if (!member.isReadonly) {
@@ -1693,6 +1703,9 @@ export class TypeScriptGenerator {
 
       // Generate cases for each operation
       for (const member of node.members) {
+        // Same scoping rule as the signatures above.
+        const srcInterface = (member as AST.InterfaceMemberNode & ExtendedNode).__sourceInterface || node.name;
+
         if (member.kind === "operation") {
           this.emit(`case "${member.name}": {`);
           this.indent();
@@ -1702,7 +1715,7 @@ export class TypeScriptGenerator {
           if (inParams.length > 0) {
             this.emit("// Unmarshal input parameters");
             for (const param of inParams) {
-              const unmarshalCall = this.getUnmarshalCall(param.type);
+              const unmarshalCall = this.getUnmarshalCall(param.type, srcInterface);
               this.emit(`const ${param.name} = ${unmarshalCall};`);
             }
           }
@@ -1726,7 +1739,7 @@ export class TypeScriptGenerator {
             this.emit(`const result = await this.${member.name}(${inParams.map((p: AST.ParameterNode) => p.name).join(", ")});`);
             this.emit("");
             this.emit("// Marshal return value and out parameters");
-            const marshalCall = this.getMarshalCall(member.returnType, "result", node.name);
+            const marshalCall = this.getMarshalCall(member.returnType, "result", srcInterface);
             this.emit(`${marshalCall};`);
           }
           else if (outParams.length > 0) {
@@ -1737,12 +1750,12 @@ export class TypeScriptGenerator {
             this.emit("// Marshal return value and out parameters");
 
             if (hasReturn) {
-              const marshalCall = this.getMarshalCall(member.returnType, "result.returnValue", node.name);
+              const marshalCall = this.getMarshalCall(member.returnType, "result.returnValue", srcInterface);
               this.emit(`${marshalCall};`);
             }
 
             for (const param of outParams) {
-              const marshalCall = this.getMarshalCall(param.type, `result.${param.name}`, node.name);
+              const marshalCall = this.getMarshalCall(param.type, `result.${param.name}`, srcInterface);
               this.emit(`${marshalCall};`);
             }
           }
@@ -1760,9 +1773,9 @@ export class TypeScriptGenerator {
           this.emit(`case "_get_${member.name}": {`);
           this.indent();
           this.emit(`const result = await this.get_${member.name}();`);
-          // Don't pass interface context for attributes - they should resolve to their declared type
-          // not to nested types within the interface
-          const marshalCall = this.getMarshalCall(member.type, "result");
+          // An unqualified attribute type resolves against the declaring
+          // interface first, so a nested type shadows a same-named outer one.
+          const marshalCall = this.getMarshalCall(member.type, "result", srcInterface);
           this.emit(`${marshalCall};`);
           this.emit("break;");
           this.dedent();
@@ -1772,7 +1785,7 @@ export class TypeScriptGenerator {
           if (!member.isReadonly) {
             this.emit(`case "_set_${member.name}": {`);
             this.indent();
-            const unmarshalCall = this.getUnmarshalCall(member.type);
+            const unmarshalCall = this.getUnmarshalCall(member.type, srcInterface);
             this.emit(`const value = ${unmarshalCall};`);
             this.emit(`await this.set_${member.name}(value);`);
             this.emit("break;");
@@ -1802,7 +1815,7 @@ export class TypeScriptGenerator {
     this.emit("");
   }
 
-  private getUnmarshalCall(type: AST.TypeNode): string {
+  private getUnmarshalCall(type: AST.TypeNode, interfaceContext?: string): string {
     if (type.kind === "primitiveType") {
       switch (type.type) {
         case "boolean":
@@ -1852,8 +1865,17 @@ export class TypeScriptGenerator {
         }
       }
 
-      // Look up the type in the registry to determine how to unmarshal it
-      const typeInfo = this.findTypeInRegistry(lookupName);
+      // Look up the type in the registry to determine how to unmarshal it.
+      // An unqualified name inside an interface resolves against that
+      // interface's scope first (CORBA IDL name scoping: innermost wins), so a
+      // nested type shadows a same-named type declared further out.
+      let typeInfo = null;
+      if (interfaceContext && !type.name.includes("::")) {
+        typeInfo = this.findTypeInRegistry(`${interfaceContext}_${lookupName}`);
+      }
+      if (!typeInfo) {
+        typeInfo = this.findTypeInRegistry(lookupName);
+      }
       if (typeInfo) {
         switch (typeInfo.kind) {
           case "enum":
@@ -1869,7 +1891,7 @@ export class TypeScriptGenerator {
             // Follow the typedef to the underlying type
             const typedefNode = typeInfo.node as AST.TypedefNode;
             if (typedefNode) {
-              return this.getUnmarshalCall(typedefNode.type);
+              return this.getUnmarshalCall(typedefNode.type, interfaceContext);
             }
             return `_inputStream.readString()`;
           }
@@ -1887,11 +1909,11 @@ export class TypeScriptGenerator {
       return `_inputStream.readLong()`;
     }
     else if (type.kind === "sequenceType") {
-      const elementUnmarshal = this.getUnmarshalCall(type.elementType);
+      const elementUnmarshal = this.getUnmarshalCall(type.elementType, interfaceContext);
       return `(() => { const length = _inputStream.readULong(); const result = []; for (let i = 0; i < length; i++) { result.push(${elementUnmarshal}); } return result; })()`;
     }
     else if (type.kind === "arrayType") {
-      const elementUnmarshal = this.getUnmarshalCall(type.elementType);
+      const elementUnmarshal = this.getUnmarshalCall(type.elementType, interfaceContext);
       const totalSize = type.dimensions.reduce((a, b) => a * b, 1);
       return `(() => { const result = []; for (let i = 0; i < ${totalSize}; i++) { result.push(${elementUnmarshal}); } return result; })()`;
     }
